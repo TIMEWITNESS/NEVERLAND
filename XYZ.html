@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#07060f">
+<title>Paulis Cosmos · X42 · Neo Hsmburg</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+<style>
+/* ── tokens ──────────────────────────────────────────────── */
+:root{
+  --pink:#ff9ecf; --lav:#c9a7ff; --aqua:#7ee8fa; --gold:#ffd98e; --mint:#9ae6b4;
+  --purple:#a855f7; --theme:#7ee8fa;
+  --panel:rgba(18,14,32,.92);
+  --panel-2:rgba(28,22,48,.92);
+  --bd:rgba(255,255,255,.14);
+  --bd-bright:rgba(255,255,255,.28);
+  --st:env(safe-area-inset-top); --sb:env(safe-area-inset-bottom);
+  --sl:env(safe-area-inset-left); --sr:env(safe-area-inset-right);
+}
+*{ -webkit-tap-highlight-color:transparent; box-sizing:border-box }
+html,body{
+  height:100%; margin:0; overflow:hidden; background:#05040b; color:#f4f1ff;
+  font-family:'Quicksand',system-ui,sans-serif; overscroll-behavior:none;
+  touch-action:manipulation; -webkit-user-select:none; user-select:none;
+}
+body::before{
+  content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(50vw 50vw at 12% 8%, rgba(126,232,250,.18), transparent 65%),
+    radial-gradient(50vw 50vw at 88% 92%, rgba(201,167,255,.20), transparent 65%),
+    radial-gradient(40vw 40vw at 78% 12%, rgba(255,158,207,.12), transparent 65%),
+    radial-gradient(40vw 40vw at 20% 88%, rgba(255,217,142,.10), transparent 65%);
+}
+#sparkles{ position:fixed; inset:0; z-index:3; pointer-events:none; overflow:hidden }
+#sparkles .sp{ position:absolute; color:#fff; text-shadow:0 0 8px #7ee8fa,0 0 16px #c9a7ff;
+  animation:tw 3.2s ease-in-out infinite, dr 22s linear infinite; opacity:.85 }
+#sparkles .s2{ font-size:10px } #sparkles .s3{ font-size:16px }
+@keyframes tw{0%,100%{opacity:.15;transform:scale(.7) rotate(0)}50%{opacity:1;transform:scale(1.2) rotate(180deg)}}
+@keyframes dr{from{translate:0 0}to{translate:-40px -50px}}
+@keyframes spinHue{to{--ang:360deg}}
+@property --ang{syntax:'<angle>';initial-value:0deg;inherits:false}
+
+/* ── the 92% frame ───────────────────────────────────────── */
+#app{
+  position:fixed; z-index:10;
+  top:max(3.5vh,var(--st)); bottom:max(3.5vh,var(--sb));
+  left:max(2.5vw,var(--sl)); right:max(2.5vw,var(--sr));
+  border-radius:22px; overflow:hidden; background:#07060f;
+  box-shadow:0 0 0 1px rgba(255,255,255,.10), 0 0 60px rgba(168,85,247,.30);
+  opacity:0; pointer-events:none; transition:opacity .6s;
+}
+#app.ready{ opacity:1; pointer-events:auto }
+#app::after{
+  content:''; position:absolute; inset:0; border-radius:22px; pointer-events:none; padding:1.2px;
+  background:conic-gradient(from var(--ang,0deg), var(--pink), var(--lav), var(--aqua), var(--gold), var(--mint), var(--pink));
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude; opacity:.55;
+  animation:spinHue 18s linear infinite;
+}
+
+/* ── perf-friendly surfaces (no blur, no heavy shadows) ─── */
+.surf{ background:var(--panel); border:1px solid var(--bd); border-radius:16px }
+.surf-2{ background:var(--panel-2); border:1px solid var(--bd); border-radius:14px }
+.glow-aq{ color:var(--aqua); text-shadow:0 0 10px rgba(126,232,250,.55) }
+.glow-pk{ color:var(--pink); text-shadow:0 0 10px rgba(255,158,207,.55) }
+.glow-gd{ color:var(--gold); text-shadow:0 0 10px rgba(255,217,142,.55) }
+
+input[type=range]{ -webkit-appearance:none; appearance:none; background:rgba(255,255,255,.10); border-radius:9px; height:5px }
+input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:#fff; box-shadow:0 0 10px var(--theme); cursor:pointer }
+
+/* ── canvas + bubbles ────────────────────────────────────── */
+#cosmos{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none }
+#bubbles{ position:absolute; inset:0; overflow:hidden; pointer-events:none }
+
+.bubble{
+  position:absolute; will-change:transform; cursor:grab; touch-action:none;
+  pointer-events:auto; transform-origin:center center;
+}
+.bubble .core{
+  width:100%; height:100%; border-radius:50%; overflow:hidden; position:relative;
+  display:grid; place-items:center;
+  background:radial-gradient(circle at 32% 26%, rgba(255,255,255,.42), rgba(255,255,255,.05) 45%, rgba(0,0,0,.35));
+  border:1.5px solid rgba(255,255,255,.38);
+  box-shadow:0 0 18px -3px var(--theme), inset 0 0 18px rgba(255,255,255,.12);
+}
+.bubble .core::after{
+  content:''; position:absolute; top:8%; left:14%; width:34%; height:22%;
+  border-radius:50%; background:linear-gradient(180deg, rgba(255,255,255,.8), transparent);
+  filter:blur(3px); pointer-events:none;
+}
+.bubble.sel .core{ box-shadow:0 0 0 3px rgba(255,255,255,.9), 0 0 26px 2px var(--theme) }
+.bubble img,.bubble video{ width:100%; height:100%; object-fit:cover; border-radius:50%; pointer-events:none }
+.bubble .face{ font-size:2rem; line-height:1; filter:drop-shadow(0 2px 5px rgba(0,0,0,.6)) }
+.bubble .chip{
+  position:absolute; left:50%; transform:translateX(-50%); bottom:-16px;
+  white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis;
+  font-size:8.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  padding:2.5px 8px; border-radius:99px; background:rgba(10,8,20,.9);
+  border:1px solid rgba(255,255,255,.2); color:#fff; pointer-events:none;
+}
+/* jellyfish tentacles — shown in ocean world */
+.bubble .tents{ position:absolute; top:100%; left:50%; transform:translateX(-50%); width:60%; height:44px; pointer-events:none; opacity:0; transition:opacity .5s }
+body.ocean .bubble .tents{ opacity:.85 }
+.bubble .tents span{ position:absolute; top:0; width:2px; height:100%;
+  background:linear-gradient(to bottom, rgba(255,255,255,.7), transparent);
+  border-radius:2px; transform-origin:top center;
+  animation:tentWiggle 2.6s ease-in-out infinite; }
+@keyframes tentWiggle{ 0%,100%{transform:rotate(-6deg) scaleY(1)} 50%{transform:rotate(6deg) scaleY(1.15)} }
+
+/* ── HUD RAILS (bracket halves) ──────────────────────────── */
+.rail{
+  position:absolute; top:50%; transform:translateY(-50%); z-index:60;
+  display:flex; flex-direction:column; gap:6px;
+}
+.rail-l{ left:0 } .rail-r{ right:0 }
+.hud-btn{
+  position:relative; width:46px; height:46px; cursor:pointer;
+  display:grid; place-items:center; font-size:20px; color:#fff;
+  background:linear-gradient(150deg, rgba(255,255,255,.16), rgba(255,255,255,.04));
+  border:1.3px solid var(--bd-bright);
+  pointer-events:auto; touch-action:manipulation;
+  transition:transform .18s, background .18s;
+}
+.rail-l .hud-btn{ border-radius:14px 0 0 14px; border-right-width:0; margin-left:0 }
+.rail-r .hud-btn{ border-radius:0 14px 14px 0; border-left-width:0; margin-right:0 }
+.hud-btn:active{ transform:scale(.9); background:rgba(255,255,255,.20) }
+.hud-btn .ico{ pointer-events:none; font-size:19px; line-height:1 }
+.hud-btn .pet{ position:absolute; bottom:-3px; right:-3px; font-size:12px; pointer-events:none }
+.rail-r .hud-btn .pet{ right:auto; left:-3px }
+.hud-btn .lbl{ position:absolute; font-size:6.4px; font-weight:800; letter-spacing:.08em;
+  text-transform:uppercase; opacity:.7; pointer-events:none; bottom:3px }
+.rail-l .hud-btn .lbl{ right:4px } .rail-r .hud-btn .lbl{ left:4px }
+
+/* ── World orbs ──────────────────────────────────────────── */
+.orb{
+  width:38px; height:38px; border-radius:50%; cursor:pointer; position:relative;
+  display:grid; place-items:center; font-size:16px;
+  border:1.5px solid rgba(255,255,255,.20);
+  pointer-events:auto; touch-action:manipulation;
+  transition:transform .22s, border-color .22s;
+}
+.orb.active{ transform:scale(1.14); border-color:#fff; box-shadow:0 0 14px 1px var(--theme) }
+.orb:active{ transform:scale(.9) }
+
+/* ── DJ cat regulators ──────────────────────────────────── */
+.dj{
+  width:46px; height:46px; border-radius:50%; cursor:pointer; position:relative;
+  display:grid; place-items:center; pointer-events:auto; touch-action:manipulation;
+  background:var(--panel-2); border:2px solid var(--reg,#c9a7ff);
+  transition:transform .25s;
+}
+.dj:active{ transform:scale(.9) }
+.dj .cat{ width:30px; height:30px; pointer-events:none }
+.dj .sym{ position:absolute; top:-3px; right:-3px; font-size:10px }
+.dj .n{ position:absolute; bottom:-13px; left:50%; transform:translateX(-50%);
+  font-size:7px; font-weight:800; letter-spacing:.14em; color:#fff; white-space:nowrap }
+
+/* ── God chips ──────────────────────────────────────────── */
+.god{
+  display:flex; align-items:center; gap:4px; padding:4px 8px 4px 5px;
+  border-radius:99px; font-size:9px; font-weight:800; letter-spacing:.1em;
+  text-transform:uppercase; cursor:pointer; pointer-events:auto; touch-action:manipulation;
+  background:var(--panel-2); border:1px solid var(--bd);
+  color:#fff; white-space:nowrap; transition:transform .18s, border-color .18s;
+}
+.god:hover{ transform:translateY(-1px); border-color:var(--gc,#c9a7ff) }
+.god:active{ transform:scale(.94) }
+.god .ge{ font-size:11px }
+
+/* ── Rabbit ─────────────────────────────────────────────── */
+#rabbit{ position:absolute; z-index:8; top:9%; left:-15%; cursor:pointer; pointer-events:auto;
+  animation:rGlide 42s linear infinite; touch-action:manipulation }
+#rabbit .trail{ position:absolute; right:100%; top:50%; transform:translateY(-50%);
+  width:200px; height:6px; border-radius:99px;
+  background:linear-gradient(to left, #ff0050,#ffb400,#fff000,#50ff78,#00c8ff,#b464ff,transparent);
+  filter:blur(1.5px); opacity:.7 }
+#rabbit .svg{ width:46px; height:46px; animation:rBob 1.4s ease-in-out infinite }
+@keyframes rGlide{0%{left:-15%}100%{left:110%}}
+@keyframes rBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+/* ── Paulis ─────────────────────────────────────────────── */
+#paulis{ position:fixed; z-index:60; width:76px; height:76px; cursor:grab; touch-action:none;
+  right:calc(2.5vw + 8px); bottom:calc(3.5vh + 100px); filter:drop-shadow(0 0 14px rgba(168,85,247,.7)) }
+#paulis svg{ width:100%; height:100%; overflow:visible }
+#paulis .tail{ transform-origin:76% 62%; animation:tw1 3.6s ease-in-out infinite }
+@keyframes tw1{0%,100%{transform:rotate(-9deg)}50%{transform:rotate(11deg)}}
+#paulis .eye{ animation:bl 5.8s infinite; transform-origin:center }
+@keyframes bl{0%,94%,100%{transform:scaleY(1)}96%{transform:scaleY(.08)}}
+#paulis .aura{ animation:ap 4.4s ease-in-out infinite; transform-origin:center }
+@keyframes ap{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:.6;transform:scale(1.12)}}
+.says{
+  position:fixed; z-index:61; max-width:220px; padding:10px 14px;
+  border-radius:16px 16px 16px 4px;
+  background:linear-gradient(150deg, var(--purple), var(--lav));
+  color:#10061e; font-weight:700; font-size:12px; line-height:1.4;
+  box-shadow:0 8px 24px rgba(168,85,247,.4);
+  animation:pop .3s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.9)}to{opacity:1;transform:none}}
+
+/* ── Drawer / Modal ─────────────────────────────────────── */
+.drawer{ position:fixed; inset:0; z-index:70; background:rgba(6,5,14,.75);
+  display:flex; align-items:flex-end; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .28s }
+.drawer.open{ opacity:1; pointer-events:auto }
+.drawer-p{
+  width:100%; max-width:560px; max-height:82vh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  touch-action:pan-y; background:var(--panel-2);
+  border:1px solid var(--bd-bright); border-bottom:0;
+  border-radius:26px 26px 0 0; padding:18px 16px calc(26px + var(--sb));
+  transform:translateY(100%); transition:transform .35s cubic-bezier(.22,1,.36,1) }
+.drawer.open .drawer-p{ transform:translateY(0) }
+.modal{ position:fixed; inset:0; z-index:90; display:grid; place-items:center; padding:18px;
+  background:rgba(4,3,10,.85); opacity:0; pointer-events:none; transition:opacity .25s }
+.modal.open{ opacity:1; pointer-events:auto }
+.modal-in{ background:var(--panel-2); border:1px solid var(--bd-bright);
+  border-radius:22px; padding:18px; width:100%; max-width:400px; text-align:center }
+
+#toast{ position:fixed; left:50%; bottom:calc(24px + var(--sb)); transform:translate(-50%,20px);
+  z-index:120; padding:10px 20px; border-radius:99px;
+  font-weight:700; font-size:12.5px; color:#0b0616;
+  background:linear-gradient(120deg, var(--aqua), var(--lav), var(--pink));
+  opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; max-width:88vw; text-align:center }
+#toast.show{ opacity:1; transform:translate(-50%,0) }
+
+/* ── VOICE SYNTH vinyl ─────────────────────────────────── */
+.vinyl{
+  width:170px; height:170px; border-radius:50%; position:relative; margin:0 auto 12px;
+  background:
+    radial-gradient(circle at 50% 50%, #0a0814 0 16%, transparent 16%),
+    radial-gradient(circle at 50% 50%, #16102c 0 22%, transparent 22%),
+    conic-gradient(from 0deg,
+      #ff0050, #ffb400, #fff000, #50ff78, #00c8ff, #b464ff, #ff0050);
+  border:2px solid rgba(255,255,255,.25);
+  animation:spin 6s linear infinite;
+}
+.vinyl::after{
+  content:''; position:absolute; inset:44%; border-radius:50%;
+  background:#0a0814; border:2px solid var(--theme);
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.vinyl.paused{ animation-play-state:paused }
+.vctr{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  font-size:11px; font-weight:800; color:#fff; letter-spacing:.1em; z-index:2; text-shadow:0 0 8px var(--theme) }
+
+.vgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:10px 0 }
+.vbtn{
+  padding:8px 4px; border-radius:12px; cursor:pointer; text-align:center;
+  background:var(--panel); border:1px solid var(--bd);
+  color:#fff; pointer-events:auto; touch-action:manipulation;
+  transition:transform .18s, border-color .18s;
+}
+.vbtn:active{ transform:scale(.94) }
+.vbtn.active{ border-color:var(--theme); background:rgba(126,232,250,.14) }
+.vbtn .ve{ font-size:16px; line-height:1 }
+.vbtn .vn{ font-size:7.5px; font-weight:800; letter-spacing:.1em; margin-top:3px; opacity:.85 }
+
+/* ── Bracket HUD reduced for landscape mobile ───────────── */
+@media (max-width:520px){
+  .hud-btn{ width:40px; height:40px; font-size:17px }
+  .hud-btn .ico{ font-size:16px }
+  .hud-btn .lbl{ font-size:5.6px }
+  .orb{ width:34px; height:34px; font-size:14px }
+  .dj{ width:42px; height:42px } .dj .cat{ width:26px; height:26px }
+  #paulis{ width:66px; height:66px }
+  #rabbit .svg{ width:38px; height:38px }
+  .vinyl{ width:150px; height:150px }
+}
+@media (max-width:360px){
+  .hud-btn{ width:36px; height:36px }
+  .hud-btn .ico{ font-size:14px }
+  .orb{ width:30px; height:30px; font-size:12px }
+  .dj{ width:38px; height:38px }
+}
+@media (orientation:landscape) and (max-height:520px){
+  .hud-btn{ width:36px; height:36px }
+  .orb{ width:30px; height:30px }
+  .dj{ width:40px; height:40px }
+  #paulis{ width:56px; height:56px }
+}
+</style>
+</head>
+
+<body>
+<div id="sparkles"></div>
+
+<!-- BOOT -->
+<div id="boot" class="fixed inset-0 z-[100] grid place-items-center px-6 cursor-pointer"
+     style="background:radial-gradient(circle at 50% 45%, rgba(168,85,247,.22), transparent 62%), #07060f"
+     onclick="App.boot()">
+  <div class="flex flex-col items-center text-center max-w-sm pointer-events-none">
+    <div class="relative mb-7" style="width:150px;height:150px">
+      <div style="position:absolute;inset:0;border-radius:50%;border:1.6px solid rgba(255,255,255,.28);animation:spin 14s linear infinite"></div>
+      <div style="position:absolute;inset:16%;border-radius:50%;border:1.4px dashed rgba(255,217,142,.55);animation:spin 20s linear infinite reverse"></div>
+      <div style="position:absolute;inset:32%;border-radius:50%;border:1.2px dashed rgba(154,230,180,.5);animation:spin 10s linear infinite"></div>
+      <div class="grid place-items-center" style="position:absolute;inset:36%;border-radius:50%;
+           background:var(--panel-2);border:1px solid var(--bd-bright)">
+        <i class="fa-solid fa-infinity text-3xl glow-pk"></i>
+      </div>
+    </div>
+    <h1 class="text-[26px] font-bold tracking-[.14em] mb-1 glow-pk" style="font-family:Fredoka">PAULIS COSMOS</h1>
+    <p class="text-[10px] tracking-[.36em] uppercase mb-4" style="color:var(--aqua)">NEO HSMBURG · X42</p>
+    <p class="text-[13px] leading-relaxed mb-6" style="color:rgba(244,241,255,.7)">
+      Tap anywhere to ignite the story-city.<br>
+      <span style="color:rgba(244,241,255,.5)">Grandma's tales · Greek guardians · sponge-city ✦</span>
+    </p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <canvas id="cosmos"></canvas>
+  <div id="bubbles"></div>
+
+  <!-- rabbit (clickable) -->
+  <div id="rabbit" onclick="Rabbit.toggle(event)">
+    <div class="trail"></div>
+    <svg class="svg" viewBox="0 0 100 100">
+      <defs>
+        <linearGradient id="rbF" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#f0d6ff"/></linearGradient>
+        <linearGradient id="rbE" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9ecf"/><stop offset="1" stop-color="#c9a7ff"/></linearGradient>
+      </defs>
+      <ellipse cx="50" cy="68" rx="24" ry="17" fill="url(#rbF)" stroke="#c9a7ff" stroke-width="1.4"/>
+      <ellipse cx="72" cy="62" rx="13" ry="12" fill="url(#rbF)" stroke="#c9a7ff" stroke-width="1.4"/>
+      <ellipse cx="68" cy="34" rx="4.5" ry="15" fill="url(#rbF)" stroke="#c9a7ff" stroke-width="1.2" transform="rotate(-14 68 34)"/>
+      <ellipse cx="68" cy="36" rx="2.2" ry="10" fill="url(#rbE)" transform="rotate(-14 68 36)"/>
+      <ellipse cx="79" cy="36" rx="4.5" ry="15" fill="url(#rbF)" stroke="#c9a7ff" stroke-width="1.2" transform="rotate(10 79 36)"/>
+      <ellipse cx="79" cy="38" rx="2.2" ry="10" fill="url(#rbE)" transform="rotate(10 79 38)"/>
+      <circle cx="76" cy="60" r="1.8" fill="#0b0616"/><circle cx="76.5" cy="59.4" r=".7" fill="#fff"/>
+      <ellipse cx="84" cy="65" rx="2.4" ry="1.4" fill="#ff9ecf" opacity=".6"/>
+    </svg>
+  </div>
+
+  <!-- world name -->
+  <div class="absolute top-[10px] left-1/2 -translate-x-1/2 z-20 pointer-events-none text-center">
+    <div id="world-name" class="text-[10px] tracking-[.36em] uppercase" style="font-family:Fredoka;color:var(--theme)">COSMIC DREAM</div>
+  </div>
+
+  <!-- god chips -->
+  <div class="absolute top-[26px] left-1/2 -translate-x-1/2 z-[58] flex gap-1.5 flex-wrap justify-center pointer-events-none" style="max-width:94%">
+    <div class="god" style="--gc:#9ae6b4" onclick="Gods.tell('irene',event)"><span class="ge">🕊️</span>ΕΙΡΗΝΗ</div>
+    <div class="god" style="--gc:#7ee8fa" onclick="Gods.tell('hermes',event)"><span class="ge">⚕️</span>ΕΡΜΗΣ</div>
+    <div class="god" style="--gc:#ff9ecf" onclick="Gods.tell('aphrodite',event)"><span class="ge">🌹</span>ΑΦΡΟΔΙΤΗ</div>
+    <div class="god" style="--gc:#ffd98e" onclick="Gods.tell('muses',event)"><span class="ge">🎼</span>ΜΟΥΣΑΙ</div>
+    <div class="god" style="--gc:#c9a7ff" onclick="Gods.tell('athena',event)"><span class="ge">🦉</span>ΑΘΗΝΑ</div>
+    <div class="god" style="--gc:#fb923c" onclick="Gods.tell('minotaur',event)"><span class="ge">🐂</span>ΜΙΝΩΤΑΥΡΟΣ</div>
+  </div>
+
+  <!-- LEFT rail — bracket [ shapes -->
+  <div class="rail rail-l" style="padding-left:var(--sl)">
+    <button class="hud-btn" onclick="HUD.pick('music',event)"><span class="ico">🎵</span><span class="pet">🐺</span><span class="lbl">Music</span></button>
+    <button class="hud-btn" onclick="HUD.pick('stories',event)"><span class="ico">📖</span><span class="pet">🦉</span><span class="lbl">Story</span></button>
+    <button class="hud-btn" onclick="HUD.pick('pictures',event)"><span class="ico">🖼️</span><span class="pet">🦋</span><span class="lbl">Pic</span></button>
+    <button class="hud-btn" onclick="HUD.pick('text',event)"><span class="ico">📜</span><span class="pet">🐢</span><span class="lbl">Text</span></button>
+  </div>
+
+  <!-- RIGHT rail — bracket ] shapes -->
+  <div class="rail rail-r" style="padding-right:var(--sr)">
+    <button class="hud-btn" onclick="HUD.pick('videos',event)"><span class="ico">🎬</span><span class="pet">🦊</span><span class="lbl">Video</span></button>
+    <button class="hud-btn" onclick="HUD.pick('web',event)"><span class="ico">🌐</span><span class="pet">🕊️</span><span class="lbl">Web</span></button>
+    <button class="hud-btn" onclick="HUD.pick('models',event)"><span class="ico">🧊</span><span class="pet">🐘</span><span class="lbl">3D</span></button>
+    <button class="hud-btn" onclick="HUD.pick('files',event)"><span class="ico">📦</span><span class="pet">🐼</span><span class="lbl">File</span></button>
+  </div>
+
+  <!-- DJ cats row -->
+  <div class="absolute left-1/2 -translate-x-1/2 z-[59] flex items-end gap-4"
+       style="bottom:calc(150px + var(--sb))">
+    <div class="dj" style="--reg:#9ae6b4" onclick="DJ.play('artemis',event)">
+      <svg class="cat" viewBox="0 0 60 60">
+        <path d="M20 26 L16 12 L28 20 Z" fill="#c4a3ff"/><path d="M40 26 L44 12 L32 20 Z" fill="#c4a3ff"/>
+        <ellipse cx="30" cy="34" rx="16" ry="14" fill="#c4a3ff" stroke="#fff" stroke-width="1.2"/>
+        <ellipse cx="24" cy="33" rx="3.2" ry="3.8" fill="#0b0616"/><ellipse cx="36" cy="33" rx="3.2" ry="3.8" fill="#0b0616"/>
+        <ellipse cx="24.6" cy="32" rx="1.2" ry="1.4" fill="#9ae6b4"/><ellipse cx="36.6" cy="32" rx="1.2" ry="1.4" fill="#9ae6b4"/>
+      </svg><span class="sym">🏹</span><span class="n">ARTEMIS</span>
+    </div>
+    <div class="dj" style="--reg:#7ee8fa" onclick="DJ.play('luna',event)">
+      <svg class="cat" viewBox="0 0 60 60">
+        <path d="M20 26 L16 12 L28 20 Z" fill="#7ee8fa"/><path d="M40 26 L44 12 L32 20 Z" fill="#7ee8fa"/>
+        <ellipse cx="30" cy="34" rx="16" ry="14" fill="#7ee8fa" stroke="#fff" stroke-width="1.2"/>
+        <ellipse cx="24" cy="33" rx="3.2" ry="3.8" fill="#0b0616"/><ellipse cx="36" cy="33" rx="3.2" ry="3.8" fill="#0b0616"/>
+        <ellipse cx="24.6" cy="32" rx="1.2" ry="1.4" fill="#fff"/><ellipse cx="36.6" cy="32" rx="1.2" ry="1.4" fill="#fff"/>
+      </svg><span class="sym">🌙</span><span class="n">LUNA</span>
+    </div>
+    <div class="dj" style="--reg:#ffd98e" onclick="DJ.play('diana',event)">
+      <svg class="cat" viewBox="0 0 60 60">
+        <path d="M20 26 L16 12 L28 20 Z" fill="#ffd98e"/><path d="M40 26 L44 12 L32 20 Z" fill="#ffd98e"/>
+        <ellipse cx="30" cy="34" rx="16" ry="14" fill="#ffd98e" stroke="#fff" stroke-width="1.2"/>
+        <ellipse cx="24" cy="33" rx="3.2" ry="3.8" fill="#0b0616"/><ellipse cx="36" cy="33" rx="3.2" ry="3.8" fill="#0b0616"/>
+        <ellipse cx="24.6" cy="32" rx="1.2" ry="1.4" fill="#ffd98e"/><ellipse cx="36.6" cy="32" rx="1.2" ry="1.4" fill="#ffd98e"/>
+      </svg><span class="sym">🌳</span><span class="n">DIANA</span>
+    </div>
+    <div class="dj" style="--reg:#ff9ecf" onclick="Synth.open(event)" title="Voice Synth">
+      <svg class="cat" viewBox="0 0 60 60">
+        <path d="M20 26 L16 12 L28 20 Z" fill="#ff9ecf"/><path d="M40 26 L44 12 L32 20 Z" fill="#ff9ecf"/>
+        <ellipse cx="30" cy="34" rx="16" ry="14" fill="#ff9ecf" stroke="#fff" stroke-width="1.2"/>
+        <ellipse cx="24" cy="33" rx="3.2" ry="3.8" fill="#0b0616"/><ellipse cx="36" cy="33" rx="3.2" ry="3.8" fill="#0b0616"/>
+      </svg><span class="sym">🎛️</span><span class="n">SYNTH</span>
+    </div>
+  </div>
+
+  <!-- Worlds row -->
+  <div class="absolute left-1/2 -translate-x-1/2 z-[60]" style="bottom:calc(94px + var(--sb))">
+    <div class="surf px-2.5 py-2 flex items-center gap-2">
+      <div class="orb active" data-w="cosmic" onclick="Worlds.set('cosmic',event)" style="background:radial-gradient(circle at 35% 30%, #fff, #7ee8fa 45%, #a855f7)">✨</div>
+      <div class="orb" data-w="ocean" onclick="Worlds.set('ocean',event)" style="background:radial-gradient(circle at 35% 30%, #fff, #38bdf8 45%, #0369a1)">🐳</div>
+      <div class="orb" data-w="green" onclick="Worlds.set('green',event)" style="background:radial-gradient(circle at 35% 30%, #fff, #4ade80 45%, #166534)">🌱</div>
+      <div class="orb" data-w="fire" onclick="Worlds.set('fire',event)" style="background:radial-gradient(circle at 35% 30%, #fff, #fb923c 45%, #b91c1c)">🔥</div>
+      <div class="orb" data-w="panda" onclick="Worlds.set('panda',event)" style="background:linear-gradient(120deg, #0b0616 50%, #fff 50%)">🐼</div>
+    </div>
+  </div>
+
+  <!-- Action bar -->
+  <div class="absolute left-1/2 -translate-x-1/2 z-[60] w-[min(94%,540px)]" style="bottom:calc(10px + var(--sb))">
+    <div class="surf px-2.5 py-2 flex items-center gap-2">
+      <button onclick="Player.toggle()" id="playBtn"
+        class="shrink-0 w-10 h-10 rounded-full grid place-items-center active:scale-90"
+        style="background:linear-gradient(135deg, var(--aqua), var(--lav) 55%, var(--pink)); pointer-events:auto; touch-action:manipulation">
+        <i id="playIcon" class="fa-solid fa-play text-[14px]" style="color:#0b0616"></i>
+      </button>
+      <div class="flex-1 min-w-0">
+        <input type="range" id="seek" min="0" max="100" step="0.1" value="0" class="w-full">
+        <div class="flex justify-between mt-1 text-[9px] font-mono" style="color:rgba(244,241,255,.55)">
+          <span id="tCur">0:00</span>
+          <span id="nowPlaying" class="truncate px-1 max-w-[110px]">silence</span>
+          <span id="tDur">0:00</span>
+        </div>
+      </div>
+      <button onclick="Snapshot.menu()" class="shrink-0 w-9 h-9 rounded-full grid place-items-center active:scale-90 surf"
+              style="pointer-events:auto; touch-action:manipulation"><i class="fa-solid fa-camera-retro text-[13px]" style="color:var(--gold)"></i></button>
+      <button onclick="Drawer.open('create')" class="shrink-0 w-9 h-9 rounded-full grid place-items-center active:scale-90 surf"
+              style="pointer-events:auto; touch-action:manipulation"><i class="fa-solid fa-link text-[12px]" style="color:var(--aqua)"></i></button>
+      <button onclick="Filter.anime()" class="shrink-0 w-9 h-9 rounded-full grid place-items-center active:scale-90 surf"
+              style="pointer-events:auto; touch-action:manipulation" title="Anime filter"><i class="fa-solid fa-wand-magic-sparkles text-[13px]" style="color:var(--pink)"></i></button>
+      <button onclick="X42.encode()" class="shrink-0 w-9 h-9 rounded-full grid place-items-center active:scale-90 surf"
+              style="pointer-events:auto; touch-action:manipulation" title="X42 encode"><i class="fa-solid fa-bolt text-[13px]" style="color:var(--mint)"></i></button>
+    </div>
+  </div>
+
+  <!-- Orbit count -->
+  <div class="absolute z-[60] top-2.5 right-2.5">
+    <div class="surf px-2.5 py-1 flex items-center gap-1.5">
+      <span class="text-[8.5px] font-bold tracking-widest uppercase" style="color:rgba(244,241,255,.7)">Orbit</span>
+      <span id="bCount" class="text-[12px] font-bold glow-aq" style="font-family:Fredoka">0</span>
+    </div>
+  </div>
+</div>
+
+<!-- Paulis -->
+<div id="paulis">
+  <svg viewBox="0 0 120 120">
+    <defs>
+      <radialGradient id="pA" cx="50%" cy="50%"><stop offset="0" stop-color="#c084fc" stop-opacity=".85"/><stop offset="100%" stop-color="#a855f7" stop-opacity="0"/></radialGradient>
+      <linearGradient id="pF" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c4a3ff"/><stop offset="1" stop-color="#8b3ff0"/></linearGradient>
+      <linearGradient id="pH" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9d5ff"/><stop offset="1" stop-color="#9333ea"/></linearGradient>
+      <linearGradient id="pS" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0abfc"/><stop offset="1" stop-color="#7c3aed"/></linearGradient>
+    </defs>
+    <circle class="aura" cx="60" cy="60" r="56" fill="url(#pA)"/>
+    <g class="tail"><path d="M78 74 C 96 70, 106 56, 100 42 C 96 33, 86 34, 85 43 C 84 50, 92 52, 93 46" fill="none" stroke="url(#pF)" stroke-width="7" stroke-linecap="round"/></g>
+    <path d="M60 62 C 42 62, 36 78, 38 96 L 82 96 C 84 78, 78 62, 60 62 Z" fill="url(#pS)"/>
+    <path d="M48 64 Q60 71 72 64 L70 69 Q60 74 50 69 Z" fill="#ffd98e" opacity=".95"/>
+    <ellipse cx="60" cy="45" rx="23" ry="21" fill="url(#pF)"/>
+    <path d="M42 32 L38 12 L54 26 Z" fill="url(#pF)" stroke="#7c3aed" stroke-width="1.2"/>
+    <path d="M78 32 L82 12 L66 26 Z" fill="url(#pF)" stroke="#7c3aed" stroke-width="1.2"/>
+    <path d="M37 42 Q40 22 60 20 Q80 22 83 42 Q76 32 66 34 Q60 28 54 34 Q44 32 37 42 Z" fill="url(#pH)"/>
+    <g class="eye">
+      <ellipse cx="51" cy="46" rx="5.4" ry="6.4" fill="#0b0616"/><ellipse cx="51" cy="46" rx="4.4" ry="5.4" fill="#7ee8fa"/><ellipse cx="52.2" cy="44.4" rx="1.8" ry="2.1" fill="#fff"/>
+      <ellipse cx="69" cy="46" rx="5.4" ry="6.4" fill="#0b0616"/><ellipse cx="69" cy="46" rx="4.4" ry="5.4" fill="#7ee8fa"/><ellipse cx="70.2" cy="44.4" rx="1.8" ry="2.1" fill="#fff"/>
+    </g>
+    <path d="M56 55 Q60 59 64 55" fill="none" stroke="#4c1d95" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M60 30 L63.4 36 L60 42 L56.6 36 Z" fill="#7ee8fa" stroke="#fff" stroke-width=".9"/>
+  </svg>
+</div>
+
+<!-- Drawer / Modal / Toast -->
+<div id="drawer" class="drawer">
+  <div class="drawer-p">
+    <div class="w-10 h-1 rounded-full mx-auto mb-4" style="background:rgba(255,255,255,.22)"></div>
+    <div id="drawerBody"></div>
+  </div>
+</div>
+<div id="modal" class="modal"><div class="modal-in" id="modalBody"></div></div>
+<div id="toast"></div>
+<input type="file" id="fileInput" multiple class="hidden">
+
+<!-- anime SVG filter (used by CSS filter) -->
+<svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <filter id="anime">
+    <feColorMatrix type="saturate" values="1.5"/>
+    <feComponentTransfer>
+      <feFuncR type="discrete" tableValues="0 .25 .5 .75 1"/>
+      <feFuncG type="discrete" tableValues="0 .25 .5 .75 1"/>
+      <feFuncB type="discrete" tableValues="0 .25 .5 .75 1"/>
+    </feComponentTransfer>
+  </filter>
+</svg>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════
+   PAULIS COSMOS · v3
+   FIXES: HUD buttons now INSIDE frame (bracket-shaped, fully tappable)
+          No backdrop-filter except boot core
+          Ocean jellyfish bubbles · Rainbow rabbit sings · Voice synth
+          Anime filter · Panda B&W world · X42 encode
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Sparkles ✦ ────────────────────────────────────────── */
+(function(){
+  const S=['✦','✧','⋆','✫','✬','✭','✮','✯','✰','⭐','💫','✺'];
+  const host=document.getElementById('sparkles');
+  const N=window.innerWidth<520?22:34; let h='';
+  for(let i=0;i<N;i++){
+    h+=`<span class="sp ${['','s2','s3'][Math.random()*3|0]}" style="left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${(Math.random()*6).toFixed(2)}s,${(Math.random()*6).toFixed(2)}s;animation-duration:${(2.4+Math.random()*3).toFixed(2)}s,${(18+Math.random()*18)|0}s">${S[Math.random()*S.length|0]}</span>`;
+  }
+  host.innerHTML=h;
+})();
+
+/* ── Config ────────────────────────────────────────────── */
+const CATS={
+  music:{accept:'audio/*',ico:'🎵',pet:'🐺',lbl:'Music',color:'#c9a7ff'},
+  stories:{accept:'.txt,.md,.pdf,.doc,.docx,.rtf',ico:'📖',pet:'🦉',lbl:'Stories',color:'#ffd98e'},
+  pictures:{accept:'image/*,.heic,.heif,.avif',ico:'🖼️',pet:'🦋',lbl:'Pictures',color:'#ff9ecf'},
+  videos:{accept:'video/*',ico:'🎬',pet:'🦊',lbl:'Videos',color:'#7ee8fa'},
+  web:{accept:'.html,.htm,.url,.webloc',ico:'🌐',pet:'🕊️',lbl:'Web',color:'#9ae6b4'},
+  text:{accept:'.txt,.md,.json,.csv,.log',ico:'📜',pet:'🐢',lbl:'Text',color:'#f6ad55'},
+  models:{accept:'.glb,.gltf',ico:'🧊',pet:'🐘',lbl:'3D',color:'#b794f4'},
+  files:{accept:'*/*',ico:'📦',pet:'🐼',lbl:'Files',color:'#e2e8f0'}
+};
+const WORLDS={
+  cosmic:{name:'COSMIC DREAM',color:'#7ee8fa',accent:'#c9a7ff'},
+  ocean:{name:'OCEAN OF TALES',color:'#38bdf8',accent:'#7ee8fa'},
+  green:{name:'FOREST OF WISDOM',color:'#4ade80',accent:'#9ae6b4'},
+  fire:{name:'HEARTH OF STORIES',color:'#fb923c',accent:'#ffd98e'},
+  panda:{name:'PANDA · COW QUIET',color:'#e5e7eb',accent:'#a855f7'}
+};
+const LINES={
+  boot:["Welcome, dear one ✦","The crystal hums for you.","Let's wake the story-city."],
+  empty:["Tap a bracket on the side ✦","Bring grandma's voice here 🎵","Everything becomes a star ✦"],
+  added:["A new star is born ✦","It floats so gently…","Beautiful. Truly.","Grandma would smile 🥰"],
+  play:["Listen closely… 🎧","The cosmos breathes with sound."],
+  snap:["Captured! ✦","A memory frozen in crystal.","Saved to your constellation."],
+  ocean:["Ahh… we swim among jellyfish 🪼","Floating like the tide…","Listen to the deep 🌊"],
+  idle:["Drag a bubble to move it 🫧","Tap the rainbow rabbit 🐇🌈","Try the worlds below ✦","Double-tap a bubble to open 💫","Tap a Greek god above ✦","Tap the SYNTH cat for voice filters 🎛️"]
+};
+
+/* ── App state ─────────────────────────────────────────── */
+const App={
+  booted:false,ready:false,world:'cosmic',theme:'#7ee8fa',accent:'#c9a7ff',
+  bubbles:[],selected:null,nextId:1,
+  boot(){
+    if(this.booted)return; this.booted=true;
+    const b=document.getElementById('boot');
+    b.style.transition='opacity .5s, transform .5s';
+    b.style.opacity='0'; b.style.transform='scale(1.06)';
+    setTimeout(()=>b.remove(),520);
+    try{Audio.init()}catch(e){console.warn(e)}
+    document.getElementById('app').classList.add('ready');
+    this.ready=true;
+    Cosmos.start(); Bubbles.start(); Paulis.start();
+    Paulis.say(LINES.boot[Math.random()*3|0],4200);
+    setTimeout(()=>Paulis.say(LINES.empty[Math.random()*3|0],5000),5200);
+    setTimeout(()=>{
+      Bubbles.spawn({type:'note',name:'Welcome ✦',r:58,
+        text:'Welcome to Neo Hsmburg.\n\nTap a bracket on the side to bring in music, stories, pictures, videos, 3D friends — anything.\n\nTap the SYNTH cat for voice filters.\nTap the rainbow rabbit 🐇 — it sings!\n\nEverything becomes a floating star. ✦\n\n— Paulis C0D4r C4;3T'});
+    },900);
+  }
+};
+
+/* ── Audio engine ──────────────────────────────────────── */
+const Audio={
+  ctx:null,el:null,src:null,master:null,
+  low:null,high:null,drive:null,delay:null,fb:null,analyser:null,
+  lfo:null,lfoGain:null,
+  data:new Uint8Array(128),avg:0,bass:0,playing:false,preset:null,
+
+  init(){
+    const AC=window.AudioContext||window.webkitAudioContext;
+    this.ctx=new AC(); this.ctx.resume();
+    this.el=new Audio(); this.el.crossOrigin='anonymous';
+    this.analyser=this.ctx.createAnalyser(); this.analyser.fftSize=256;
+    this.analyser.smoothingTimeConstant=.82;
+
+    this.master=this.ctx.createGain(); this.master.gain.value=.85;
+    this.low=this.ctx.createBiquadFilter(); this.low.type='lowshelf'; this.low.frequency.value=220;
+    this.high=this.ctx.createBiquadFilter(); this.high.type='highshelf'; this.high.frequency.value=3200;
+    this.drive=this.ctx.createWaveShaper();
+    this.drive.curve=this.makeCurve(2);
+    this.drive.oversample='2x';
+    this.delay=this.ctx.createDelay(4); this.delay.delayTime.value=.22;
+    this.fb=this.ctx.createGain(); this.fb.gain.value=.28;
+
+    this.lfo=this.ctx.createOscillator(); this.lfo.frequency.value=0;
+    this.lfoGain=this.ctx.createGain(); this.lfoGain.gain.value=0;
+    this.lfo.connect(this.lfoGain); this.lfoGain.connect(this.master.gain); this.lfo.start();
+
+    this.src=this.ctx.createMediaElementSource(this.el);
+    this.src.connect(this.low); this.low.connect(this.high);
+    this.high.connect(this.drive); this.drive.connect(this.master);
+    this.drive.connect(this.delay); this.delay.connect(this.fb); this.fb.connect(this.delay);
+    this.delay.connect(this.master);
+    this.master.connect(this.analyser); this.analyser.connect(this.ctx.destination);
+
+    this.el.addEventListener('timeupdate',Player.sync);
+    this.el.addEventListener('loadedmetadata',Player.sync);
+    this.el.addEventListener('ended',()=>Player.setIcon(false));
+
+    const tick=()=>{
+      if(this.analyser){
+        this.analyser.getByteFrequencyData(this.data);
+        let s=0,b=0;
+        for(let i=0;i<this.data.length;i++){s+=this.data[i];if(i<8)b+=this.data[i];}
+        this.avg=s/this.data.length; this.bass=b/8;
+      }
+      requestAnimationFrame(tick);
+    }; tick();
+  },
+
+  makeCurve(amount){
+    const n=44100, c=new Float32Array(n), k=amount*100;
+    for(let i=0;i<n;i++){ const x=i*2/n-1; c[i]=(1+k)*x/(1+k*Math.abs(x)); }
+    return c;
+  },
+
+  load(url,name){
+    if(!this.ctx)return;
+    this.el.src=url; this.el.load();
+    document.getElementById('nowPlaying').textContent=(name||'audio').slice(0,28);
+    Paulis.say(LINES.play[0],2400);
+  },
+
+  toggle(){
+    if(!this.ctx)return;
+    if(!this.el.src){Toast.show('Load music first 🎵');return;}
+    if(this.ctx.state==='suspended')this.ctx.resume();
+    if(this.el.paused){ this.el.play().then(()=>Player.setIcon(true)).catch(()=>Toast.show('Blocked')); }
+    else { this.el.pause(); Player.setIcon(false); }
+  },
+
+  /* deep, cheap reverb-ish tail; no convolver */
+  setReverb(amt){
+    this.fb.gain.setTargetAtTime(.1+amt*.6,this.ctx.currentTime,.2);
+    this.delay.delayTime.setTargetAtTime(.15+amt*.4,this.ctx.currentTime,.2);
+  },
+  /* LFO tremolo for insects/birds */
+  setLFO(rate,depth){
+    this.lfo.frequency.setTargetAtTime(rate||0,this.ctx.currentTime,.2);
+    this.lfoGain.gain.setTargetAtTime(depth||0,this.ctx.currentTime,.2);
+  }
+};
+
+/* ── Voice presets ─────────────────────────────────────── */
+const VOICES={
+  apex_king:{rate:.82,low:10,high:-2,drive:.35,rev:.28,lfo:0,label:'APEX KING',em:'👑'},
+  apex_queen:{rate:.92,low:2,high:5,drive:.18,rev:.38,lfo:0,label:'APEX QUEEN',em:'♛'},
+  bunny:{rate:1.22,low:-5,high:6,drive:.1,rev:.15,lfo:0,label:'BUNNY',em:'🐰'},
+  fox:{rate:1.1,low:-2,high:3,drive:.2,rev:.22,lfo:0,label:'FOX',em:'🦊'},
+  darling:{rate:1.06,low:-8,high:2,drive:.08,rev:.42,lfo:0,label:'DARLING NB',em:'✨'},
+  teen_f:{rate:1.18,low:-3,high:4,drive:.08,rev:.2,lfo:0,label:'TEEN F',em:'💫'},
+  teen_m:{rate:1.08,low:3,high:1,drive:.12,rev:.15,lfo:0,label:'TEEN M',em:'⚡'},
+  teen_nb:{rate:1.13,low:-1,high:2,drive:.08,rev:.25,lfo:0,label:'TEEN NB',em:'🌈'},
+  grandma:{rate:.94,low:-2,high:-4,drive:.05,rev:.32,lfo:0,label:'GRANDMA',em:'👵'},
+  grandpa:{rate:.88,low:5,high:-5,drive:.15,rev:.3,lfo:0,label:'GRANDPA',em:'👴'},
+  grand_nb:{rate:.96,low:0,high:-2,drive:.08,rev:.35,lfo:0,label:'GRAND NB',em:'🌙'},
+  insect:{rate:1.55,low:-8,high:9,drive:.32,rev:.1,lfo:26,lfoD:.32,label:'INSECT',em:'🐜'},
+  bird:{rate:1.4,low:-6,high:10,drive:.15,rev:.15,lfo:14,lfoD:.22,label:'BIRD',em:'🐦'},
+  whale:{rate:.6,low:14,high:-10,drive:.1,rev:.62,lfo:0,label:'WHALE',em:'🐋'},
+  cricket:{rate:1.7,low:-10,high:12,drive:.2,rev:.08,lfo:38,lfoD:.42,label:'CRICKET',em:'🦗'}
+};
+const Synth={
+  current:'apex_queen',
+  open(ev){
+    if(ev)ev.stopPropagation();
+    const grid=Object.entries(VOICES).map(([k,v])=>`
+      <div class="vbtn ${k===this.current?'active':''}" data-v="${k}" onclick="Synth.pick('${k}',event)">
+        <div class="ve">${v.em}</div><div class="vn">${v.label}</div>
+      </div>`).join('');
+    Drawer.open('raw',`
+      <div class="text-center mb-2">
+        <div class="text-[16px] font-bold glow-gd" style="font-family:Fredoka;color:var(--gold)">X42 Voice Synth</div>
+        <div class="text-[10.5px]" style="color:rgba(244,241,255,.55)">Tap a preset · play audio · hear it transform</div>
+      </div>
+      <div class="vinyl" id="vinyl"><div class="vctr" id="vinylLabel">${VOICES[this.current].label}</div></div>
+      <div class="text-center text-[10.5px] mb-2" style="color:rgba(244,241,255,.6)">Current: <b id="curVoice" style="color:var(--theme)">${VOICES[this.current].label}</b></div>
+      <div class="vgrid">${grid}</div>
+      <div class="text-[10px] text-center mt-3" style="color:rgba(244,241,255,.5)">DARLING NB anonymizes male & female voices alike — same quality, unreadable timbre (CapCut-style).</div>
+    `);
+  },
+  pick(k,ev){
+    if(ev)ev.stopPropagation();
+    this.current=k;
+    const v=VOICES[k];
+    if(!Audio.ctx){Toast.show('Audio not ready');return;}
+    Audio.el.playbackRate=v.rate||1;
+    Audio.low.gain.setTargetAtTime(v.low||0,Audio.ctx.currentTime,.15);
+    Audio.high.gain.setTargetAtTime(v.high||0,Audio.ctx.currentTime,.15);
+    Audio.drive.curve=Audio.makeCurve(1+(v.drive||0)*3);
+    Audio.setReverb(v.rev||0);
+    Audio.setLFO(v.lfo||0,v.lfoD||0);
+    document.querySelectorAll('.vbtn').forEach(b=>b.classList.toggle('active',b.dataset.v===k));
+    const lbl=document.getElementById('vinylLabel'); if(lbl)lbl.textContent=v.label;
+    const cv=document.getElementById('curVoice'); if(cv)cv.textContent=v.label;
+    Paulis.say(`${v.em} ${v.label} — voice transformed ✦`,2200);
+  }
+};
+
+/* ── Player ────────────────────────────────────────────── */
+const Player={
+  toggle(){Audio.toggle()},
+  setIcon(on){const i=document.getElementById('playIcon');if(i)i.className=on?'fa-solid fa-pause text-[14px]':'fa-solid fa-play text-[14px]'},
+  sync(){
+    const el=Audio.el; if(!el||!el.duration)return;
+    document.getElementById('seek').value=(el.currentTime/el.duration)*100;
+    document.getElementById('tCur').textContent=Player.fmt(el.currentTime);
+    document.getElementById('tDur').textContent=Player.fmt(el.duration);
+  },
+  seek(v){const el=Audio.el;if(el&&el.duration)el.currentTime=(v/100)*el.duration},
+  fmt(s){const m=Math.floor(s/60),x=Math.floor(s%60);return`${m}:${String(x).padStart(2,'0')}`}
+};
+document.getElementById('seek').addEventListener('input',e=>Player.seek(e.target.value));
+
+/* ── Worlds (with ocean jellyfish mode) ─────────────────── */
+const Worlds={
+  set(w,ev){
+    if(ev)ev.stopPropagation();
+    App.world=w; const cfg=WORLDS[w];
+    App.theme=cfg.color; App.accent=cfg.accent;
+    document.documentElement.style.setProperty('--theme',cfg.color);
+    const nm=document.getElementById('world-name');
+    nm.textContent=cfg.name; nm.style.color=cfg.color;
+    document.querySelectorAll('.orb').forEach(o=>o.classList.toggle('active',o.dataset.w===w));
+    document.body.classList.toggle('ocean',w==='ocean');
+    Cosmos.rebuild();
+    if(w==='ocean') Paulis.say(LINES.ocean[Math.random()*3|0],3200);
+    else Paulis.say(`Entering ${cfg.name.toLowerCase()} ✦`,2400);
+  }
+};
+
+/* ── Cosmos canvas (fast — no blur, few ops) ────────────── */
+const Cosmos={
+  cv:null,ctx:null,w:0,h:0,parts:[],run:false,t:0,
+  start(){
+    this.cv=document.getElementById('cosmos');
+    this.ctx=this.cv.getContext('2d',{alpha:true});
+    this.resize();
+    window.addEventListener('resize',()=>this.resize());
+    window.addEventListener('orientationchange',()=>setTimeout(()=>this.resize(),220));
+    this.rebuild(); this.run=true;
+    requestAnimationFrame(()=>this.loop());
+  },
+  resize(){
+    if(!this.cv)return;
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    this.w=this.cv.clientWidth; this.h=this.cv.clientHeight;
+    this.cv.width=this.w*dpr; this.cv.height=this.h*dpr;
+    this.ctx.setTransform(dpr,0,0,dpr,0,0);
+  },
+  rebuild(){
+    this.parts=[];
+    const n=App.world==='cosmic'?70:App.world==='ocean'?36:50;
+    for(let i=0;i<n;i++){
+      this.parts.push({
+        x:Math.random()*this.w, y:Math.random()*this.h,
+        r:Math.random()*2+.5,
+        vy:(Math.random()*.5+.15)*(App.world==='fire'?-1:1),
+        vx:(Math.random()-.5)*.3,
+        a:Math.random()*.6+.3, ph:Math.random()*Math.PI*2, tw:Math.random()*Math.PI*2
+      });
+    }
+  },
+  loop(){
+    if(!this.run)return;
+    requestAnimationFrame(()=>this.loop());
+    this.t+=.016;
+    const {ctx,w,h}=this; if(!w||!h)return;
+    const theme=App.theme;
+    const avg=Audio.playing?Audio.avg:0, bass=Audio.playing?Audio.bass:0;
+
+    /* bg */
+    ctx.fillStyle='#07060f';
+    ctx.fillRect(0,0,w,h);
+
+    /* world overlays — cheap */
+    if(App.world==='ocean'){
+      ctx.globalAlpha=.22+.1*Math.sin(this.t*.4);
+      const g=ctx.createLinearGradient(0,0,0,h);
+      g.addColorStop(0,'#0b1e3a'); g.addColorStop(1,'#02060f');
+      ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+      ctx.globalAlpha=1;
+    } else if(App.world==='green'){
+      ctx.globalAlpha=.15; ctx.strokeStyle=theme;
+      for(let i=0;i<5;i++){
+        const x0=(i/5)*w+40;
+        ctx.beginPath(); ctx.moveTo(x0,h);
+        ctx.quadraticCurveTo(x0+Math.sin(this.t*.3+i)*40,h*.6,x0+Math.sin(this.t*.2+i)*80,h*.3);
+        ctx.lineWidth=1; ctx.stroke();
+      }
+      ctx.globalAlpha=1;
+    } else if(App.world==='fire'){
+      const g=ctx.createRadialGradient(w/2,h,10,w/2,h,h*.7);
+      g.addColorStop(0,`rgba(251,146,60,${.12+bass/1000})`); g.addColorStop(1,'rgba(251,146,60,0)');
+      ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+    } else if(App.world==='panda'){
+      /* B&W panda/cow split */
+      ctx.globalAlpha=.06;
+      ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h*.5);
+      ctx.fillStyle='#000'; ctx.fillRect(0,h*.5,w,h*.5);
+      /* cow spots */
+      ctx.globalAlpha=.12; ctx.fillStyle='#fff';
+      for(let i=0;i<3;i++){
+        const cx=w*(.2+.3*i), cy=h*(.7+.05*(i%2));
+        ctx.beginPath(); ctx.arc(cx,cy,w*.08,0,Math.PI*2); ctx.fill();
+      }
+      /* panda ears suggestion */
+      ctx.globalAlpha=.1; ctx.fillStyle='#000';
+      ctx.beginPath(); ctx.arc(w*.15,h*.2,w*.09,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(w*.85,h*.2,w*.09,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=1;
+    } else {
+      /* cosmic — soft purple haze */
+      ctx.globalAlpha=.10;
+      const g=ctx.createRadialGradient(w*.3,h*.4,10,w*.3,h*.4,w*.65);
+      g.addColorStop(0,'#a855f7'); g.addColorStop(1,'rgba(168,85,247,0)');
+      ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+      ctx.globalAlpha=1;
+    }
+
+    /* city skyline (skip on ocean for perf) */
+    if(App.world!=='ocean') this.drawCity(w,h,theme,avg);
+
+    /* particles */
+    for(let i=0;i<this.parts.length;i++){
+      const p=this.parts[i];
+      p.x+=p.vx+Math.sin(this.t+p.ph)*.15+avg*.003;
+      p.y+=p.vy*(1+avg*.01);
+      if(App.world==='fire'&&p.y<-10){p.y=h+10;p.x=Math.random()*w}
+      if(App.world!=='fire'&&p.y>h+10){p.y=-10;p.x=Math.random()*w}
+      if(p.x<-10)p.x=w+10; if(p.x>w+10)p.x=-10;
+      const tw=.55+Math.sin(this.t*2.4+p.tw)*.45;
+      ctx.globalAlpha=p.a*(0.5+tw*.6);
+      ctx.fillStyle=theme;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r*(0.85+tw*0.35),0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+
+    /* audio-reactive border — cheap stroke */
+    const breathe=Audio.playing?(bass/255):(Math.sin(this.t*.7)*.5+.5)*.1;
+    ctx.strokeStyle=theme;
+    ctx.globalAlpha=.35+breathe*.5;
+    ctx.lineWidth=1.5+breathe*4;
+    if(ctx.roundRect)ctx.roundRect(7,7,w-14,h-14,20);
+    else ctx.rect(7,7,w-14,h-14);
+    ctx.stroke();
+    ctx.globalAlpha=1;
+  },
+  drawCity(w,h,theme,avg){
+    const ctx=this.ctx, baseY=h*.92;
+    const towers=[
+      {x:.08,w:.08,hh:.30,roof:'plant'},{x:.18,w:.06,hh:.22,roof:'dome'},
+      {x:.26,w:.09,hh:.38,roof:'plant'},{x:.37,w:.07,hh:.28,roof:'glass'},
+      {x:.46,w:.10,hh:.44,roof:'dome'},{x:.58,w:.07,hh:.26,roof:'plant'},
+      {x:.67,w:.09,hh:.36,roof:'glass'},{x:.78,w:.06,hh:.24,roof:'plant'},
+      {x:.86,w:.09,hh:.32,roof:'dome'}
+    ];
+    ctx.globalAlpha=.55;
+    for(const t of towers){
+      const bx=w*t.x, bw=w*t.w, bh=h*t.hh, by=baseY-bh;
+      ctx.fillStyle='#16102c';
+      ctx.fillRect(bx,by,bw,bh);
+      ctx.strokeStyle=`rgba(126,232,250,.18)`;
+      ctx.lineWidth=1; ctx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
+      /* windows (static-ish for perf) */
+      ctx.fillStyle=`rgba(126,232,250,${.25+avg/1200})`;
+      for(let yy=by+8; yy<baseY-6; yy+=12){
+        for(let xx=bx+4; xx<bx+bw-3; xx+=8){
+          ctx.globalAlpha=.35;
+          ctx.fillRect(xx,yy,1.4,1.4);
+        }
+      }
+      ctx.globalAlpha=.55;
+      /* roof */
+      if(t.roof==='plant'){
+        ctx.fillStyle='rgba(74,222,128,.5)'; ctx.fillRect(bx+2,by-4,bw-4,4);
+      } else if(t.roof==='dome'){
+        ctx.fillStyle='rgba(201,167,255,.35)';
+        ctx.beginPath(); ctx.arc(bx+bw/2,by,bw*.4,Math.PI,0); ctx.fill();
+      } else {
+        ctx.fillStyle='rgba(126,232,250,.25)'; ctx.fillRect(bx+2,by-6,bw-4,6);
+      }
+    }
+    ctx.globalAlpha=1;
+  }
+};
+
+/* ── Bubbles (with jellyfish mode) ─────────────────────── */
+const Bubbles={
+  layer:null,run:false,
+  start(){ this.layer=document.getElementById('bubbles'); this.run=true; requestAnimationFrame(()=>this.loop()); },
+  stage(){ return document.getElementById('app').getBoundingClientRect(); },
+  loop(){
+    if(!this.run)return;
+    requestAnimationFrame(()=>this.loop());
+    const r=this.stage(); const W=r.width,H=r.height;
+    const avg=Audio.playing?Audio.avg:0;
+    const ocean=App.world==='ocean';
+    const t=performance.now()/1000;
+    for(const b of App.bubbles){
+      if(b.dragging)continue;
+      if(ocean){
+        /* jellyfish pulse: slow vertical bob + gentle drift */
+        b.x+=Math.sin(t*.3+b.seed)*.15;
+        b.y+=Math.sin(t*.8+b.seed*2)*.12;
+      } else {
+        b.vx*=.995; b.vy*=.995;
+        b.vx+=Math.sin(t*.4+b.seed)*.006;
+        b.vy+=Math.cos(t*.5+b.seed)*.005;
+        b.x+=b.vx; b.y+=b.vy;
+      }
+      const pad=b.r+8;
+      if(b.x<pad){b.x=pad;b.vx=Math.abs(b.vx)*.8}
+      if(b.x>W-pad){b.x=W-pad;b.vx=-Math.abs(b.vx)*.8}
+      if(b.y<pad+40){b.y=pad+40;b.vy=Math.abs(b.vy)*.8}
+      if(b.y>H-pad-150){b.y=H-pad-150;b.vy=-Math.abs(b.vy)*.8}
+      const pulse=1+(avg/255)*.04;
+      b.dom.style.transform=`translate3d(${b.x-b.r}px,${b.y-b.r}px,0) scale(${b.scale*pulse})`;
+    }
+  },
+  spawn(c){
+    const r=this.stage(); const W=r.width,H=r.height;
+    const rad=c.r||52;
+    const b={id:App.nextId++,type:c.type,name:c.name||'untitled',text:c.text||'',
+      url:c.url||null,mime:c.mime||'',raw:c.raw||null,filter:false,
+      r:rad,x:c.x??(60+Math.random()*(W-120)),y:c.y??(110+Math.random()*(H-360)),
+      vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.3,
+      scale:1,seed:Math.random()*Math.PI*2,dragging:false,dom:null,videoEl:null};
+    const el=document.createElement('div');
+    el.className='bubble';
+    el.style.width=(rad*2)+'px'; el.style.height=(rad*2)+'px';
+    el.innerHTML=this.html(b);
+    el.addEventListener('pointerdown',e=>this.down(e,b));
+    el.addEventListener('dblclick',e=>{e.stopPropagation();this.open(b)});
+    this.layer.appendChild(el); b.dom=el;
+    b.videoEl=el.querySelector('video');
+    el.style.transform=`translate3d(${b.x-rad}px,${b.y-rad}px,0) scale(1)`;
+    App.bubbles.push(b); this.count();
+    Paulis.say(LINES.added[Math.random()*4|0],2200);
+    return b;
+  },
+  html(b){
+    const tent=`<div class="tents">${Array.from({length:5},(_,i)=>
+      `<span style="left:${12+i*19}%;animation-delay:${i*.3}s"></span>`).join('')}</div>`;
+    const f=b.filter?'filter:url(#anime) saturate(1.35) contrast(1.1);':'';
+    let inner='';
+    switch(b.type){
+      case 'image': inner=`<img src="${b.url}" alt="" style="${f}">`; break;
+      case 'video': inner=`<video src="${b.url}" muted loop playsinline preload="metadata" style="${f}"></video>
+        <div style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none">
+          <i class="fa-solid fa-play" style="color:#fff;font-size:13px"></i></div>`; break;
+      case 'audio':{
+        const bars=Array.from({length:16},(_,i)=>`<span style="height:${6+Math.random()*22}px;transform:rotate(${i*22.5}deg)"></span>`).join('');
+        inner=`<div style="position:absolute;inset:0;border-radius:50%">
+          ${bars.replace(/<span/g,'<span style="position:absolute;left:50%;bottom:50%;width:2.5px;border-radius:2px;background:linear-gradient(to top,var(--theme),#fff);transform-origin:50% 100%;opacity:.85"')}
+        </div><i class="fa-solid fa-music" style="position:relative;color:#fff;font-size:15px"></i>`;
+        break;
+      }
+      case 'note': case 'text':
+        inner=`<i class="fa-solid fa-scroll" style="color:#ffe9b8;font-size:17px"></i>`; break;
+      case 'web': inner=`<i class="fa-solid fa-globe" style="color:#c6f6d5;font-size:17px"></i>`; break;
+      case 'model': inner=`<i class="fa-solid fa-cube" style="color:#e9d8fd;font-size:17px"></i>`; break;
+      case 'pdf': inner=`<i class="fa-solid fa-file-pdf" style="color:#ffd0e6;font-size:17px"></i>`; break;
+      default: inner=`<span class="face">📦</span>`;
+    }
+    const cat=CATS[this.catOf(b.type)];
+    return `<div class="core">${inner}</div>${tent}
+      <span class="chip">${cat.pet} ${this.esc(b.name)}</span>`;
+  },
+  catOf(t){return({image:'pictures',video:'videos',audio:'music',note:'stories',text:'text',web:'web',model:'models',pdf:'stories'})[t]||'files'},
+  esc(s){return String(s||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]))},
+  down(e,b){
+    e.preventDefault(); e.stopPropagation();
+    b.dragging=true; b.dom.setPointerCapture?.(e.pointerId);
+    const sx=e.clientX,sy=e.clientY,ox=b.x,oy=b.y;
+    let moved=0,lastT=performance.now(),lastX=sx,lastY=sy;
+    const mv=(ev)=>{
+      const dx=ev.clientX-sx,dy=ev.clientY-sy;
+      moved=Math.max(moved,Math.hypot(dx,dy));
+      b.x=ox+dx; b.y=oy+dy;
+      const now=performance.now(),dt=Math.max(now-lastT,1);
+      b.vx=(ev.clientX-lastX)/dt*8; b.vy=(ev.clientY-lastY)/dt*8;
+      lastT=now; lastX=ev.clientX; lastY=ev.clientY;
+      b.dom.style.transform=`translate3d(${b.x-b.r}px,${b.y-b.r}px,0) scale(${b.scale*1.05})`;
+    };
+    const up=()=>{
+      b.dragging=false;
+      b.dom.style.transform=`translate3d(${b.x-b.r}px,${b.y-b.r}px,0) scale(${b.scale})`;
+      window.removeEventListener('pointermove',mv);
+      window.removeEventListener('pointerup',up);
+      window.removeEventListener('pointercancel',up);
+      if(moved<6)this.select(b);
+    };
+    window.addEventListener('pointermove',mv,{passive:false});
+    window.addEventListener('pointerup',up);
+    window.addEventListener('pointercancel',up);
+  },
+  select(b){
+    App.bubbles.forEach(x=>x.dom.classList.remove('sel'));
+    b.dom.classList.add('sel'); App.selected=b;
+    Paulis.say(`"${b.name}" — double-tap to open.`,2600);
+    Drawer.open('inspect',b);
+  },
+  resize(b,r){if(!b)return;b.r=r;b.dom.style.width=(r*2)+'px';b.dom.style.height=(r*2)+'px'},
+  open(b){
+    const map={image:'media',video:'media',audio:'media',note:'text',text:'text',web:'web',pdf:'pdf',model:'model'};
+    const fn=map[b.type]||'file'; Modal[fn]?.(b);
+  },
+  remove(b){
+    b.dom.remove();
+    App.bubbles=App.bubbles.filter(x=>x.id!==b.id);
+    if(App.selected?.id===b.id)App.selected=null;
+    this.count(); Toast.show('Released to the void 🌌');
+  },
+  count(){const el=document.getElementById('bCount');if(el)el.textContent=App.bubbles.length}
+};
+
+/* ── HUD ───────────────────────────────────────────────── */
+const HUD={
+  pick(cat,ev){
+    if(ev)ev.stopPropagation();
+    const c=CATS[cat];
+    const inp=document.getElementById('fileInput');
+    inp.accept=c.accept; inp.value='';
+    inp.onchange=e=>this.handle(e.target.files);
+    inp.click();
+    Paulis.say(`${c.pet} Bring me your ${c.lbl.toLowerCase()}…`,2000);
+  },
+  async handle(fs){ if(!fs||!fs.length)return; Toast.show(`Adding ${fs.length}…`); for(const f of fs)await this.ingest(f); },
+  async ingest(file){
+    const mime=file.type||'',name=file.name||'untitled',
+      ext=(name.split('.').pop()||'').toLowerCase(),
+      url=URL.createObjectURL(file);
+    try{
+      if(mime.startsWith('image/')||['png','jpg','jpeg','webp','gif','svg','avif','heic','heif'].includes(ext))
+        return Bubbles.spawn({type:'image',name,url,mime,raw:file});
+      if(mime.startsWith('video/')||['mp4','mov','m4v','webm','ogv','avi','mkv'].includes(ext))
+        return Bubbles.spawn({type:'video',name,url,mime,raw:file});
+      if(mime.startsWith('audio/')||['mp3','m4a','wav','ogg','flac','aac','opus'].includes(ext)){
+        Bubbles.spawn({type:'audio',name,url,mime,raw:file}); Audio.load(url,name); return;
+      }
+      if(mime==='application/pdf'||ext==='pdf') return Bubbles.spawn({type:'pdf',name,url,mime,raw:file});
+      if(['glb','gltf'].includes(ext)) return Bubbles.spawn({type:'model',name,url,mime,raw:file});
+      if(['html','htm','url','webloc'].includes(ext)||mime==='text/html')
+        return Bubbles.spawn({type:'web',name,url,mime,raw:file});
+      if(mime.startsWith('text/')||['txt','md','json','csv','log','rtf'].includes(ext)){
+        const text=await file.text();
+        return Bubbles.spawn({type:ext==='md'?'text':'note',name,text:text.slice(0,6000),url,mime,raw:file});
+      }
+      Bubbles.spawn({type:'file',name,url,mime,raw:file});
+    }catch(e){console.warn(e);Toast.show(`Could not read ${name}`)}
+  }
+};
+
+/* ── DJ cats ───────────────────────────────────────────── */
+const DJ={
+  play(who,ev){
+    if(ev)ev.stopPropagation();
+    const presets={
+      artemis:{low:10,high:-2,drive:.35,rev:.4,label:'ARTEMIS · wild forest'},
+      luna:{low:2,high:8,drive:.15,rev:.5,label:'LUNA · silver tide'},
+      diana:{low:4,high:0,drive:.2,rev:.35,label:'DIANA · warm forest'}
+    };
+    const p=presets[who]; if(!p||!Audio.ctx)return;
+    Audio.low.gain.setTargetAtTime(p.low,Audio.ctx.currentTime,.2);
+    Audio.high.gain.setTargetAtTime(p.high,Audio.ctx.currentTime,.2);
+    Audio.drive.curve=Audio.makeCurve(1+p.drive*3);
+    Audio.setReverb(p.rev);
+    Paulis.say(`🎧 ${p.label}`,2800);
+    Toast.show(`${who.toUpperCase()} on decks 🎧`);
+  }
+};
+
+/* ── Gods ─────────────────────────────────────────────── */
+const Gods={
+  tell(id,ev){
+    if(ev)ev.stopPropagation();
+    const L={
+      irene:'🕊️ ΕΙΡΗΝΗ — Peace. Where peace walks, everything blooms.',
+      hermes:'⚕️ ΕΡΜΗΣ — Messages, travel, tech. Every bridge begins with hello.',
+      aphrodite:'🌹 ΑΦΡΟΔΙΤΗ — Love, beauty, care. Every being deserves tenderness.',
+      muses:'🎼 ΜΟΥΣΑΙ — Art, music, memory. You are one when you create.',
+      athena:'🦉 ΑΘΗΝΑ · MINERVA — Wisdom, craft, just strategy.',
+      minotaur:'🐂 ΜΙΝΩΤΑΥΡΟΣ — Guardian of the labyrinth. Strength that shelters.'
+    };
+    Paulis.say(L[id]||'The gods watch over us ✦',3800);
+  }
+};
+
+/* ── Rainbow Rabbit ───────────────────────────────────── */
+const Rabbit={
+  lyrics:[
+    ["Oh the sponge-city hums tonight","Every drop of rain a light","We build the future from the past","Nothing wasted, nothing lost"],
+    ["🐇 Rainbow rabbit on the trail","Painting skies with every tail","If you're weary, if you're small","We will catch you when you fall"],
+    ["Peace is not a distant star","It's the way we treat who we are","Recycle love, recycle care","Every being, everywhere"],
+    ["Sing with me a while, dear friend","Every story has an end","But every ending starts anew","Neo Hsmburg built for you"]
+  ],
+  singing:false, idx:0, timer:null,
+  toggle(ev){
+    if(ev)ev.stopPropagation();
+    if(this.singing) this.stop();
+    else this.sing();
+  },
+  sing(){
+    this.singing=true;
+    Paulis.say('🐇🌈 Listen — the rabbit sings…',2400);
+    this.next();
+  },
+  next(){
+    if(!this.singing) return;
+    const verse=this.lyrics[this.idx%this.lyrics.length];
+    /* show lyric bubble */
+    const el=document.createElement('div');
+    el.className='says';
+    el.style.right='auto'; el.style.left='50%'; el.style.transform='translateX(-50%)';
+    el.style.top='22%'; el.style.maxWidth='280px';
+    el.style.background='linear-gradient(150deg, var(--pink), var(--gold))';
+    el.style.color='#1a0f2e';
+    el.innerHTML=verse.map(l=>`<div style="font-size:12px;line-height:1.5">${l}</div>`).join('');
+    document.body.appendChild(el);
+    setTimeout(()=>{
+      el.style.transition='opacity .4s'; el.style.opacity='0';
+      setTimeout(()=>el.remove(),420);
+    },4400);
+    /* speak the lyrics */
+    if('speechSynthesis' in window){
+      speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance(verse.join('. '));
+      u.rate=.92; u.pitch=1.32; u.volume=.9;
+      const vs=speechSynthesis.getVoices();
+      const f=vs.find(v=>/female|samantha|zira|victoria|karen/i.test(v.name));
+      if(f) u.voice=f;
+      speechSynthesis.speak(u);
+    }
+    this.idx++;
+    clearTimeout(this.timer);
+    this.timer=setTimeout(()=>this.next(),5200);
+  },
+  stop(){
+    this.singing=false;
+    clearTimeout(this.timer);
+    if('speechSynthesis' in window) speechSynthesis.cancel();
+    Toast.show('The rabbit rests ✦');
+  }
+};
+
+/* ── Anime filter toggle ──────────────────────────────── */
+const Filter={
+  anime(){
+    /* toggle anime filter on all image/video bubbles */
+    let on=false;
+    for(const b of App.bubbles){
+      if(b.type==='image'||b.type==='video'){
+        b.filter=!b.filter;
+        on=b.filter;
+        /* redraw bubble inner HTML to apply filter */
+        b.dom.querySelector('.core').innerHTML=Bubbles.html(b).split('<div class="core">')[1].split('</div>')[0];
+        b.videoEl=b.dom.querySelector('video');
+      }
+    }
+    Toast.show(on?'✦ Anime filter ON':'Anime filter off');
+    Paulis.say(on?'Anime magic applied ✦':'Filter removed',2000);
+  }
+};
+
+/* ── X42 encode (audit + compress metadata snapshot) ──── */
+const X42={
+  encode(){
+    const total=App.bubbles.length;
+    const byType={};
+    for(const b of App.bubbles) byType[b.type]=(byType[b.type]||0)+1;
+    let dataUrl='';
+    try {
+      const sm=document.createElement('canvas');
+      sm.width=640; sm.height=640;
+      const g=sm.getContext('2d');
+      g.fillStyle='#07060f'; g.fillRect(0,0,640,640);
+      try{g.drawImage(Cosmos.cv,0,0,640,640)}catch(e){}
+      dataUrl=sm.toDataURL('image/jpeg',.55);
+    } catch(e){}
+    const meta={
+      version:'X42.3', ts:new Date().toISOString(), world:App.world,
+      voice:Synth.current, filters:App.bubbles.filter(b=>b.filter).length,
+      summary:byType, total
+    };
+    const blob=new Blob([JSON.stringify(meta,null,2)],{type:'application/json'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`x42-encode-${Date.now()}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    Modal.open(`
+      <div class="text-center">
+        <div class="text-4xl mb-2">⚡</div>
+        <div class="text-[16px] font-bold glow-aq mb-1" style="font-family:Fredoka;color:var(--aqua)">X42 Encoded</div>
+        <div class="text-[11.5px] mb-4" style="color:rgba(244,241,255,.7)">${total} bubble${total!==1?'s':''} audited · metadata preserved · smallest form</div>
+        <div class="text-left text-[11px] p-3 rounded-xl mb-3" style="background:rgba(255,255,255,.05);color:rgba(244,241,255,.85)">
+          ${Object.entries(byType).map(([k,v])=>`<div>· <b style="color:var(--aqua)">${k}</b> × ${v}</div>`).join('') || '<div>· empty cosmos</div>'}
+          <div class="mt-2" style="color:var(--lav)">Voice: ${VOICES[Synth.current].em} ${VOICES[Synth.current].label}</div>
+          <div style="color:var(--mint)">World: ${WORLDS[App.world].name}</div>
+        </div>
+        <button onclick="Modal.close()" class="w-full py-3 rounded-2xl text-[12px] font-bold"
+          style="background:linear-gradient(120deg,#7ee8fa,#c9a7ff,#ff9ecf);color:#0b0616;pointer-events:auto;touch-action:manipulation">Done</button>
+      </div>
+    `);
+    Paulis.say('X42 audit complete — data preserved ⚡',2400);
+  }
+};
+
+/* ── Paulis ───────────────────────────────────────────── */
+const Paulis={
+  el:null,sayEl:null,timer:null,idleT:null,
+  start(){
+    this.el=document.getElementById('paulis');
+    this.makeDraggable();
+    this.idle();
+    this.el.addEventListener('dblclick',()=>this.speak(this.sayEl?.textContent||'Hello, dear one.'));
+  },
+  makeDraggable(){
+    let drag=false,ox=0,oy=0; const el=this.el;
+    el.addEventListener('pointerdown',e=>{
+      drag=true; el.setPointerCapture(e.pointerId);
+      const r=el.getBoundingClientRect();
+      ox=e.clientX-r.left; oy=e.clientY-r.top;
+    });
+    window.addEventListener('pointermove',e=>{
+      if(!drag)return;
+      const x=Math.min(Math.max(e.clientX-ox,4),window.innerWidth-el.offsetWidth-4);
+      const y=Math.min(Math.max(e.clientY-oy,4),window.innerHeight-el.offsetHeight-4);
+      el.style.left=x+'px'; el.style.right='auto'; el.style.top=y+'px'; el.style.bottom='auto';
+      this.reposition();
+    });
+    window.addEventListener('pointerup',()=>drag=false);
+  },
+  say(text,ms=3400){
+    if(!text)return; this.hide();
+    const d=document.createElement('div');
+    d.className='says'; d.textContent=text;
+    document.body.appendChild(d); this.sayEl=d; this.reposition();
+    clearTimeout(this.timer);
+    this.timer=setTimeout(()=>this.hide(),ms);
+    this.idle();
+  },
+  hide(){
+    if(this.sayEl){
+      const s=this.sayEl;
+      s.style.transition='opacity .26s'; s.style.opacity='0';
+      setTimeout(()=>s.remove(),280); this.sayEl=null;
+    }
+  },
+  reposition(){
+    if(!this.sayEl)return;
+    const r=this.el.getBoundingClientRect();
+    const w=this.sayEl.offsetWidth||200;
+    let left=r.left-w-10;
+    if(left<8)left=Math.min(r.right+10,window.innerWidth-w-8);
+    let top=r.top;
+    if(top+90>window.innerHeight)top=window.innerHeight-100;
+    this.sayEl.style.left=Math.max(8,left)+'px';
+    this.sayEl.style.top=Math.max(8,top)+'px';
+  },
+  idle(){
+    clearTimeout(this.idleT);
+    this.idleT=setTimeout(()=>{
+      const pool=App.bubbles.length===0?LINES.empty:LINES.idle;
+      this.say(pool[Math.random()*pool.length|0],3800);
+    },14000);
+  },
+  speak(t){
+    if(!('speechSynthesis' in window))return;
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(t);
+    u.rate=.94; u.pitch=1.28;
+    speechSynthesis.speak(u);
+  }
+};
+
+/* ── Drawer (ghost-click guard) ──────────────────────── */
+const Drawer={
+  el:null,openedAt:0,
+  init(){
+    this.el=document.getElementById('drawer');
+    this.el.addEventListener('click',e=>{
+      if(e.target!==this.el)return;
+      if(Date.now()-this.openedAt<400)return;
+      this.close();
+    });
+  },
+  open(kind,p){
+    if(!this.el)this.init();
+    const body=document.getElementById('drawerBody');
+    if(kind==='inspect'&&p) body.innerHTML=this.inspectHTML(p);
+    else if(kind==='story') body.innerHTML=this.storyHTML();
+    else if(kind==='vision') body.innerHTML=this.visionHTML();
+    else if(kind==='create') body.innerHTML=this.createHTML();
+    else if(kind==='raw') body.innerHTML=p;
+    this.el.classList.add('open'); this.openedAt=Date.now();
+  },
+  close(){ this.el?.classList.remove('open'); },
+  inspectHTML(b){
+    const c=CATS[Bubbles.catOf(b.type)];
+    return `
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-12 h-12 rounded-2xl grid place-items-center text-xl shrink-0"
+             style="background:${c.color}33;border:1px solid ${c.color}66">${c.pet}</div>
+        <div class="min-w-0">
+          <div class="text-[15px] font-bold truncate" style="font-family:Fredoka;color:#fff">${Bubbles.esc(b.name)}</div>
+          <div class="text-[10px] uppercase tracking-widest" style="color:${c.color}">${c.lbl}</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 mb-4">
+        <button onclick="Bubbles.open(App.selected)" class="surf-2 py-2.5 rounded-xl text-[12px] font-bold">Open</button>
+        <button onclick="Snapshot.one(App.selected)" class="surf-2 py-2.5 rounded-xl text-[12px] font-bold">📸 Snap</button>
+        <button onclick="Bubbles.remove(App.selected);Drawer.close()" class="surf-2 py-2.5 rounded-xl text-[12px] font-bold">🗑 Release</button>
+        <button onclick="Paulis.speak(${JSON.stringify((b.name||'').slice(0,80))})" class="surf-2 py-2.5 rounded-xl text-[12px] font-bold">🔊 Read</button>
+      </div>
+      <div class="text-[10px] mb-1 uppercase tracking-widest" style="color:rgba(244,241,255,.55)">Size</div>
+      <input type="range" min="34" max="110" value="${b.r}" class="w-full mb-4" oninput="Bubbles.resize(App.selected,+this.value)">
+      ${b.text?`<div class="text-[11px] leading-relaxed p-3 rounded-xl max-h-40 overflow-y-auto"
+        style="background:rgba(0,0,0,.4);color:rgba(244,241,255,.85);white-space:pre-wrap">${Bubbles.esc(b.text).slice(0,1200)}</div>`:''}
+    `;
+  },
+  createHTML(){
+    return `
+      <div class="text-center mb-4">
+        <div class="text-[18px] font-bold glow-aq" style="font-family:Fredoka;color:var(--aqua)">Create from URL</div>
+        <div class="text-[11px]" style="color:rgba(244,241,255,.6)">Bring any web thing into your cosmos 🌐</div>
+      </div>
+      <input id="urlIn" type="url" placeholder="https://…"
+        class="w-full px-3 py-3 rounded-xl text-[13px] outline-none mb-3"
+        style="background:rgba(255,255,255,.07);border:1px solid var(--bd);color:#fff"
+        autocapitalize="off" autocorrect="off" spellcheck="false">
+      <div class="grid grid-cols-2 gap-2 mb-3">
+        <button onclick="Web.add('web')" class="surf-2 py-2.5 rounded-xl text-[12px] font-bold">🌐 Web</button>
+        <button onclick="Web.add('audio')" class="surf-2 py-2.5 rounded-xl text-[12px] font-bold">🎵 Audio</button>
+        <button onclick="Web.add('image')" class="surf-2 py-2.5 rounded-xl text-[12px] font-bold">🖼️ Image</button>
+        <button onclick="Web.add('video')" class="surf-2 py-2.5 rounded-xl text-[12px] font-bold">🎬 Video</button>
+      </div>
+      <div class="text-[10px] text-center" style="color:rgba(244,241,255,.5)">Try: https://upload.wikimedia.org/wikipedia/commons/a/a9/120_bpm_drum_beat.ogg</div>
+    `;
+  },
+  storyHTML(){
+    const c=[
+      {i:'👵',l:'Grandmother',c:'#ffd98e',n:'The origin — her voice, her hands, her world.'},
+      {i:'🎙️',l:'Voice',c:'#ff9ecf',n:'Recorded warmth. Sound of belonging.'},
+      {i:'📖',l:'Fairytale',c:'#c9a7ff',n:'The story she told, again and again.'},
+      {i:'🖼️',l:'Images',c:'#7ee8fa',n:'Photos, drawings, the old album.'},
+      {i:'🎵',l:'Music',c:'#9ae6b4',n:'The song she hummed while cooking.'},
+      {i:'🌱',l:'Lesson',c:'#ffd98e',n:'What she carried forward.'},
+      {i:'✦',l:'Your Response',c:'#a855f7',n:'Remix, answer, continue.'},
+      {i:'🌌',l:'New Story',c:'#7ee8fa',n:'The chain extends.'}
+    ];
+    return `
+      <div class="text-center mb-4">
+        <div class="text-[18px] font-bold glow-gd" style="font-family:Fredoka;color:var(--gold)">Grandmother's Chain</div>
+        <div class="text-[11px]" style="color:rgba(244,241,255,.6)">Wisdom → Voice → Story → You</div>
+      </div>
+      ${c.map((s,i)=>`
+        <div class="flex gap-3 items-start mb-2.5">
+          <div class="w-10 h-10 rounded-xl grid place-items-center text-base shrink-0"
+               style="background:${s.c}33;border:1px solid ${s.c}66">${s.i}</div>
+          <div class="pt-0.5 min-w-0">
+            <div class="text-[12px] font-bold" style="color:${s.c}">${s.l}</div>
+            <div class="text-[11px] leading-snug" style="color:rgba(244,241,255,.68)">${s.n}</div>
+          </div>
+        </div>
+        ${i<c.length-1?`<div class="ml-5 w-px h-3 -mt-1 mb-1" style="background:${s.c}66"></div>`:''}
+      `).join('')}
+      <button onclick="Paulis.say('Tell me a story from long ago…',5000);Drawer.close()"
+        class="w-full mt-4 py-3 rounded-2xl font-bold text-[13px]"
+        style="background:linear-gradient(120deg,#ffd98e,#ff9ecf,#c9a7ff);color:#160a24">💛 Begin a story</button>
+    `;
+  },
+  visionHTML(){
+    return `
+      <div class="text-center mb-4">
+        <div class="text-[18px] font-bold glow-pk" style="font-family:Fredoka;color:var(--pink)">Neo Hsmburg Blueprint</div>
+        <div class="text-[11px]" style="color:rgba(244,241,255,.6)">A sponge-city where every being belongs</div>
+      </div>
+      <div class="space-y-2.5 text-[12px] leading-relaxed" style="color:rgba(244,241,255,.85)">
+        <p><b style="color:var(--aqua)">✦ Living city.</b> Glassy membranes, eco towers. Every drop recycled. Every insect welcomed.</p>
+        <p><b style="color:var(--mint)">✦ Upcycled play.</b> Waste becomes art, sound, texture. Entertainment from yesterday's plastic.</p>
+        <p><b style="color:var(--gold)">✦ All beings, all rights.</b> Human rights extended to every lifeform. Every entity deserves dignity, food, safety.</p>
+        <p><b style="color:var(--pink)">✦ No brainrot.</b> Media that teaches, heals, connects. Stories that carry memory. Music that carries warmth.</p>
+        <p><b style="color:var(--lav)">✦ Guardians.</b> Greek virtues watch over us: Irene, Hermes, Aphrodite, the Muses, Athena, Minotaur.</p>
+        <p><b style="color:var(--aqua)">✦ Bright mindset.</b> Transparency, art, logic, love. Every citizen a guardian. Every guardian a friend.</p>
+        <p style="font-style:italic;color:rgba(244,241,255,.65)">— In the spirit of Gene Roddenberry: the future is built together, in peace.</p>
+      </div>
+      <button onclick="Paulis.speak('Welcome to Neo Hsmburg. A city for every being. We build peace together.')"
+        class="w-full mt-4 py-3 rounded-2xl font-bold text-[12px]"
+        style="background:linear-gradient(120deg,#7ee8fa,#c9a7ff,#ff9ecf);color:#0b0616">💛 Speak the vision</button>
+    `;
+  }
+};
+
+/* ── Web (URL loader) ─────────────────────────────────── */
+const Web={
+  add(type){
+    const inp=document.getElementById('urlIn');
+    const url=(inp?.value||'').trim();
+    if(!url||!/^https?:|^data:|^blob:/i.test(url)){Toast.show('Need a URL 🌐');return}
+    const name=(url.split('/').pop()||'link').slice(0,40);
+    if(type==='audio'){Bubbles.spawn({type:'audio',name,url});Audio.load(url,name)}
+    else if(type==='image')Bubbles.spawn({type:'image',name,url});
+    else if(type==='video')Bubbles.spawn({type:'video',name,url});
+    else Bubbles.spawn({type:'web',name,url});
+    Drawer.close(); Toast.show('Link became a star ✦');
+  }
+};
+
+/* ── Modal ────────────────────────────────────────────── */
+const Modal={
+  el:null,openedAt:0,
+  init(){
+    this.el=document.getElementById('modal');
+    this.el.addEventListener('click',e=>{
+      if(e.target!==this.el)return;
+      if(Date.now()-this.openedAt<400)return;
+      this.close();
+    });
+  },
+  open(html){
+    if(!this.el)this.init();
+    document.getElementById('modalBody').innerHTML=html;
+    this.el.classList.add('open'); this.openedAt=Date.now();
+  },
+  close(){ this.el?.classList.remove('open'); },
+  media(b){
+    const inner=b.type==='image'?`<img src="${b.url}" style="width:100%;border-radius:14px;display:block${b.filter?';filter:url(#anime) saturate(1.35)':''}">`
+      :b.type==='video'?`<video src="${b.url}" controls autoplay playsinline style="width:100%;border-radius:14px;display:block${b.filter?';filter:url(#anime) saturate(1.35)':''}"></video>`
+      :`<audio src="${b.url}" controls autoplay style="width:100%"></audio>`;
+    this.open(`
+      <div class="text-left">
+        <div class="flex justify-between items-center mb-3">
+          <span class="text-[10px] uppercase tracking-widest" style="color:var(--aqua)">${b.type}</span>
+          <button onclick="Modal.close()" class="w-7 h-7 rounded-full grid place-items-center" style="background:rgba(255,255,255,.1)">✕</button>
+        </div>
+        ${inner}
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          <button onclick="Snapshot.one(App.selected||App.bubbles.find(x=>x.id===${b.id}))" class="surf-2 py-2.5 rounded-xl text-[12px] font-bold">📸 Snap</button>
+          <button onclick="Filter.anime()" class="surf-2 py-2.5 rounded-xl text-[12px] font-bold">✨ Anime</button>
+        </div>
+      </div>
+    `);
+    if(b.type==='audio')Audio.load(b.url,b.name);
+  },
+  text(b){
+    this.open(`
+      <div class="text-left">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-[10px] uppercase tracking-widest" style="color:var(--gold)">story</span>
+          <button onclick="Modal.close()" class="w-7 h-7 rounded-full grid place-items-center" style="background:rgba(255,255,255,.1)">✕</button>
+        </div>
+        <div class="text-[15px] font-bold mb-2" style="font-family:Fredoka">${Bubbles.esc(b.name)}</div>
+        <div id="mTxt" class="max-h-[45vh] overflow-y-auto text-[12.5px] leading-relaxed p-3 rounded-xl"
+             style="background:rgba(255,217,142,.08);color:rgba(244,241,255,.9);white-space:pre-wrap">${Bubbles.esc(b.text)}</div>
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          <button onclick="Paulis.speak(document.getElementById('mTxt').innerText)" class="surf-2 py-2.5 rounded-xl text-[12px] font-bold">🔊 Read</button>
+          <button onclick="Snapshot.one(App.selected)" class="surf-2 py-2.5 rounded-xl text-[12px] font-bold">📸 Snap</button>
+        </div>
+      </div>
+    `);
+  },
+  web(b){
+    this.open(`
+      <div class="text-left">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-[10px] uppercase tracking-widest" style="color:var(--mint)">portal</span>
+          <button onclick="Modal.close()" class="w-7 h-7 rounded-full grid place-items-center" style="background:rgba(255,255,255,.1)">✕</button>
+        </div>
+        <div class="text-[14px] font-bold mb-2">${Bubbles.esc(b.name)}</div>
+        <iframe src="${b.url}" sandbox="allow-scripts allow-same-origin"
+          style="width:100%;height:52vh;border-radius:14px;border:1px solid var(--bd);background:#fff"></iframe>
+      </div>
+    `);
+  },
+  pdf(b){
+    this.open(`
+      <div class="text-left">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-[10px] uppercase tracking-widest" style="color:var(--pink)">document</span>
+          <button onclick="Modal.close()" class="w-7 h-7 rounded-full grid place-items-center" style="background:rgba(255,255,255,.1)">✕</button>
+        </div>
+        <iframe src="${b.url}" style="width:100%;height:52vh;border-radius:14px;border:1px solid var(--bd);background:#fff"></iframe>
+        <a href="${b.url}" target="_blank" class="surf-2 py-2.5 rounded-xl text-[12px] font-bold text-center block mt-3">↗ Open</a>
+      </div>
+    `);
+  },
+  model(b){
+    this.open(`
+      <div class="text-left">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-[10px] uppercase tracking-widest" style="color:#b794f4">3d friend</span>
+          <button onclick="Modal.close()" class="w-7 h-7 rounded-full grid place-items-center" style="background:rgba(255,255,255,.1)">✕</button>
+        </div>
+        <model-viewer src="${b.url}" camera-controls auto-rotate
+          style="width:100%;height:48vh;border-radius:14px;background:#0a0814"></model-viewer>
+      </div>
+    `);
+  },
+  file(b){
+    this.open(`
+      <div class="text-center">
+        <div class="text-4xl mb-2">📦</div>
+        <div class="text-[14px] font-bold mb-1">${Bubbles.esc(b.name)}</div>
+        <div class="text-[10.5px] mb-4" style="color:rgba(244,241,255,.55)">${b.mime||'unknown'}</div>
+        <div class="grid grid-cols-2 gap-2">
+          <a href="${b.url}" download="${Bubbles.esc(b.name)}" class="surf-2 py-2.5 rounded-xl text-[12px] font-bold text-center">⬇ Download</a>
+          <button onclick="Modal.close()" class="surf-2 py-2.5 rounded-xl text-[12px] font-bold">Close</button>
+        </div>
+      </div>
+    `);
+  }
+};
+
+/* ── Snapshot ─────────────────────────────────────────── */
+const Snapshot={
+  menu(){
+    this.open(`
+      <div class="text-center mb-4">
+        <div class="text-3xl mb-2">📸</div>
+        <div class="text-[16px] font-bold glow-gd" style="font-family:Fredoka;color:var(--gold)">Capture the Cosmos</div>
+      </div>
+      <div class="flex flex-col gap-2">
+        <button onclick="Snapshot.full()" class="surf-2 py-3 rounded-xl text-left px-4">
+          <div class="text-[13px] font-bold" style="color:var(--aqua)">✦ Full Composition (PNG)</div>
+          <div class="text-[10.5px]" style="color:rgba(244,241,255,.6)">Canvas + city + every bubble</div>
+        </button>
+        <button onclick="Snapshot.motion()" class="surf-2 py-3 rounded-xl text-left px-4">
+          <div class="text-[13px] font-bold" style="color:var(--pink)">🎞️ Motion Clip (WebM)</div>
+          <div class="text-[10.5px]" style="color:rgba(244,241,255,.6)">5 seconds of living city</div>
+        </button>
+        <button onclick="Snapshot.one(App.selected)" class="surf-2 py-3 rounded-xl text-left px-4">
+          <div class="text-[13px] font-bold" style="color:var(--mint)">🫧 Selected Bubble</div>
+          <div class="text-[10.5px]" style="color:rgba(244,241,255,.6)">${App.selected?Bubbles.esc(App.selected.name):'Nothing selected'}</div>
+        </button>
+      </div>
+      <button onclick="Modal.close()" class="w-full mt-3 py-2.5 rounded-xl text-[12px] font-bold" style="background:rgba(255,255,255,.08);color:rgba(244,241,255,.8)">Close</button>
+    `);
+  },
+  open(html){
+    if(!Modal.el)Modal.init();
+    document.getElementById('modalBody').innerHTML=html;
+    Modal.el.classList.add('open'); Modal.openedAt=Date.now();
+  },
+  full(){
+    Modal.close(); Toast.show('Composing your cosmos… ✦');
+    setTimeout(()=>{
+      const W=window.innerWidth,H=window.innerHeight;
+      const dpr=Math.min(window.devicePixelRatio||1,2);
+      const out=document.createElement('canvas'); out.width=W*dpr; out.height=H*dpr;
+      const g=out.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+      g.fillStyle='#07060f'; g.fillRect(0,0,W,H);
+      const r=document.getElementById('app').getBoundingClientRect();
+      g.save(); g.translate(r.left,r.top);
+      try{g.drawImage(Cosmos.cv,0,0,r.width,r.height)}catch(e){}
+      g.restore();
+      App.bubbles.forEach(b=>this.drawBubble(g,b,r.left,r.top));
+      g.font='700 10px Quicksand'; g.fillStyle='#7ee8fa';
+      g.textAlign='right'; g.fillText('PAULIS COSMOS · NEO HSMBURG ✦',W-14,H-14);
+      this.preview(out.toDataURL('image/png'),`paulis-cosmos-${Date.now()}.png`);
+    },80);
+  },
+  drawBubble(g,b,ox=0,oy=0){
+    const x=b.x+ox,y=b.y+oy,r=b.r*b.scale;
+    g.beginPath(); g.arc(x,y,r,0,Math.PI*2);
+    g.fillStyle='rgba(12,9,26,.85)'; g.fill();
+    const sph=g.createRadialGradient(x-r*.3,y-r*.35,r*.1,x,y,r);
+    sph.addColorStop(0,'rgba(255,255,255,.5)');
+    sph.addColorStop(.4,'rgba(255,255,255,.10)');
+    sph.addColorStop(1,'rgba(0,0,0,.4)');
+    g.fillStyle=sph; g.fill();
+    g.lineWidth=1.5; g.strokeStyle='rgba(255,255,255,.5)'; g.stroke();
+    g.save(); g.beginPath(); g.arc(x,y,r-1,0,Math.PI*2); g.clip();
+    if(b.type==='image'&&b.dom){
+      const img=b.dom.querySelector('img');
+      if(img&&img.complete){try{g.drawImage(img,x-r,y-r,r*2,r*2)}catch(e){}}
+    } else if(b.type==='video'&&b.videoEl&&b.videoEl.readyState>=2){
+      try{g.drawImage(b.videoEl,x-r,y-r,r*2,r*2)}catch(e){}
+    } else {
+      const gl={note:'📜',text:'📜',web:'🌐',model:'🧊',pdf:'📕',audio:'🎵'}[b.type]||'📦';
+      g.font=`${Math.round(r*.6)}px serif`;
+      g.textAlign='center'; g.textBaseline='middle';
+      g.fillText(gl,x,y);
+    }
+    g.restore();
+  },
+  one(b){
+    if(!b||!b.id){Toast.show('Select a bubble first 🫧');return}
+    Modal.close();
+    const S=400; const out=document.createElement('canvas'); out.width=out.height=S;
+    const g=out.getContext('2d');
+    const bg=g.createRadialGradient(S/2,S/2,10,S/2,S/2,S*.7);
+    bg.addColorStop(0,'#151030'); bg.addColorStop(1,'#07060f');
+    g.fillStyle=bg; g.fillRect(0,0,S,S);
+    g.fillStyle='rgba(255,255,255,.5)';
+    for(let i=0;i<50;i++){g.globalAlpha=Math.random()*.6;
+      g.beginPath(); g.arc(Math.random()*S,Math.random()*S,Math.random()*1.3,0,Math.PI*2); g.fill();}
+    g.globalAlpha=1;
+    this.drawBubble(g,{...b,x:S/2,y:S/2-10,r:110,scale:1});
+    g.font='700 9px Quicksand'; g.fillStyle='rgba(126,232,250,.6)';
+    g.textAlign='center'; g.fillText('PAULIS COSMOS ✦',S/2,S-14);
+    this.preview(out.toDataURL('image/png'),`paulis-${(b.name||'b').replace(/\W+/g,'_')}-${Date.now()}.png`);
+  },
+  motion(){
+    Modal.close();
+    if(!('MediaRecorder' in window)){Toast.show('Recording not supported');return}
+    const stream=Cosmos.cv.captureStream(30);
+    const types=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+    const mime=types.find(t=>MediaRecorder.isTypeSupported(t));
+    if(!mime){Toast.show('WebM not supported');return}
+    const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:3_500_000});
+    const chunks=[];
+    rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+    rec.onstop=()=>{
+      const blob=new Blob(chunks,{type:'video/webm'});
+      this.preview(URL.createObjectURL(blob),`paulis-motion-${Date.now()}.webm`,true);
+    };
+    rec.start();
+    Toast.show('Recording 5s… 🎞️'); Paulis.say('Dance, stars! ✦',2400);
+    setTimeout(()=>rec.stop(),5000);
+  },
+  preview(url,filename,isVideo=false){
+    document.getElementById('modalBody').innerHTML=`
+      <div class="text-center">
+        <div class="text-[10px] uppercase tracking-widest mb-2" style="color:var(--mint)">✦ captured ✦</div>
+        ${isVideo?`<video src="${url}" autoplay loop muted controls style="width:100%;border-radius:14px;display:block;margin-bottom:10px"></video>`
+          :`<img src="${url}" style="width:100%;border-radius:14px;display:block;margin-bottom:10px">`}
+        <div class="text-[10.5px] mb-3 truncate" style="color:rgba(244,241,255,.55)">${filename}</div>
+        <div class="grid grid-cols-2 gap-2">
+          <a href="${url}" download="${filename}" class="py-2.5 rounded-xl text-[12px] font-bold text-center"
+             style="background:linear-gradient(120deg,#7ee8fa,#c9a7ff,#ff9ecf);color:#0b0616">⬇ Save</a>
+          <button onclick="Modal.close()" class="surf-2 py-2.5 rounded-xl text-[12px] font-bold">Done</button>
+        </div>
+      </div>`;
+    Modal.el.classList.add('open'); Modal.openedAt=Date.now();
+    Paulis.say(LINES.snap[Math.random()*3|0],2400);
+  }
+};
+
+/* ── Toast ─────────────────────────────────────────────── */
+const Toast={
+  t:null,
+  show(msg,ms=2200){
+    const el=document.getElementById('toast');
+    el.textContent=msg; el.classList.add('show');
+    clearTimeout(this.t);
+    this.t=setTimeout(()=>el.classList.remove('show'),ms);
+  }
+};
+
+/* ── Init ─────────────────────────────────────────────── */
+Worlds.set('cosmic');
+Drawer.init();
+Modal.init();
+document.addEventListener('gesturestart',e=>e.preventDefault());
+document.addEventListener('touchmove',e=>{
+  if(e.target.closest('.drawer-p, #drawer, #modal'))return;
+  if(e.touches.length>1)e.preventDefault();
+},{passive:false});
+window.addEventListener('keydown',e=>{
+  if(!App.ready)return;
+  if(e.key===' '){e.preventDefault();Player.toggle()}
+  if(e.key==='s'||e.key==='S')Snapshot.menu();
+  if(e.key==='Escape'){Modal.close();Drawer.close()}
+  if(e.key==='r'||e.key==='R')Rabbit.toggle();
+});
+console.log('%c✦ PAULIS COSMOS · v3 · NEO HSMBURG ✦','color:#c9a7ff;font-size:13px;font-weight:700');
+console.log('%cHUD fixed · ocean jellyfish · rabbit sings · voice synth · anime filter · panda/cow · X42 encode','color:#7ee8fa;font-size:11px');
+</script>
+</body>
+</html>
