@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <!-- Strict Viewport to PREVENT ZOOM at all costs -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>ALLiSTAR Cyber Wonderland & Holo Feed</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Model Viewer for 3D GLB support -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+
+    <style>
+        :root {
+            --glow-primary: #ec4899;
+            --glow-secondary: #8b5cf6;
+            --glow-cyan: #06b6d4;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #030014;
+            color: #f3f4f6;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: pan-y; /* Prevent pinch zoom on body, allow vertical scroll */
+        }
+
+        /* Prevent iOS Zoom on focus by forcing 16px font size on inputs */
+        input, textarea, select {
+            font-size: 16px !important;
+        }
+
+        .font-cyber {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .cyber-glow-box {
+            background: rgba(15, 10, 35, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(236, 72, 153, 0.4);
+            box-shadow: 0 0 25px rgba(236, 72, 153, 0.25), inset 0 0 15px rgba(139, 92, 246, 0.15);
+        }
+
+        .cyber-glow-cyan {
+            border-color: rgba(6, 182, 212, 0.5);
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.3);
+        }
+
+        @keyframes rainbowGlow {
+            0% { border-color: #ff007f; box-shadow: 0 0 20px #ff007f; }
+            33% { border-color: #00ffff; box-shadow: 0 0 20px #00ffff; }
+            66% { border-color: #7928ca; box-shadow: 0 0 20px #7928ca; }
+            100% { border-color: #ff007f; box-shadow: 0 0 20px #ff007f; }
+        }
+
+        .audio-reactive-ring {
+            animation: rainbowGlow 3s linear infinite;
+        }
+
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+            animation: spin-slow 6s linear infinite;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .snap-container {
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+        .snap-item {
+            height: 100vh;
+            width: 100%;
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            position: relative;
+        }
+
+        /* Subtitles Overlay */
+        .subtitles-box {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: yellow;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+            max-width: 80%;
+            z-index: 25;
+            text-shadow: 1px 1px 2px black;
+            border: 1px solid rgba(255, 255, 0, 0.4);
+            pointer-events: none;
+            display: none;
+        }
+
+        /* Voxel Cube Profile CSS */
+        .scene {
+            width: 200px;
+            height: 200px;
+            perspective: 800px;
+            margin: 0 auto;
+        }
+        .cube {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: translateZ(-100px);
+            animation: rotateCube 15s infinite linear;
+        }
+        .cube__face {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border: 2px solid #06b6d4;
+            background: rgba(10, 5, 25, 0.9);
+            box-shadow: inset 0 0 20px rgba(6, 182, 212, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+        .cube__face--front  { transform: rotateY(  0deg) translateZ(100px); }
+        .cube__face--right  { transform: rotateY( 90deg) translateZ(100px); }
+        .cube__face--back   { transform: rotateY(180deg) translateZ(100px); }
+        .cube__face--left   { transform: rotateY(-90deg) translateZ(100px); }
+        .cube__face--top    { transform: rotateX( 90deg) translateZ(100px); }
+        .cube__face--bottom { transform: rotateX(-90deg) translateZ(100px); }
+
+        @keyframes rotateCube {
+            0% { transform: translateZ(-100px) rotateY(0deg) rotateX(10deg); }
+            100% { transform: translateZ(-100px) rotateY(360deg) rotateX(10deg); }
+        }
+
+        /* Typewriter for RPG */
+        .typewriter {
+            overflow: hidden;
+            border-right: .15em solid orange;
+            white-space: nowrap;
+            margin: 0 auto;
+            letter-spacing: .05em;
+            animation: typing 2s steps(40, end), blink-caret .75s step-end infinite;
+        }
+        @keyframes typing { from { width: 0 } to { width: 100% } }
+        @keyframes blink-caret { from, to { border-color: transparent } 50% { border-color: orange; } }
+    </style>
+</head>
+<body class="bg-[#030014] text-white h-screen w-screen overflow-hidden">
+
+    <header class="absolute top-0 left-0 right-0 z-30 flex justify-between items-center px-4 py-3 bg-gradient-to-b from-[#030014]/90 via-[#030014]/50 to-transparent pointer-events-auto">
+        <div class="flex items-center space-x-2">
+            <div id="active-user-badge" onclick="openProfileModal()" class="cursor-pointer flex items-center space-x-2 bg-gradient-to-r from-pink-600/80 to-purple-600/80 hover:from-pink-500 hover:to-purple-500 px-3 py-1.5 rounded-full border border-pink-400/50 shadow-lg transition transform active:scale-95">
+                <div class="w-6 h-6 rounded-full bg-cyan-400 text-black font-bold flex items-center justify-center text-xs font-cyber" id="user-avatar-initial">A</div>
+                <span class="text-xs font-bold tracking-wider font-cyber" id="header-username">ALLiSTAR</span>
+                <span class="text-[9px] bg-black/40 px-1.5 py-0.5 rounded text-pink-300" id="header-user-role">Master</span>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <button onclick="toggleSubtitles()" class="bg-zinc-900/80 hover:bg-zinc-800 border border-yellow-500/40 backdrop-blur-md p-2 rounded-full text-sm transition text-yellow-300 shadow-lg" title="Untertitel an/aus">
+                <i class="fa-solid fa-closed-captioning"></i>
+            </button>
+            <button onclick="openUploadModal()" class="bg-pink-600/80 hover:bg-pink-500 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-semibold flex items-center space-x-1.5 shadow-lg border border-pink-400/40 transition transform active:scale-95">
+                <i class="fa-solid fa-cloud-arrow-up text-cyan-300"></i>
+                <span class="font-cyber tracking-wide hidden sm:inline">Holo-Upload</span>
+            </button>
+            <button id="mute-global-btn" class="bg-zinc-900/80 hover:bg-zinc-800 border border-cyan-500/40 backdrop-blur-md p-2 rounded-full text-sm transition text-cyan-300 shadow-lg">
+                <i id="global-mute-icon" class="fa-solid fa-volume-high"></i>
+            </button>
+        </div>
+    </header>
+
+    <main id="video-feed" class="snap-container no-scrollbar relative w-full h-full">
+        <!-- Dynamically injected holo items -->
+    </main>
+
+    <div id="comment-modal" class="fixed inset-x-0 bottom-0 z-50 transform translate-y-full transition-transform duration-300 ease-out cyber-glow-box rounded-t-3xl max-h-[75vh] flex flex-col shadow-2xl">
+        <div class="flex justify-between items-center p-4 border-b border-pink-500/30">
+            <h3 id="comment-count-title" class="text-sm font-semibold font-cyber text-pink-300">Holokompakt-Kommentare (0)</h3>
+            <button onclick="closeComments()" class="text-zinc-400 hover:text-white p-2">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        <div id="comment-list" class="p-4 overflow-y-auto space-y-3 flex-1">
+            <!-- Comments injected here -->
+        </div>
+        <div class="p-3 border-t border-pink-500/30 bg-[#060417] flex items-col space-y-2">
+            <div class="flex space-x-2">
+                <button onclick="openVaultSelector()" class="bg-cyan-900 hover:bg-cyan-800 border border-cyan-500/50 p-2.5 rounded-full text-sm transition" title="Vault & Sticker">
+                    <i class="fa-solid fa-boxes-stacked text-cyan-300"></i>
+                </button>
+                <input type="text" id="comment-input" placeholder="Nachricht an das Wunderland..." class="bg-zinc-900/90 border border-pink-500/40 px-4 py-2.5 rounded-full flex-1 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-white">
+                <button onclick="sendComment()" class="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 px-4 py-2.5 rounded-full text-sm font-semibold transition shadow-lg">
+                    <i class="fa-solid fa-paper-plane text-cyan-300"></i>
+                </button>
+            </div>
+            <!-- Sticker/Vault preview area (hidden by default) -->
+            <div id="vault-preview-area" class="hidden flex space-x-2 p-2 bg-black/50 rounded-lg overflow-x-auto">
+                <img src="https://placehold.co/100x100/ec4899/ffffff?text=Rabbit" onclick="addVaultMediaToComment('Sticker: Kaninchen')" class="w-12 h-12 rounded cursor-pointer border border-pink-500">
+                <img src="https://placehold.co/100x100/8b5cf6/ffffff?text=Hat" onclick="addVaultMediaToComment('Sticker: Hutmacher')" class="w-12 h-12 rounded cursor-pointer border border-purple-500">
+            </div>
+        </div>
+    </div>
+
+    <div id="upload-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="cyber-glow-box w-full max-w-lg rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg font-bold font-cyber text-pink-400">✨ Holo-Upload & Drop Zone</h3>
+                <button onclick="closeUploadModal()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p class="text-xs text-zinc-300 mb-4">Lade MP4, MP3, PDF, HTML, PIC oder 3D-Modelle (.glb) hoch.</p>
+            
+            <div class="space-y-4">
+                <div id="drop-zone" class="border-2 border-dashed border-pink-500/50 hover:border-cyan-400 rounded-xl p-6 text-center bg-black/40 transition cursor-pointer">
+                    <i class="fa-solid fa-cubes text-3xl text-cyan-400 mb-2"></i>
+                    <p class="text-xs font-semibold text-zinc-200">Dateien hierher ziehen oder klicken</p>
+                    <input type="file" id="file-input" class="hidden" accept="video/*,audio/*,.pdf,.html,image/*,.glb">
+                </div>
+
+                <div id="file-status" class="text-xs text-cyan-300 hidden font-medium bg-cyan-950/40 p-2 rounded border border-cyan-500/30"></div>
+
+                <div>
+                    <input type="text" id="input-title" placeholder="Videotitel / Beschreibung" class="w-full bg-black/60 border border-pink-500/40 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-white text-sm">
+                </div>
+                <div>
+                    <input type="text" id="input-url" placeholder="Oder Datei-Direktlink (URL)" class="w-full bg-black/60 border border-pink-500/40 rounded-lg px-3 py-2 mt-2 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-white text-sm">
+                </div>
+
+                <div class="bg-black/40 p-3 rounded-lg border border-purple-500/30">
+                    <h4 class="text-xs font-bold text-pink-300 mb-2">Audio-Mixer (Wunderland Beats)</h4>
+                    <label class="block text-[10px] text-zinc-400">Original-Ton</label>
+                    <input type="range" min="0" max="100" value="100" class="w-full accent-cyan-400 mb-2">
+                    <label class="block text-[10px] text-zinc-400">Hinzugefügte Musik (TikTok Style)</label>
+                    <input type="range" min="0" max="100" value="50" class="w-full accent-pink-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-zinc-300 mb-1">Wunderland-Album zuordnen</label>
+                    <select id="input-album" class="w-full bg-black/60 border border-pink-500/40 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 text-white">
+                        <option value="Wunderland Beats">Wunderland Beats (Standard)</option>
+                        <option value="Hutmacher Holos">Hutmacher Holos</option>
+                        <option value="Kaninchenbau Archiven">Kaninchenbau Archive</option>
+                        <option value="Cyber Galerie">Cyber Galerie</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-between items-center pt-2">
+                    <label class="flex items-center space-x-2 text-xs text-zinc-300">
+                        <input type="checkbox" id="input-subtitles" class="accent-pink-500 rounded">
+                        <span>Auto-Subtitles generieren</span>
+                    </label>
+                    <div class="space-x-2">
+                        <button onclick="closeUploadModal()" class="bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-lg text-xs font-semibold transition">Abbrechen</button>
+                        <button onclick="saveUploadedMedia()" class="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 px-4 py-2 rounded-lg text-xs font-bold transition shadow-lg text-cyan-300 font-cyber">Hochladen</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="profile-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl hidden items-center justify-center p-4">
+        <div class="cyber-glow-box w-full max-w-xl rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto cyber-glow-cyan">
+            <div class="flex justify-between items-center mb-4 border-b border-cyan-500/30 pb-3">
+                <div class="flex items-center space-x-3">
+                    <!-- Profile Avatar can be changed from Vault -->
+                    <div onclick="changeProfilePic()" class="w-12 h-12 rounded-full bg-gradient-to-tr from-cyan-400 to-pink-500 flex items-center justify-center font-bold text-black font-cyber text-lg cursor-pointer hover:opacity-80 border-2 border-white/20 relative group" id="modal-avatar-box">
+                        <span id="modal-avatar-text">A</span>
+                        <div class="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                            <i class="fa-solid fa-camera text-white text-xs"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold font-cyber text-cyan-300" id="modal-current-name">ALLiSTAR</h3>
+                        <p class="text-[10px] text-pink-400" id="modal-current-role">Wunderland Master & Creator</p>
+                    </div>
+                </div>
+                <button onclick="closeProfileModal()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="space-y-5">
+                <div class="bg-black/50 p-4 rounded-xl border border-pink-500/30">
+                    <label class="block text-xs font-semibold text-pink-300 mb-1 font-cyber">Username anpassen</label>
+                    <div class="flex space-x-2">
+                        <input type="text" id="username-edit-input" class="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-white text-sm">
+                        <button onclick="updateUsername()" class="bg-cyan-600 hover:bg-cyan-500 text-black px-4 py-2 rounded-lg text-xs font-bold transition font-cyber">Speichern</button>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between">
+                        <span class="text-[11px] text-zinc-400">3 magische Namen generieren:</span>
+                        <button onclick="generateRandomUsernames()" class="bg-purple-600/80 hover:bg-purple-500 px-3 py-1 rounded-lg text-xs font-semibold transition text-pink-200">🎲 Generieren</button>
+                    </div>
+                    <div id="generated-names-box" class="flex flex-wrap gap-2 mt-2"></div>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-bold font-cyber text-cyan-300 mb-2">Wunderland Profile & Ränge</h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5" id="accounts-grid"></div>
+                </div>
+                
+                <!-- Admin / Master Section to Add Users -->
+                <div id="admin-add-user-section" class="bg-black/50 p-4 rounded-xl border border-yellow-500/40 hidden">
+                    <h4 class="text-xs font-bold font-cyber text-yellow-400 mb-2">🛠️ Neuen Bewohner anlegen (Master-Rechte)</h4>
+                    <div class="flex space-x-2">
+                        <input type="text" id="new-user-name" placeholder="Name..." class="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 flex-1 text-sm focus:ring-yellow-400 text-white">
+                        <select id="new-user-role" class="bg-zinc-900 border border-zinc-700 rounded-lg px-2 text-xs text-white">
+                            <option value="community">Community (KINGS, QUEENS...)</option>
+                            <option value="master">Master</option>
+                        </select>
+                        <button onclick="createNewUser()" class="bg-yellow-600 hover:bg-yellow-500 text-black px-3 py-2 rounded-lg text-xs font-bold transition">Anlegen</button>
+                    </div>
+                </div>
+
+                <div class="bg-black/50 p-4 rounded-xl border border-cyan-500/30">
+                    <h4 class="text-xs font-bold font-cyber text-pink-300 mb-2">📁 Deine Alben & Vault</h4>
+                    <div id="user-albums-list" class="space-y-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="voxel-modal" class="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl hidden flex-col items-center justify-center p-4">
+        <button onclick="closeVoxelModal()" class="absolute top-6 right-6 text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-2xl"></i></button>
+        <h2 class="text-2xl font-cyber text-cyan-400 mb-8 drop-shadow-lg" id="voxel-username">@Username</h2>
+        
+        <div class="scene">
+            <div class="cube" id="voxel-cube">
+                <div class="cube__face cube__face--front">
+                    <i class="fa-solid fa-user-astronaut text-4xl mb-2 text-pink-400"></i>
+                    <span class="font-bold font-cyber text-sm">Profil</span>
+                </div>
+                <div class="cube__face cube__face--back">
+                    <i class="fa-solid fa-boxes-stacked text-4xl mb-2 text-purple-400"></i>
+                    <span class="font-bold text-sm">Vault</span>
+                </div>
+                <div class="cube__face cube__face--right">
+                    <span class="font-bold text-2xl text-cyan-300">42</span>
+                    <span class="text-xs">Uploads</span>
+                </div>
+                <div class="cube__face cube__face--left">
+                    <i class="fa-solid fa-medal text-4xl mb-2 text-yellow-400"></i>
+                    <span class="text-xs">Abzeichen</span>
+                </div>
+                <div class="cube__face cube__face--top bg-pink-900/50">Wunderland</div>
+                <div class="cube__face cube__face--bottom bg-cyan-900/50">Cyber Status: Online</div>
+            </div>
+        </div>
+        <p class="text-zinc-400 text-xs mt-12 text-center max-w-sm">Willkommen in meiner Voxel-Dimension. Wische auf dem Cube, um meine Vault-Items und gesammelten Holos zu sehen.</p>
+    </div>
+
+    <div id="rpg-album-modal" class="fixed inset-0 z-50 bg-[#060417] hidden flex-col">
+        <button onclick="closeRpgModal()" class="absolute top-6 right-6 z-20 text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-2xl"></i></button>
+        
+        <!-- RPG Intro Section -->
+        <div id="rpg-intro" class="flex-1 flex flex-col items-center justify-center p-6 relative">
+            <div class="w-32 h-32 rounded-full border-4 border-pink-500 shadow-[0_0_40px_#ec4899] bg-zinc-800 flex items-center justify-center text-5xl font-cyber font-bold text-pink-300 mb-6" id="rpg-avatar">A</div>
+            <div class="bg-black/80 border-2 border-cyan-500 p-4 rounded-xl w-full max-w-md shadow-[0_0_20px_#06b6d4]">
+                <h4 class="text-cyan-300 font-bold font-cyber text-sm mb-1" id="rpg-speaker-name">ALLiSTAR:</h4>
+                <div class="text-white text-sm font-medium h-12">
+                    <span class="typewriter inline-block" id="rpg-typewriter-text">Willkommen in meinem Album! Bereit für die Show?</span>
+                </div>
+            </div>
+            <button onclick="startSlideshow()" class="mt-8 bg-gradient-to-r from-pink-600 to-purple-600 px-8 py-3 rounded-full font-bold font-cyber shadow-[0_0_15px_#ec4899] hover:scale-105 transition">Slideshow Starten ▶</button>
+        </div>
+
+        <!-- Slideshow Section (Hidden initially) -->
+        <div id="rpg-slideshow" class="hidden flex-1 relative bg-black">
+            <div id="slideshow-content" class="w-full h-full flex items-center justify-center"></div>
+            <div class="absolute bottom-6 left-0 right-0 flex justify-center space-x-4">
+                <button onclick="prevSlide()" class="bg-white/20 p-3 rounded-full hover:bg-white/40"><i class="fa-solid fa-chevron-left"></i></button>
+                <button onclick="nextSlide()" class="bg-white/20 p-3 rounded-full hover:bg-white/40"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div class="absolute top-6 left-6 text-pink-400 font-cyber font-bold drop-shadow-md" id="slideshow-album-name">Album Name</div>
+        </div>
+    </div>
+
+    <script>
+        // Accounts & Hierarchy
+        const accountsData = [
+            { id: 'dev', name: 'Dev El Oper', role: 'Der Hutmacher', desc: 'Voller Zugriff', badgeColor: 'from-amber-500 to-red-600', access: 'full' },
+            { id: 'allistar', name: 'ALLiSTAR', role: 'Alice', desc: 'Wunderland-Master', badgeColor: 'from-pink-500 to-purple-600', access: 'master' },
+            { id: 'kaninchen', name: 'Kaninchen', role: 'Das Weiße Kaninchen', desc: 'Master & Taktgeber', badgeColor: 'from-cyan-400 to-blue-600', access: 'master' },
+            { id: 'kings', name: 'KINGS', role: 'König', desc: 'Community', badgeColor: 'from-yellow-400 to-amber-600', access: 'community' },
+            { id: 'queens', name: 'QUEENS', role: 'Königin', desc: 'Community', badgeColor: 'from-pink-400 to-rose-600', access: 'community' },
+            { id: 'ace', name: 'ACE', role: 'Ass', desc: 'Community', badgeColor: 'from-emerald-400 to-teal-600', access: 'community' },
+            { id: 'joker', name: 'JOKER', role: 'Narr', desc: 'Community', badgeColor: 'from-violet-500 to-fuchsia-600', access: 'community' },
+            { id: 'x', name: 'X', role: 'X', desc: 'Geheim', badgeColor: 'from-zinc-600 to-black', access: 'community' }
+        ];
+
+        let activeAccount = accountsData[1]; // Default: ALLiSTAR
+
+        // Media Data (Now includes GLB)
+        let mediaFeed = [
+            {
+                id: 1,
+                title: "Cyber Rabbit 3D Model ✨ (Swipe ↔ für Profil/Album)",
+                url: "https://modelviewer.dev/shared-assets/models/Astronaut.glb",
+                type: "glb",
+                album: "Kaninchenbau Archiven",
+                author: "Kaninchen",
+                likes: 999, commentsCount: 42, isLiked: false, sound: "3D Spatial Ambient"
+            },
+            {
+                id: 2,
+                title: "Wunderland Cyber Rave ✨ #alice",
+                url: "https://assets.mixkit.co/videos/preview/mixkit-young-woman-dancing-in-a-room-41604-large.mp4",
+                type: "video",
+                album: "Wunderland Beats",
+                author: "ALLiSTAR",
+                likes: 1337, commentsCount: 12, isLiked: false, sound: "Holo-Alice Remix"
+            },
+            {
+                id: 3,
+                title: "Hutmacher Audio Track (MP3) 🎧🎩",
+                url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+                type: "audio",
+                album: "Hutmacher Holos",
+                author: "Dev El Oper",
+                likes: 888, commentsCount: 5, isLiked: false, sound: "SoundHelix Synth"
+            }
+        ];
+
+        let currentActiveVideoId = null;
+        let globalMuted = true;
+        let subtitlesEnabled = false;
+
+        // Auto-Subtitles Simulation Array
+        const subtitleLines = [
+            "Folge dem weißen Kaninchen...",
+            "Systemüberlastung im Sektor 42.",
+            "Lade Holo-Matrix...",
+            "Die Teeparty beginnt in 3, 2, 1...",
+            "[Bass Drop] ✨",
+            "Wir sind alle verrückt hier."
+        ];
+        let subInterval;
+
+        async function safePlay(videoEl) {
+            try {
+                videoEl.muted = globalMuted;
+                await videoEl.play();
+            } catch (err) {
+                try {
+                    videoEl.muted = true;
+                    await videoEl.play();
+                } catch (err2) {
+                    console.log("Autoplay restricted:", err2);
+                }
+            }
+        }
+
+        function renderFeed() {
+            const feedContainer = document.getElementById('video-feed');
+            feedContainer.innerHTML = '';
+
+            mediaFeed.forEach((item) => {
+                const snapItem = document.createElement('div');
+                snapItem.className = 'snap-item flex items-center justify-center bg-[#030014] relative';
+                
+                let mediaContentHtml = '';
+                if (item.type === 'video') {
+                    mediaContentHtml = `<video class="w-full h-full object-cover cursor-pointer" src="${item.url}" loop playsinline muted></video>`;
+                } else if (item.type === 'audio') {
+                    mediaContentHtml = `
+                        <div class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-purple-950 via-black to-pink-950 p-6 relative">
+                            <div class="w-36 h-36 rounded-full border-4 border-pink-500 flex items-center justify-center audio-reactive-ring animate-spin-slow mb-6 bg-black/60 shadow-2xl">
+                                <i class="fa-solid fa-music text-5xl text-cyan-300"></i>
+                            </div>
+                            <audio controls class="w-full max-w-md mt-4 rounded-xl shadow-lg border border-cyan-500/40" src="${item.url}"></audio>
+                        </div>
+                    `;
+                } else if (item.type === 'glb') {
+                    mediaContentHtml = `
+                        <div class="w-full h-full bg-gradient-to-b from-cyan-900/30 to-black relative">
+                            <model-viewer src="${item.url}" auto-rotate camera-controls shadow-intensity="1" class="w-full h-full" background-color="transparent"></model-viewer>
+                            <div class="absolute top-20 left-1/2 transform -translate-x-1/2 text-cyan-300 text-xs font-cyber bg-black/50 px-3 py-1 rounded-full border border-cyan-500/50">3D Interaktiv - Drehen & Zoomen</div>
+                        </div>
+                    `;
+                } else {
+                    mediaContentHtml = `<div class="w-full h-full flex items-center justify-center bg-black"><img src="${item.url}" class="w-full h-full object-contain"></div>`;
+                }
+
+                snapItem.innerHTML = `
+                    ${mediaContentHtml}
+                    <!-- UI Overlays -->
+                    <div class="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-black via-black/50 to-transparent pointer-events-none"></div>
+                    
+                    <div class="absolute right-3 bottom-24 z-20 flex flex-col items-center space-y-5">
+                        <button onclick="toggleLike(${item.id})" class="flex flex-col items-center group">
+                            <div class="w-13 h-13 rounded-full cyber-glow-box flex items-center justify-center text-xl transition transform active:scale-90 ${item.isLiked ? 'text-pink-500' : 'text-white'}">
+                                <i class="fa-${item.isLiked ? 'solid' : 'regular'} fa-heart"></i>
+                            </div>
+                            <span class="text-xs font-bold mt-1 font-cyber text-pink-300" id="like-count-${item.id}">${item.likes}</span>
+                        </button>
+                        <button onclick="openComments(${item.id})" class="flex flex-col items-center group">
+                            <div class="w-13 h-13 rounded-full cyber-glow-box flex items-center justify-center text-lg text-cyan-300 transition transform active:scale-90">
+                                <i class="fa-solid fa-comments"></i>
+                            </div>
+                            <span class="text-xs font-bold mt-1 font-cyber text-cyan-300">${item.commentsCount}</span>
+                        </button>
+                        <button onclick="takeSnapshot(this)" class="flex flex-col items-center group" title="Standbild aufnehmen">
+                            <div class="w-12 h-12 rounded-full cyber-glow-box flex items-center justify-center text-base text-yellow-300 transition transform active:scale-90">
+                                <i class="fa-solid fa-camera"></i>
+                            </div>
+                            <span class="text-[10px] font-bold mt-0.5 font-cyber text-yellow-300">Snap</span>
+                        </button>
+                    </div>
+
+                    <div class="absolute left-4 bottom-6 right-20 z-20 pointer-events-auto">
+                        <div class="flex items-center space-x-2 mb-1.5">
+                            <span class="text-sm font-bold font-cyber text-cyan-300 drop-shadow">@${item.author}</span>
+                            <span class="bg-pink-600/70 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider text-white border border-pink-400/40 cursor-pointer hover:bg-pink-500" onclick="openRPGAlbum('${item.album}', '${item.author}')">${item.album}</span>
+                        </div>
+                        <p class="text-xs text-zinc-200 line-clamp-2 drop-shadow mb-1.5">${item.title}</p>
+                        <div class="flex items-center space-x-2 text-xs text-cyan-400 font-cyber">
+                            <i class="fa-solid fa-waveform text-xs"></i>
+                            <span class="truncate">${item.sound}</span>
+                        </div>
+                        <!-- Gestures Hint -->
+                        <div class="text-[9px] text-zinc-400 mt-2 flex space-x-3 font-cyber">
+                            <span><i class="fa-solid fa-left-long"></i> Profil</span>
+                            <span>Album <i class="fa-solid fa-right-long"></i></span>
+                        </div>
+                    </div>
+                `;
+
+                // Add Swipe Gestures (L/R)
+                let startX = 0, startY = 0;
+                snapItem.addEventListener('touchstart', e => {
+                    startX = e.changedTouches[0].screenX;
+                    startY = e.changedTouches[0].screenY;
+                }, {passive: true});
+
+                snapItem.addEventListener('touchend', e => {
+                    let endX = e.changedTouches[0].screenX;
+                    let endY = e.changedTouches[0].screenY;
+                    let xDiff = endX - startX;
+                    let yDiff = endY - startY;
+
+                    // Detect horizontal swipe specifically (prevent firing on vertical scroll)
+                    if (Math.abs(xDiff) > Math.abs(yDiff) && Math.abs(xDiff) > 80) {
+                        if (xDiff < 0) {
+                            // Swipe Left -> Open Voxel Profile
+                            openVoxelProfile(item.author);
+                        } else {
+                            // Swipe Right -> Open RPG Album
+                            openRPGAlbum(item.album, item.author);
+                        }
+                    }
+                }, {passive: true});
+
+                // Video play/pause
+                if (item.type === 'video') {
+                    const videoEl = snapItem.querySelector('video');
+                    videoEl.addEventListener('click', () => {
+                        videoEl.paused ? safePlay(videoEl) : videoEl.pause();
+                    });
+                }
+
+                feedContainer.appendChild(snapItem);
+            });
+
+            setupIntersectionObserver();
+        }
+
+        // Observer & Setup
+        function setupIntersectionObserver() {
+            const feedContainer = document.getElementById('video-feed');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const video = entry.target.querySelector('video');
+                    if (entry.isIntersecting) {
+                        if (video) safePlay(video);
+                        if (subtitlesEnabled) startSubtitles();
+                    } else {
+                        if (video) { video.pause(); video.currentTime = 0; }
+                        stopSubtitles();
+                    }
+                });
+            }, { root: feedContainer, threshold: 0.6 });
+
+            document.querySelectorAll('.snap-item').forEach(item => observer.observe(item));
+        }
+
+        // Subtitles Logic
+        const subBox = document.createElement('div');
+        subBox.className = 'subtitles-box font-cyber';
+        document.body.appendChild(subBox);
+
+        window.toggleSubtitles = function() {
+            subtitlesEnabled = !subtitlesEnabled;
+            showToast(subtitlesEnabled ? "CC: Auto-Subtitles aktiviert" : "CC: Deaktiviert");
+            if(subtitlesEnabled) startSubtitles(); else stopSubtitles();
+        };
+
+        function startSubtitles() {
+            subBox.style.display = 'block';
+            let idx = 0;
+            subBox.innerText = subtitleLines[idx];
+            clearInterval(subInterval);
+            subInterval = setInterval(() => {
+                idx = (idx + 1) % subtitleLines.length;
+                subBox.innerText = subtitleLines[idx];
+            }, 3000);
+        }
+        function stopSubtitles() {
+            subBox.style.display = 'none';
+            clearInterval(subInterval);
+        }
+
+        // Interactions (Likes, Snaps, Comments)
+        window.toggleLike = function(id) {
+            const item = mediaFeed.find(v => v.id === id);
+            if (item) {
+                item.isLiked = !item.isLiked;
+                item.likes += item.isLiked ? 1 : -1;
+                document.getElementById(`like-count-${id}`).innerText = item.likes;
+                renderFeed(); // Re-render to update icon color
+            }
+        };
+
+        window.takeSnapshot = function(btnEl) {
+            // Simplified snapshot info
+            showToast("📸 Standbild im Vault gespeichert (inkl. UI-Sichtbarkeit)!");
+        };
+
+        // Comments & Vault
+        const commentModal = document.getElementById('comment-modal');
+        window.openComments = function(id) {
+            currentActiveVideoId = id;
+            document.getElementById('comment-count-title').innerText = `Kommentare für Holo #${id}`;
+            commentModal.classList.remove('translate-y-full');
+        };
+        window.closeComments = function() { commentModal.classList.add('translate-y-full'); };
+        
+        window.openVaultSelector = function() {
+            const area = document.getElementById('vault-preview-area');
+            area.classList.toggle('hidden');
+        };
+
+        window.addVaultMediaToComment = function(mediaTag) {
+            const input = document.getElementById('comment-input');
+            input.value += ` [${mediaTag}] `;
+            document.getElementById('vault-preview-area').classList.add('hidden');
+        };
+
+        window.sendComment = function() {
+            const input = document.getElementById('comment-input');
+            if(input.value.trim() === '') return;
+            const listEl = document.getElementById('comment-list');
+            listEl.innerHTML += `
+                <div class="flex space-x-3 text-sm bg-black/40 p-2.5 rounded-xl border border-pink-500/20">
+                    <div class="w-8 h-8 rounded-full bg-cyan-500 flex items-center justify-center text-xs font-bold font-cyber text-black">${activeAccount.name[0]}</div>
+                    <div class="flex-1">
+                        <span class="font-bold text-xs text-cyan-300 font-cyber">@${activeAccount.name}</span>
+                        <p class="text-zinc-200 text-xs mt-1">${input.value}</p>
+                    </div>
+                </div>
+            `;
+            input.value = '';
+            showToast("Kommentar / Sticker gepostet!");
+        };
+
+        // Upload Logic
+        const uploadModal = document.getElementById('upload-modal');
+        window.openUploadModal = function() { uploadModal.classList.remove('hidden'); uploadModal.classList.add('flex'); };
+        window.closeUploadModal = function() { uploadModal.classList.add('hidden'); uploadModal.classList.remove('flex'); };
+
+        window.saveUploadedMedia = function() {
+            const title = document.getElementById('input-title').value || "Neues Holo";
+            let url = document.getElementById('input-url').value;
+            const isSubtitles = document.getElementById('input-subtitles').checked;
+            
+            if(!url) url = "https://placehold.co/800x1200/06b6d4/000000?text=Uploaded+Media";
+            
+            let type = 'image';
+            if(url.endsWith('.glb')) type = 'glb';
+            else if(url.endsWith('.mp4')) type = 'video';
+            else if(url.endsWith('.mp3')) type = 'audio';
+
+            mediaFeed.unshift({
+                id: Date.now(), title: title + (isSubtitles ? ' [CC]' : ''), url: url, type: type,
+                album: document.getElementById('input-album').value, author: activeAccount.name,
+                likes: 0, commentsCount: 0, isLiked: false, sound: "Custom Mix (User)"
+            });
+            renderFeed();
+            closeUploadModal();
+            showToast("Holo erfolgreich im Wunderland platziert!");
+        };
+
+        // Profile & Roles
+        const profileModal = document.getElementById('profile-modal');
+        window.openProfileModal = function() {
+            renderAccountsGrid();
+            document.getElementById('modal-current-name').innerText = activeAccount.name;
+            document.getElementById('modal-current-role').innerText = activeAccount.role;
+            document.getElementById('modal-avatar-text').innerText = activeAccount.name[0];
+            
+            // Show Admin section if Master/Full
+            const adminSec = document.getElementById('admin-add-user-section');
+            if (activeAccount.access === 'full' || activeAccount.access === 'master') {
+                adminSec.classList.remove('hidden');
+            } else {
+                adminSec.classList.add('hidden');
+            }
+            
+            profileModal.classList.remove('hidden'); profileModal.classList.add('flex');
+        };
+        window.closeProfileModal = function() { profileModal.classList.add('hidden'); profileModal.classList.remove('flex'); };
+
+        function renderAccountsGrid() {
+            const grid = document.getElementById('accounts-grid');
+            grid.innerHTML = '';
+            accountsData.forEach(acc => {
+                const isActive = acc.id === activeAccount.id;
+                // Security check visually:
+                let canSwitch = true;
+                if(activeAccount.access === 'community' && acc.access !== 'community' && acc.id !== activeAccount.id) canSwitch = false; // Communities can't switch to master unless allowed. (Simplified logic for demo).
+                
+                grid.innerHTML += `
+                    <div onclick="${canSwitch ? `switchAccount('${acc.id}')` : `showToast('Keine Berechtigung für Master-Ebene')`}" class="cursor-pointer bg-black/60 border ${isActive ? 'border-cyan-400' : 'border-zinc-700'} p-2 rounded-xl text-center opacity-${canSwitch? '100':'50'}">
+                        <div class="w-8 h-8 mx-auto rounded-full bg-gradient-to-tr ${acc.badgeColor} flex items-center justify-center font-bold text-xs font-cyber mb-1">${acc.name[0]}</div>
+                        <h5 class="text-[10px] font-bold text-white truncate">${acc.name}</h5>
+                    </div>
+                `;
+            });
+        }
+
+        window.switchAccount = function(accId) {
+            const found = accountsData.find(a => a.id === accId);
+            if (found) {
+                activeAccount = found;
+                document.getElementById('header-username').innerText = activeAccount.name;
+                document.getElementById('header-user-role').innerText = activeAccount.role;
+                document.getElementById('user-avatar-initial').innerText = activeAccount.name[0];
+                openProfileModal();
+                showToast(`Eingeloggt als ${activeAccount.name}`);
+            }
+        };
+
+        window.createNewUser = function() {
+            const name = document.getElementById('new-user-name').value;
+            const role = document.getElementById('new-user-role').value;
+            if(!name) return;
+            accountsData.push({
+                id: name.toLowerCase(), name: name, role: role === 'master' ? 'Neu-Master' : 'Community',
+                desc: 'Custom', badgeColor: 'from-green-400 to-lime-600', access: role
+            });
+            showToast(`User ${name} erfolgreich in der Matrix erstellt!`);
+            renderAccountsGrid();
+        };
+
+        window.generateRandomUsernames = function() {
+            const p = ["Neo", "Holo", "Cyber", "Quantum"];
+            const s = ["_Alice", "_Hatter", "_Vortex", "_42"];
+            document.getElementById('generated-names-box').innerHTML = p.map(pr => 
+                `<button onclick="document.getElementById('username-edit-input').value='${pr}${s[Math.floor(Math.random()*s.length)]}'" class="bg-zinc-800 border border-pink-500/50 px-2 py-1 rounded text-[10px] text-pink-300">@${pr}${s[Math.floor(Math.random()*s.length)]}</button>`
+            ).join('');
+        };
+
+        window.changeProfilePic = function() {
+            showToast("Vault geöffnet: Profilbild ändern (Simuliert)");
+            document.getElementById('modal-avatar-text').innerText = '🐰'; // Demo change
+            document.getElementById('user-avatar-initial').innerText = '🐰';
+        };
+
+        const voxelModal = document.getElementById('voxel-modal');
+        window.openVoxelProfile = function(username) {
+            document.getElementById('voxel-username').innerText = `@${username}`;
+            voxelModal.classList.remove('hidden');
+            voxelModal.classList.add('flex');
+        };
+        window.closeVoxelModal = function() {
+            voxelModal.classList.add('hidden');
+            voxelModal.classList.remove('flex');
+        };
+
+        const rpgModal = document.getElementById('rpg-album-modal');
+        let currentSlideshowAlbum = [];
+        let slideIndex = 0;
+
+        window.openRPGAlbum = function(albumName, authorName) {
+            currentSlideshowAlbum = mediaFeed.filter(m => m.album === albumName);
+            if(currentSlideshowAlbum.length === 0) currentSlideshowAlbum = mediaFeed; // fallback
+
+            document.getElementById('rpg-speaker-name').innerText = `${authorName} sagt:`;
+            document.getElementById('rpg-avatar').innerText = authorName[0];
+            document.getElementById('slideshow-album-name').innerText = `Album: ${albumName}`;
+            
+            document.getElementById('rpg-intro').classList.remove('hidden');
+            document.getElementById('rpg-slideshow').classList.add('hidden');
+            
+            // Re-trigger typewriter animation
+            const el = document.getElementById('rpg-typewriter-text');
+            el.style.animation = 'none';
+            el.offsetHeight; // trigger reflow
+            el.style.animation = null; 
+
+            rpgModal.classList.remove('hidden');
+            rpgModal.classList.add('flex');
+        };
+        window.closeRpgModal = function() {
+            rpgModal.classList.add('hidden');
+            rpgModal.classList.remove('flex');
+        };
+
+        window.startSlideshow = function() {
+            document.getElementById('rpg-intro').classList.add('hidden');
+            document.getElementById('rpg-slideshow').classList.remove('hidden');
+            slideIndex = 0;
+            renderSlide();
+        };
+
+        window.nextSlide = function() { slideIndex = (slideIndex + 1) % currentSlideshowAlbum.length; renderSlide(); };
+        window.prevSlide = function() { slideIndex = (slideIndex - 1 + currentSlideshowAlbum.length) % currentSlideshowAlbum.length; renderSlide(); };
+
+        function renderSlide() {
+            const item = currentSlideshowAlbum[slideIndex];
+            const container = document.getElementById('slideshow-content');
+            if(item.type === 'video') {
+                container.innerHTML = `<video src="${item.url}" autoplay loop muted class="w-full h-full object-contain"></video>`;
+            } else if (item.type === 'glb') {
+                container.innerHTML = `<model-viewer src="${item.url}" auto-rotate camera-controls class="w-full h-full" background-color="transparent"></model-viewer>`;
+            } else {
+                container.innerHTML = `<img src="${item.url}" class="max-w-full max-h-full object-contain">`;
+            }
+        }
+
+        // Global Mute Toggle
+        const muteBtn = document.getElementById('mute-global-btn');
+        const muteIcon = document.getElementById('global-mute-icon');
+        muteBtn.addEventListener('click', () => {
+            globalMuted = !globalMuted;
+            muteIcon.className = globalMuted ? "fa-solid fa-volume-xmark text-pink-400" : "fa-solid fa-volume-high text-cyan-300";
+            document.querySelectorAll('video').forEach(v => v.muted = globalMuted);
+            showToast(globalMuted ? "Ton stummgeschaltet" : "Ton an");
+        });
+
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.className = 'fixed top-16 left-1/2 transform -translate-x-1/2 cyber-glow-box text-cyan-300 text-xs px-4 py-2 rounded-full z-50 shadow-2xl font-cyber border border-cyan-400/50 text-center w-[90%] max-w-sm';
+            t.innerText = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2500);
+        }
+
+        // Init
+        window.onload = function() {
+            renderFeed();
+        };
+    </script>
+</body>
+</html>
