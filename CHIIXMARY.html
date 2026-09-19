@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#07060f">
+<title>Paulis Cosmos · X42 Crystal Nexus</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{
+  colors:{ cosmos:{ base:'#07060f', deep:'#0d0a1c', pink:'#ff9ecf', lav:'#c9a7ff', aqua:'#7ee8fa', gold:'#ffd98e', mint:'#9ae6b4', paulis:'#a855f7' } },
+  fontFamily:{ display:['Fredoka','system-ui','sans-serif'], body:['Quicksand','system-ui','sans-serif'] }
+}}}
+</script>
+
+<style>
+:root{ --pink:#ff9ecf; --lav:#c9a7ff; --aqua:#7ee8fa; --gold:#ffd98e; --mint:#9ae6b4; --paulis:#a855f7; --theme:#7ee8fa; --radius:22px; }
+*{ -webkit-tap-highlight-color:transparent; box-sizing:border-box; }
+
+html,body{
+  height:100%; margin:0; overflow:hidden;
+  background:#07060f; color:#f4f1ff;
+  font-family:'Quicksand', system-ui, sans-serif;
+  overscroll-behavior:none;
+  touch-action:manipulation;          /* allows taps, blocks double-tap zoom */
+  -webkit-user-select:none; user-select:none;
+}
+
+/* aurora */
+body::before{
+  content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(60vw 60vw at 12% 8%,  rgba(126,232,250,.14), transparent 60%),
+    radial-gradient(55vw 55vw at 88% 92%, rgba(201,167,255,.16), transparent 60%),
+    radial-gradient(45vw 45vw at 78% 12%, rgba(255,158,207,.11), transparent 60%),
+    radial-gradient(50vw 50vw at 20% 88%, rgba(255,217,142,.09), transparent 60%);
+  animation:auroraDrift 26s ease-in-out infinite alternate;
+}
+@keyframes auroraDrift{ 0%{transform:scale(1)} 100%{transform:scale(1.14) translate3d(-2%,2%,0)} }
+
+/* ── Sparkle star layer ───────────────────────────────── */
+#sparkles{ position:fixed; inset:0; z-index:5; pointer-events:none; overflow:hidden; }
+#sparkles .sp{ position:absolute; font-size:14px; color:#fff;
+  text-shadow:0 0 8px #7ee8fa, 0 0 18px #c9a7ff, 0 0 30px #ff9ecf;
+  animation: twinkle 3.2s ease-in-out infinite, drift 22s linear infinite;
+  opacity:.9; will-change:transform,opacity;
+}
+#sparkles .sp.s2{ font-size:10px; animation-duration: 4.1s, 30s; }
+#sparkles .sp.s3{ font-size:18px; animation-duration: 2.6s, 26s; }
+#sparkles .sp.s4{ font-size:8px;  animation-duration: 5.0s, 34s; }
+@keyframes twinkle{ 0%,100%{opacity:.15; transform:scale(.7) rotate(0deg)} 50%{opacity:1; transform:scale(1.2) rotate(180deg)} }
+@keyframes drift{ from{ translate:0 0 } to{ translate:-40px -50px } }
+
+/* ── Crystal glass ─────────────────────────────────────── */
+.crystal{ position:relative;
+  background:linear-gradient(150deg, rgba(255,255,255,.13), rgba(255,255,255,.035));
+  backdrop-filter:blur(22px) saturate(170%); -webkit-backdrop-filter:blur(22px) saturate(170%);
+  border-radius:var(--radius);
+  box-shadow:0 18px 48px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -18px 40px rgba(168,85,247,.07);
+}
+.crystal::before{ content:''; position:absolute; inset:0; border-radius:inherit; padding:1.2px;
+  background: conic-gradient(from var(--ang,0deg), var(--pink), var(--lav), var(--aqua), var(--gold), var(--mint), var(--pink));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  pointer-events:none; opacity:.75; animation:spinHue 14s linear infinite;
+}
+@keyframes spinHue{ to{ --ang:360deg } }
+@property --ang{ syntax:'<angle>'; initial-value:0deg; inherits:false }
+
+.glow-aqua{ text-shadow:0 0 12px rgba(126,232,250,.85), 0 0 34px rgba(126,232,250,.45) }
+.glow-pink{ text-shadow:0 0 12px rgba(255,158,207,.85), 0 0 34px rgba(255,158,207,.4) }
+.glow-gold{ text-shadow:0 0 12px rgba(255,217,142,.9),  0 0 30px rgba(255,217,142,.45) }
+.glow-paulis{ text-shadow:0 0 14px rgba(168,85,247,.95), 0 0 40px rgba(168,85,247,.5) }
+
+::-webkit-scrollbar{ width:5px; height:5px } ::-webkit-scrollbar-track{ background:transparent }
+::-webkit-scrollbar-thumb{ background:linear-gradient(var(--lav),var(--aqua)); border-radius:9px }
+.no-sb::-webkit-scrollbar{ display:none }
+
+input[type=range]{ -webkit-appearance:none; appearance:none; background:rgba(255,255,255,.12); border-radius:9px; height:5px; }
+input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
+  background:radial-gradient(circle at 35% 35%, #fff, var(--theme)); box-shadow:0 0 14px var(--theme); cursor:pointer }
+
+@keyframes corePulse{ 0%,100%{ transform:scale(1); filter:brightness(1) } 50%{ transform:scale(1.06); filter:brightness(1.3) } }
+.core-pulse{ animation:corePulse 3.2s ease-in-out infinite }
+@keyframes ringSpin{ to{ transform:rotate(360deg) } }
+.crystal-ring{ animation:ringSpin 18s linear infinite } .crystal-ring.rev{ animation-direction:reverse; animation-duration:26s }
+
+/* ── Bubbles ───────────────────────────────────────────── */
+.bubble{ position:absolute; will-change:transform; transform-origin:center center;
+  cursor:grab; touch-action:none; pointer-events:auto; }
+.bubble:active{ cursor:grabbing }
+.bubble .glass-core{
+  width:100%; height:100%; border-radius:50%; overflow:hidden; position:relative; display:grid; place-items:center;
+  background: radial-gradient(circle at 32% 26%, rgba(255,255,255,.5), rgba(255,255,255,.06) 42%, rgba(0,0,0,.35));
+  border:1.6px solid rgba(255,255,255,.42);
+  box-shadow: 0 0 26px -4px var(--theme), inset 0 0 26px rgba(255,255,255,.16), 0 14px 34px rgba(0,0,0,.55);
+  backdrop-filter: blur(10px) saturate(160%); -webkit-backdrop-filter: blur(10px) saturate(160%);
+}
+.bubble .glass-core::after{ content:''; position:absolute; top:9%; left:16%; width:34%; height:22%;
+  border-radius:50%; background:linear-gradient(180deg, rgba(255,255,255,.85), transparent);
+  filter:blur(5px); pointer-events:none; }
+.bubble.selected .glass-core{ box-shadow:0 0 0 3px rgba(255,255,255,.85), 0 0 40px 4px var(--theme), inset 0 0 30px rgba(255,255,255,.24) }
+.bubble img, .bubble video{ width:100%; height:100%; object-fit:cover; border-radius:50%; pointer-events:none; user-select:none }
+.bubble model-viewer{ width:100%; height:100%; background:transparent; --poster-color:transparent; pointer-events:none }
+.bubble .emoji-face{ font-size:2.1rem; line-height:1; filter:drop-shadow(0 3px 8px rgba(0,0,0,.6)) }
+.wave-ring{ position:absolute; inset:0; border-radius:50% }
+.wave-ring span{ position:absolute; left:50%; bottom:50%; width:3px; border-radius:3px;
+  background:linear-gradient(to top, var(--theme), #fff); transform-origin:50% 100%; opacity:.9 }
+.bubble-chip{ position:absolute; left:50%; transform:translateX(-50%); bottom:-20px;
+  white-space:nowrap; max-width:130px; overflow:hidden; text-overflow:ellipsis;
+  font-size:9.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  padding:3px 10px; border-radius:99px;
+  background:rgba(10,8,20,.82); border:1px solid rgba(255,255,255,.2); color:#fff;
+  backdrop-filter:blur(8px); pointer-events:none; }
+
+/* ── Edge HUD (FIXED: z-60, touch-action, pointer-events) ─ */
+.edge-btn{
+  position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  width:60px; height:60px; border-radius:18px; cursor:pointer;
+  pointer-events:auto; touch-action:manipulation;
+  background:linear-gradient(150deg, rgba(255,255,255,.14), rgba(255,255,255,.04));
+  border:1.4px solid rgba(255,255,255,.24);
+  backdrop-filter:blur(18px) saturate(170%); -webkit-backdrop-filter:blur(18px) saturate(170%);
+  box-shadow:0 10px 26px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.28);
+  transition:transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .22s, border-color .22s;
+  -webkit-tap-highlight-color:transparent;
+}
+.edge-btn:active{ transform:scale(.92) }
+.edge-btn .glyph{ font-size:19px; line-height:1; pointer-events:none }
+.edge-btn .animal{ position:absolute; bottom:-3px; right:-3px; font-size:14px; filter:drop-shadow(0 2px 4px #000); pointer-events:none }
+.edge-btn .lbl{ position:absolute; bottom:-15px; font-size:7.4px; font-weight:700;
+  letter-spacing:.1em; text-transform:uppercase; opacity:.78; white-space:nowrap; pointer-events:none }
+.edge-btn:hover{ box-shadow:0 0 28px -4px var(--theme), 0 12px 30px rgba(0,0,0,.55); border-color:rgba(255,255,255,.5) }
+
+/* ── World orb ─────────────────────────────────────────── */
+.world-orb{ width:48px; height:48px; border-radius:50%; cursor:pointer; position:relative;
+  display:grid; place-items:center; font-size:20px;
+  border:1.6px solid rgba(255,255,255,.22);
+  backdrop-filter:blur(14px) saturate(160%);
+  pointer-events:auto; touch-action:manipulation;
+  transition:transform .28s cubic-bezier(.34,1.56,.64,1), box-shadow .28s, border-color .28s; }
+.world-orb.active{ transform:scale(1.16); border-color:rgba(255,255,255,.9);
+  box-shadow:0 0 26px 2px var(--theme), inset 0 0 22px rgba(255,255,255,.2) }
+.world-orb:active{ transform:scale(.9) }
+
+/* ── Paulis ────────────────────────────────────────────── */
+#paulis{ position:fixed; z-index:60; width:88px; height:88px; cursor:grab; touch-action:none;
+  user-select:none; filter:drop-shadow(0 0 22px rgba(168,85,247,.75));
+  right:calc(10px + env(safe-area-inset-right));
+  bottom:calc(112px + env(safe-area-inset-bottom)); }
+#paulis svg{ width:100%; height:100%; overflow:visible }
+#paulis .tail{ transform-origin:76% 62%; animation:tailSway 3.6s ease-in-out infinite }
+@keyframes tailSway{ 0%,100%{ transform:rotate(-9deg) } 50%{ transform:rotate(11deg) } }
+#paulis .ear-l{ transform-origin:center bottom; animation:earTwitchL 5.2s ease-in-out infinite }
+#paulis .ear-r{ transform-origin:center bottom; animation:earTwitchR 6.1s ease-in-out infinite }
+@keyframes earTwitchL{ 0%,88%,100%{ transform:rotate(0) } 92%{ transform:rotate(-11deg) } }
+@keyframes earTwitchR{ 0%,84%,100%{ transform:rotate(0) } 89%{ transform:rotate(10deg) } }
+#paulis .eye{ animation:blink 5.8s infinite; transform-origin:center }
+@keyframes blink{ 0%,94%,100%{ transform:scaleY(1) } 96%{ transform:scaleY(.08) } }
+#paulis .aura{ animation:auraPulse 4.4s ease-in-out infinite; transform-origin:center }
+@keyframes auraPulse{ 0%,100%{ opacity:.30; transform:scale(1) } 50%{ opacity:.62; transform:scale(1.14) } }
+
+.paulis-says{ position:fixed; z-index:61; max-width:220px; padding:11px 15px; border-radius:18px 18px 18px 4px;
+  background:linear-gradient(150deg, rgba(168,85,247,.94), rgba(201,167,255,.9));
+  color:#10061e; font-weight:700; font-size:12.5px; line-height:1.42;
+  box-shadow:0 12px 34px rgba(168,85,247,.5), inset 0 1px 0 rgba(255,255,255,.5);
+  backdrop-filter:blur(12px); animation:sayPop .34s cubic-bezier(.34,1.56,.64,1); }
+@keyframes sayPop{ from{ opacity:0; transform:translateY(9px) scale(.9) } to{ opacity:1; transform:none } }
+
+/* ── Drawer / Modal ───────────────────────────────────── */
+.drawer{ position:fixed; inset:0; z-index:70; background:rgba(6,5,14,.7);
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  display:flex; align-items:flex-end; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .3s; }
+.drawer.open{ opacity:1; pointer-events:auto }
+.drawer-panel{ width:100%; max-width:560px; max-height:82vh; overflow-y:auto;
+  border-radius:30px 30px 0 0; padding:22px 18px calc(30px + env(safe-area-inset-bottom));
+  transform:translateY(100%); transition:transform .38s cubic-bezier(.22,1,.36,1); }
+.drawer.open .drawer-panel{ transform:translateY(0) }
+
+.modal{ position:fixed; inset:0; z-index:90; display:grid; place-items:center; padding:20px;
+  background:rgba(4,3,10,.82); backdrop-filter:blur(14px);
+  opacity:0; pointer-events:none; transition:opacity .28s; }
+.modal.open{ opacity:1; pointer-events:auto }
+
+#toast{ position:fixed; left:50%; bottom:calc(26px + env(safe-area-inset-bottom));
+  transform:translate(-50%, 26px); z-index:120; padding:12px 22px; border-radius:99px;
+  font-weight:700; font-size:13px; color:#0b0616;
+  background:linear-gradient(120deg, var(--aqua), var(--lav), var(--pink));
+  box-shadow:0 12px 34px rgba(0,0,0,.5);
+  opacity:0; pointer-events:none; transition:opacity .3s, transform .3s;
+  max-width:88vw; text-align:center; }
+#toast.show{ opacity:1; transform:translate(-50%, 0) }
+
+.fade-in{ animation:fadeIn .5s ease both } @keyframes fadeIn{ from{ opacity:0; transform:translateY(10px) } to{ opacity:1; transform:none } }
+.spin-slow{ animation:ringSpin 9s linear infinite }
+
+/* ── MOBILE PORTRAIT OPTIMISATION ─────────────────────── */
+@media (max-width:520px){
+  .edge-btn{ width:52px; height:52px; border-radius:15px }
+  .edge-btn .glyph{ font-size:16px }
+  .edge-btn .animal{ font-size:12px }
+  .edge-btn .lbl{ font-size:6.6px; bottom:-12px }
+  .world-orb{ width:42px; height:42px; font-size:18px }
+  #paulis{ width:72px; height:72px; bottom:calc(104px + env(safe-area-inset-bottom)) }
+  .bubble-chip{ font-size:8.5px; padding:2px 8px; bottom:-17px; max-width:110px }
+}
+@media (max-width:360px){
+  .edge-btn{ width:46px; height:46px }
+  .edge-btn .glyph{ font-size:14px }
+  .world-orb{ width:38px; height:38px; font-size:16px }
+  #paulis{ width:62px; height:62px }
+}
+/* landscape squeeze */
+@media (orientation:landscape) and (max-height:520px){
+  .edge-btn{ width:46px; height:46px }
+  .world-orb{ width:38px; height:38px; font-size:16px }
+  #paulis{ width:64px; height:64px }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ✦ glimmer layer -->
+<div id="sparkles"></div>
+
+<!-- ═══ BOOT (fully tappable now) ══════════════════════════════ -->
+<div id="boot" class="fixed inset-0 z-[100] grid place-items-center px-6 cursor-pointer"
+     style="background:radial-gradient(circle at 50% 45%, rgba(168,85,247,.20), transparent 62%), #07060f;"
+     onclick="App.boot()">
+  <div class="flex flex-col items-center text-center max-w-sm fade-in pointer-events-none">
+    <div class="relative grid place-items-center mb-9 core-pulse pointer-events-none" style="width:190px;height:190px;">
+      <div class="absolute inset-0 crystal-ring">
+        <svg viewBox="0 0 200 200" class="w-full h-full"><defs>
+          <linearGradient id="rg1" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#ff9ecf"/><stop offset="50%" stop-color="#7ee8fa"/><stop offset="100%" stop-color="#c9a7ff"/>
+          </linearGradient></defs>
+          <circle cx="100" cy="100" r="92" fill="none" stroke="url(#rg1)" stroke-width="1.6" stroke-dasharray="7 13" opacity=".9"/>
+        </svg>
+      </div>
+      <div class="absolute inset-0 crystal-ring rev scale-[.82]">
+        <svg viewBox="0 0 200 200" class="w-full h-full">
+          <circle cx="100" cy="100" r="92" fill="none" stroke="#ffd98e" stroke-width="1.1" stroke-dasharray="3 19" opacity=".75"/>
+        </svg>
+      </div>
+      <div class="absolute inset-0 crystal-ring rev scale-[.64]" style="animation-duration:11s">
+        <svg viewBox="0 0 200 200" class="w-full h-full">
+          <circle cx="100" cy="100" r="92" fill="none" stroke="#9ae6b4" stroke-width="1.4" stroke-dasharray="22 46" opacity=".7"/>
+        </svg>
+      </div>
+      <div class="relative w-[104px] h-[104px] rounded-full crystal grid place-items-center"
+           style="box-shadow:0 0 70px rgba(168,85,247,.6), inset 0 0 40px rgba(255,255,255,.14);">
+        <i class="fa-solid fa-infinity text-4xl glow-paulis" style="color:#e9d5ff"></i>
+      </div>
+    </div>
+    <h1 class="font-display text-[30px] font-bold tracking-[.14em] mb-1 glow-pink" style="color:#fff">PAULIS COSMOS</h1>
+    <p class="font-display text-[11px] tracking-[.42em] uppercase mb-5" style="color:var(--aqua)">X42 · Crystal Nexus</p>
+    <p class="text-[13.5px] leading-relaxed mb-9" style="color:rgba(244,241,255,.72)">
+      Tap anywhere to awaken the story-world.<br>
+      <span style="color:rgba(244,241,255,.5)">Grandma's tales become stars ✦</span>
+    </p>
+    <div class="flex items-center gap-3 text-[10px] uppercase tracking-widest" style="color:rgba(244,241,255,.42)">
+      <span>🎵 Music</span><span>·</span><span>📖 Stories</span><span>·</span><span>🖼️ Pictures</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ APP SHELL ═════════════════════════════════════════════ -->
+<div id="app" class="fixed inset-0 z-10 opacity-0 pointer-events-none transition-opacity duration-700">
+
+  <!-- canvas: NON-interactive (fix!) -->
+  <canvas id="cosmos" class="absolute inset-0 w-full h-full" style="pointer-events:none"></canvas>
+
+  <!-- bubble layer: NON-interactive on empty space, bubbles themselves are auto -->
+  <div id="bubble-layer" class="absolute inset-0 overflow-hidden" style="pointer-events:none"></div>
+
+  <div class="absolute top-[13px] left-1/2 -translate-x-1/2 z-20 pointer-events-none text-center">
+    <div id="world-name" class="font-display text-[11px] tracking-[.42em] uppercase"
+         style="color:var(--theme); text-shadow:0 0 16px var(--theme)">COSMIC DREAM</div>
+  </div>
+
+  <!-- LEFT portals -->
+  <div class="absolute left-0 top-1/2 -translate-y-1/2 z-[60] flex flex-col gap-3.5"
+       style="padding-left:env(safe-area-inset-left)">
+    <div class="edge-btn" style="margin-left:-30px" onclick="HUD.pick('music')"><span class="glyph">🎵</span><span class="animal">🐺</span><span class="lbl">Music</span></div>
+    <div class="edge-btn" style="margin-left:-30px" onclick="HUD.pick('stories')"><span class="glyph">📖</span><span class="animal">🦉</span><span class="lbl">Stories</span></div>
+    <div class="edge-btn" style="margin-left:-30px" onclick="HUD.pick('pictures')"><span class="glyph">🖼️</span><span class="animal">🦋</span><span class="lbl">Pictures</span></div>
+    <div class="edge-btn" style="margin-left:-30px" onclick="HUD.pick('text')"><span class="glyph">📜</span><span class="animal">🐢</span><span class="lbl">Text</span></div>
+  </div>
+
+  <!-- RIGHT portals -->
+  <div class="absolute right-0 top-1/2 -translate-y-1/2 z-[60] flex flex-col gap-3.5"
+       style="padding-right:env(safe-area-inset-right)">
+    <div class="edge-btn" style="margin-right:-30px" onclick="HUD.pick('videos')"><span class="glyph">🎬</span><span class="animal">🦊</span><span class="lbl">Video</span></div>
+    <div class="edge-btn" style="margin-right:-30px" onclick="HUD.pick('web')"><span class="glyph">🌐</span><span class="animal">🕊️</span><span class="lbl">Web</span></div>
+    <div class="edge-btn" style="margin-right:-30px" onclick="HUD.pick('models')"><span class="glyph">🧊</span><span class="animal">🐘</span><span class="lbl">3D</span></div>
+    <div class="edge-btn" style="margin-right:-30px" onclick="HUD.pick('files')"><span class="glyph">📦</span><span class="animal">🐼</span><span class="lbl">Files</span></div>
+  </div>
+
+  <!-- Worlds -->
+  <div class="absolute left-1/2 -translate-x-1/2 z-[60]" style="bottom:calc(96px + env(safe-area-inset-bottom))">
+    <div class="crystal px-3 py-2.5 flex items-center gap-2.5">
+      <div class="world-orb active" data-world="cosmic" onclick="Worlds.set('cosmic')" style="background:radial-gradient(circle at 35% 30%, #fff, #7ee8fa 45%, #a855f7)">✨</div>
+      <div class="world-orb" data-world="water" onclick="Worlds.set('water')" style="background:radial-gradient(circle at 35% 30%, #fff, #38bdf8 45%, #0369a1)">🌊</div>
+      <div class="world-orb" data-world="green" onclick="Worlds.set('green')" style="background:radial-gradient(circle at 35% 30%, #fff, #4ade80 45%, #166534)">🌱</div>
+      <div class="world-orb" data-world="fire"  onclick="Worlds.set('fire')"  style="background:radial-gradient(circle at 35% 30%, #fff, #fb923c 45%, #b91c1c)">🔥</div>
+      <div class="world-orb" data-world="panda" onclick="Worlds.set('panda')" style="background:radial-gradient(circle at 35% 30%, #fff, #e5e7eb 42%, #111827)">🐼</div>
+    </div>
+  </div>
+
+  <!-- Action bar -->
+  <div class="absolute left-1/2 -translate-x-1/2 z-[60] w-[min(94vw,540px)]"
+       style="bottom:calc(12px + env(safe-area-inset-bottom))">
+    <div class="crystal px-3 py-2.5 flex items-center gap-2.5">
+      <button onclick="Player.toggle()" id="playBtn"
+        class="shrink-0 w-11 h-11 rounded-full grid place-items-center active:scale-90 transition-transform"
+        style="background:linear-gradient(135deg, var(--aqua), var(--lav) 55%, var(--pink));
+               box-shadow:0 0 22px rgba(126,232,250,.6); pointer-events:auto; touch-action:manipulation">
+        <i id="playIcon" class="fa-solid fa-play text-[15px]" style="color:#0b0616"></i>
+      </button>
+      <div class="flex-1 min-w-0">
+        <input type="range" id="seek" min="0" max="100" step="0.1" value="0" class="w-full cursor-pointer">
+        <div class="flex justify-between mt-1 text-[9px] font-mono" style="color:rgba(244,241,255,.55)">
+          <span id="tCur">0:00</span>
+          <span id="nowPlaying" class="truncate px-2 max-w-[150px]">silence…</span>
+          <span id="tDur">0:00</span>
+        </div>
+      </div>
+      <button onclick="Snapshot.menu()"
+        class="shrink-0 w-11 h-11 rounded-full grid place-items-center active:scale-90 transition-transform crystal"
+        style="pointer-events:auto; touch-action:manipulation">
+        <i class="fa-solid fa-camera-retro text-[15px]" style="color:var(--gold)"></i>
+      </button>
+      <button onclick="Drawer.open('story')"
+        class="shrink-0 w-11 h-11 rounded-full grid place-items-center active:scale-90 transition-transform crystal"
+        style="pointer-events:auto; touch-action:manipulation">
+        <i class="fa-solid fa-seedling text-[15px]" style="color:var(--mint)"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- count -->
+  <div class="absolute z-[60] top-3 right-3" style="padding-right:env(safe-area-inset-right)">
+    <div class="crystal px-3 py-1.5 flex items-center gap-2">
+      <span class="text-[10px] font-bold tracking-widest uppercase" style="color:rgba(244,241,255,.7)">Orbit</span>
+      <span id="bubbleCount" class="text-[13px] font-display font-bold glow-aqua" style="color:var(--aqua)">0</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PAULIS ═════════════════════════════════════════════════ -->
+<div id="paulis">
+  <svg viewBox="0 0 120 120">
+    <defs>
+      <radialGradient id="pAura" cx="50%" cy="50%">
+        <stop offset="0%" stop-color="#c084fc" stop-opacity=".85"/>
+        <stop offset="70%" stop-color="#a855f7" stop-opacity=".18"/>
+        <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="pFur" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#c4a3ff"/><stop offset="100%" stop-color="#8b3ff0"/>
+      </linearGradient>
+      <linearGradient id="pHair" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#e9d5ff"/><stop offset="100%" stop-color="#9333ea"/>
+      </linearGradient>
+      <linearGradient id="pSuit" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#f0abfc"/><stop offset="100%" stop-color="#7c3aed"/>
+      </linearGradient>
+    </defs>
+    <circle class="aura" cx="60" cy="60" r="56" fill="url(#pAura)"/>
+    <g class="tail"><path d="M78 74 C 96 70, 106 56, 100 42 C 96 33, 86 34, 85 43 C 84 50, 92 52, 93 46" fill="none" stroke="url(#pFur)" stroke-width="7" stroke-linecap="round"/></g>
+    <path d="M60 62 C 42 62, 36 78, 38 96 L 82 96 C 84 78, 78 62, 60 62 Z" fill="url(#pSuit)"/>
+    <path d="M48 64 Q60 71 72 64 L70 69 Q60 74 50 69 Z" fill="#ffd98e" opacity=".95"/>
+    <ellipse cx="60" cy="45" rx="23" ry="21" fill="url(#pFur)"/>
+    <path class="ear-l" d="M42 32 L38 12 L54 26 Z" fill="url(#pFur)" stroke="#7c3aed" stroke-width="1.2"/>
+    <path class="ear-l" d="M43 30 L41 18 L51 27 Z" fill="#f0abfc" opacity=".75"/>
+    <path class="ear-r" d="M78 32 L82 12 L66 26 Z" fill="url(#pFur)" stroke="#7c3aed" stroke-width="1.2"/>
+    <path class="ear-r" d="M77 30 L79 18 L69 27 Z" fill="#f0abfc" opacity=".75"/>
+    <path d="M37 42 Q40 22 60 20 Q80 22 83 42 Q76 32 66 34 Q60 28 54 34 Q44 32 37 42 Z" fill="url(#pHair)"/>
+    <g class="eye">
+      <ellipse cx="51" cy="46" rx="5.4" ry="6.4" fill="#0b0616"/>
+      <ellipse cx="51" cy="46" rx="4.4" ry="5.4" fill="#7ee8fa"/>
+      <ellipse cx="52.2" cy="44.4" rx="1.8" ry="2.1" fill="#fff"/>
+      <ellipse cx="69" cy="46" rx="5.4" ry="6.4" fill="#0b0616"/>
+      <ellipse cx="69" cy="46" rx="4.4" ry="5.4" fill="#7ee8fa"/>
+      <ellipse cx="70.2" cy="44.4" rx="1.8" ry="2.1" fill="#fff"/>
+    </g>
+    <ellipse cx="44" cy="52" rx="4.2" ry="2.4" fill="#ff9ecf" opacity=".62"/>
+    <ellipse cx="76" cy="52" rx="4.2" ry="2.4" fill="#ff9ecf" opacity=".62"/>
+    <path d="M56 55 Q60 59 64 55" fill="none" stroke="#4c1d95" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M60 30 L63.4 36 L60 42 L56.6 36 Z" fill="#7ee8fa" stroke="#fff" stroke-width=".9"/>
+  </svg>
+</div>
+
+<!-- Drawer / Modal / Toast -->
+<div id="drawer" class="drawer" onclick="if(event.target===this) Drawer.close()">
+  <div class="drawer-panel crystal" style="border-radius:30px 30px 0 0">
+    <div class="w-12 h-1.5 rounded-full mx-auto mb-5" style="background:rgba(255,255,255,.24)"></div>
+    <div id="drawerBody"></div>
+  </div>
+</div>
+
+<div id="modal" class="modal" onclick="if(event.target===this) Modal.close()">
+  <div class="crystal w-full max-w-sm p-5 text-center" id="modalBody"></div>
+</div>
+
+<div id="toast"></div>
+<input type="file" id="fileInput" multiple class="hidden">
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   ✦ PAULIS COSMOS — fixed single-file build
+   ────────────────────────────────────────────────────────────────────
+   FIXES IN THIS BUILD:
+   • canvas + bubble-layer: pointer-events:none (bubbles stay auto)
+   • HUD z-index raised to 60, explicit pointer-events:auto
+   • touch-action:manipulation on every button
+   • body: touch-action:manipulation (was none — killed taps)
+   • boot screen fully tappable
+   • iOS safe-area insets respected
+   • mobile portrait sizing
+   • ✦ glimmering sparkle layer
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Sparkles ✦ ───────────────────────────────────────────── */
+(function sparkles(){
+  const SYMS = ['✦','✧','⋆','✫','✬','✭','✮','✯','✰','⭐','💫','🌟','✺','✹'];
+  const host = document.getElementById('sparkles');
+  const N = window.innerWidth < 520 ? 26 : 42;
+  let html = '';
+  for (let i=0;i<N;i++){
+    const s = SYMS[Math.random()*SYMS.length|0];
+    const x = Math.random()*100, y = Math.random()*100;
+    const delay = (Math.random()*6).toFixed(2);
+    const dur   = (2.2 + Math.random()*3).toFixed(2);
+    const cls   = ['','s2','s3','s4'][Math.random()*4|0];
+    html += `<span class="sp ${cls}" style="left:${x}%;top:${y}%;animation-delay:${delay}s,${(Math.random()*6).toFixed(2)}s;animation-duration:${dur}s,${(18+Math.random()*18).toFixed(0)}s">${s}</span>`;
+  }
+  host.innerHTML = html;
+})();
+
+/* ── Config ───────────────────────────────────────────────── */
+const CATEGORIES = {
+  music:    { accept:'audio/*',                       glyph:'🎵', animal:'🐺', label:'Music',    color:'#c9a7ff' },
+  stories:  { accept:'.txt,.md,.pdf,.doc,.docx,.rtf', glyph:'📖', animal:'🦉', label:'Stories',  color:'#ffd98e' },
+  pictures: { accept:'image/*,.heic,.heif,.avif',     glyph:'🖼️', animal:'🦋', label:'Pictures', color:'#ff9ecf' },
+  videos:   { accept:'video/*',                       glyph:'🎬', animal:'🦊', label:'Videos',   color:'#7ee8fa' },
+  web:      { accept:'.html,.htm,.url,.webloc',       glyph:'🌐', animal:'🕊️', label:'Web',      color:'#9ae6b4' },
+  text:     { accept:'.txt,.md,.json,.csv,.log',      glyph:'📜', animal:'🐢', label:'Text',     color:'#f6ad55' },
+  models:   { accept:'.glb,.gltf',                    glyph:'🧊', animal:'🐘', label:'3D',       color:'#b794f4' },
+  files:    { accept:'*/*',                           glyph:'📦', animal:'🐼', label:'Files',    color:'#e2e8f0' }
+};
+const WORLDS = {
+  cosmic:{ name:'COSMIC DREAM',      color:'#7ee8fa', accent:'#c9a7ff' },
+  water: { name:'OCEAN OF TALES',    color:'#38bdf8', accent:'#7ee8fa' },
+  green: { name:'FOREST OF WISDOM',  color:'#4ade80', accent:'#9ae6b4' },
+  fire:  { name:'HEARTH OF STORIES', color:'#fb923c', accent:'#ffd98e' },
+  panda: { name:'PANDA QUIET',       color:'#e5e7eb', accent:'#a855f7' }
+};
+const PAULIS_LINES = {
+  boot:    ["Welcome, dear one ✦","The crystal hums for you.","Let's wake the story-world."],
+  empty:   ["Tap a portal on the side 🐺","Bring grandma's voice here 🎵","Everything becomes a star ✦"],
+  added:   ["A new star is born ✦","It floats so gently…","Beautiful. Truly.","Grandma would smile 🥰"],
+  play:    ["Listen closely… 🎧","The cosmos breathes with sound.","Feel the rhythm ripple."],
+  snapshot:["Captured! ✦","A memory, frozen in crystal.","Saved to your constellation."],
+  grandma: ["Tell me a story from long ago…","Grandma's voice lives in the sound 🎵","What did she teach you?"],
+  idle:    ["Drag a bubble to move it 🫧","Try the Worlds below 🌊🌱🔥🐼✦","Every file becomes a friend 📦","Double-tap a bubble to open it 💫"]
+};
+
+/* ── App state ─────────────────────────────────────────────── */
+const App = {
+  ready:false, booted:false, world:'cosmic', theme:'#7ee8fa', accent:'#c9a7ff',
+  bubbles:[], selected:null, nextId:1,
+
+  boot(){
+    if(this.booted) return;
+    this.booted = true;
+
+    const boot = document.getElementById('boot');
+    boot.style.transition = 'opacity .55s, transform .55s';
+    boot.style.opacity = '0';
+    boot.style.transform = 'scale(1.08)';
+    setTimeout(()=> boot.remove(), 580);
+
+    try { Audio.init(); } catch(e){ console.warn('audio init', e); }
+
+    const app = document.getElementById('app');
+    app.classList.remove('opacity-0','pointer-events-none');
+
+    this.ready = true;
+    Cosmos.start();
+    Bubbles.start();
+    Paulis.start();
+
+    Paulis.say(PAULIS_LINES.boot[Math.random()*3|0], 4200);
+    setTimeout(()=> Paulis.say(PAULIS_LINES.empty[Math.random()*3|0], 5000), 5200);
+
+    setTimeout(()=>{
+      Bubbles.spawn({
+        type:'note', name:'Welcome ✦',
+        text:'Tap a portal on the sides to bring in music, stories, pictures, videos, 3D friends — anything at all.\n\nEverything you add becomes a floating star in this cosmos. ✦\n\n— Paulis C0D4r C4;3T',
+        r:62
+      });
+    }, 900);
+  }
+};
+
+/* ── Audio ─────────────────────────────────────────────────── */
+const Audio = {
+  ctx:null, el:null, src:null, gain:null, filter:null, delay:null, fb:null, analyser:null,
+  data:new Uint8Array(128), avg:0, bass:0, playing:false,
+
+  init(){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    this.ctx = new AC(); this.ctx.resume();
+    this.el = new Audio(); this.el.crossOrigin = 'anonymous';
+    this.analyser = this.ctx.createAnalyser(); this.analyser.fftSize = 256; this.analyser.smoothingTimeConstant = .82;
+    this.gain = this.ctx.createGain(); this.gain.gain.value = .85;
+    this.filter = this.ctx.createBiquadFilter(); this.filter.type='peaking'; this.filter.frequency.value=1400; this.filter.Q.value=1;
+    this.delay = this.ctx.createDelay(4.0);
+    this.fb = this.ctx.createGain(); this.fb.gain.value = .28;
+
+    this.src = this.ctx.createMediaElementSource(this.el);
+    this.src.connect(this.filter);
+    this.filter.connect(this.gain);
+    this.filter.connect(this.delay);
+    this.delay.connect(this.fb); this.fb.connect(this.delay);
+    this.delay.connect(this.gain);
+    this.gain.connect(this.analyser); this.analyser.connect(this.ctx.destination);
+
+    this.el.addEventListener('timeupdate', Player.sync);
+    this.el.addEventListener('loadedmetadata', Player.sync);
+    this.el.addEventListener('ended', ()=> Player.setIcon(false));
+
+    const tick = ()=>{
+      if(this.analyser){
+        this.analyser.getByteFrequencyData(this.data);
+        let s=0, b=0;
+        for(let i=0;i<this.data.length;i++){ s+=this.data[i]; if(i<8) b+=this.data[i]; }
+        this.avg = s/this.data.length; this.bass = b/8;
+      }
+      requestAnimationFrame(tick);
+    };
+    tick();
+  },
+  load(url, name){
+    if(!this.ctx) return;
+    this.el.src = url; this.el.load();
+    document.getElementById('nowPlaying').textContent = name || 'audio';
+    Paulis.say(PAULIS_LINES.play[0], 2600);
+  },
+  toggle(){
+    if(!this.ctx) return;
+    if(!this.el.src){ Toast.show('Load music first 🎵'); return; }
+    if(this.ctx.state === 'suspended') this.ctx.resume();
+    if(this.el.paused){
+      this.el.play().then(()=> Player.setIcon(true)).catch(()=> Toast.show('Playback blocked'));
+    } else { this.el.pause(); Player.setIcon(false); }
+  }
+};
+
+/* ── Player ────────────────────────────────────────────────── */
+const Player = {
+  toggle(){ Audio.toggle(); },
+  setIcon(on){ const i=document.getElementById('playIcon'); if(i) i.className = on ? 'fa-solid fa-pause text-[15px]' : 'fa-solid fa-play text-[15px]'; },
+  sync(){
+    const el = Audio.el; if(!el || !el.duration) return;
+    const pct = (el.currentTime/el.duration)*100;
+    document.getElementById('seek').value = pct;
+    document.getElementById('tCur').textContent = Player.fmt(el.currentTime);
+    document.getElementById('tDur').textContent = Player.fmt(el.duration);
+  },
+  seek(v){ const el=Audio.el; if(el && el.duration) el.currentTime = (v/100)*el.duration; },
+  fmt(s){ const m=Math.floor(s/60), sec=Math.floor(s%60); return `${m}:${String(sec).padStart(2,'0')}`; }
+};
+document.getElementById('seek').addEventListener('input', e=> Player.seek(e.target.value));
+
+/* ── Worlds ────────────────────────────────────────────────── */
+const Worlds = {
+  set(w){
+    App.world = w;
+    const cfg = WORLDS[w];
+    App.theme = cfg.color; App.accent = cfg.accent;
+    document.documentElement.style.setProperty('--theme', cfg.color);
+    document.documentElement.style.setProperty('--aqua', cfg.accent);
+
+    const el = document.getElementById('world-name');
+    el.textContent = cfg.name; el.style.color = cfg.color; el.style.textShadow = `0 0 18px ${cfg.color}`;
+
+    document.querySelectorAll('.world-orb').forEach(o=> o.classList.toggle('active', o.dataset.world === w));
+    Cosmos.rebuild();
+    const em = ['✦','🌊','🌱','🔥','🐼'][['cosmic','water','green','fire','panda'].indexOf(w)];
+    Paulis.say(`Entering ${cfg.name.toLowerCase()}… ${em}`, 2600);
+  }
+};
+
+/* ── Cosmos canvas ─────────────────────────────────────────── */
+const Cosmos = {
+  cv:null, ctx:null, w:0, h:0, particles:[], run:false, t:0,
+
+  start(){
+    this.cv = document.getElementById('cosmos');
+    this.ctx = this.cv.getContext('2d');
+    this.resize();
+    window.addEventListener('resize', ()=> this.resize());
+    window.addEventListener('orientationchange', ()=> setTimeout(()=> this.resize(), 220));
+    this.rebuild();
+    this.run = true;
+    requestAnimationFrame(()=> this.loop());
+  },
+  resize(){
+    if(!this.cv) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.w = this.cv.clientWidth;
+    this.h = this.cv.clientHeight;
+    this.cv.width = this.w * dpr;
+    this.cv.height = this.h * dpr;
+    this.ctx.setTransform(dpr,0,0,dpr,0,0);
+  },
+  rebuild(){
+    this.particles = [];
+    const n = App.world === 'cosmic' ? 100 : 70;
+    for(let i=0;i<n;i++){
+      this.particles.push({
+        x: Math.random()*this.w, y: Math.random()*this.h,
+        r: Math.random()*2.2 + .4,
+        vy: (Math.random()*.55 + .18) * (App.world==='fire' ? -1 : 1),
+        vx: (Math.random()-.5)*.35,
+        a: Math.random()*.7 + .25,
+        ph: Math.random()*Math.PI*2,
+        tw: Math.random()*Math.PI*2   // twinkle phase
+      });
+    }
+  },
+  loop(){
+    if(!this.run) return;
+    requestAnimationFrame(()=> this.loop());
+    this.t += .016;
+    const { ctx, w, h } = this;
+    if(!w || !h) return;
+
+    const theme = App.theme;
+    const avg = Audio.playing ? Audio.avg : 0;
+    const bass = Audio.playing ? Audio.bass : 0;
+
+    /* background */
+    ctx.clearRect(0,0,w,h);
+    const bg = ctx.createLinearGradient(0,0,w,h);
+    bg.addColorStop(0,'#07060f'); bg.addColorStop(.5,'#0b0819'); bg.addColorStop(1,'#07060f');
+    ctx.fillStyle = bg; ctx.fillRect(0,0,w,h);
+
+    /* world-specific overlays */
+    if(App.world === 'water'){
+      ctx.save(); ctx.globalAlpha = .16 + avg/600; ctx.strokeStyle = theme; ctx.lineWidth = 1.4;
+      for(let i=0;i<6;i++){
+        ctx.beginPath();
+        for(let x=0;x<=w;x+=14){
+          const y = h*.62 + Math.sin(x*.011 + this.t*1.1 + i*.9) * (26 + avg*.35) + i*22;
+          x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    if(App.world === 'green'){
+      ctx.save(); ctx.globalAlpha = .2; ctx.strokeStyle = theme;
+      for(let i=0;i<7;i++){
+        const x0 = (i/7)*w + 30;
+        ctx.beginPath(); ctx.moveTo(x0,h);
+        ctx.quadraticCurveTo(x0 + Math.sin(this.t*.4+i)*30, h*.65, x0 + Math.sin(this.t*.3+i)*60, h*.35);
+        ctx.lineWidth = 1.1; ctx.stroke();
+      }
+      ctx.restore();
+    }
+    if(App.world === 'fire'){
+      const g = ctx.createRadialGradient(w/2, h*1.05, 10, w/2, h*1.05, h*.75);
+      g.addColorStop(0, `rgba(251,146,60,${.14 + bass/900})`);
+      g.addColorStop(1, 'rgba(251,146,60,0)');
+      ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+    }
+    if(App.world === 'cosmic'){
+      const g = ctx.createRadialGradient(w*.3,h*.35,10, w*.3,h*.35, w*.6);
+      g.addColorStop(0, `rgba(168,85,247,${.10 + avg/1400})`);
+      g.addColorStop(1, 'rgba(168,85,247,0)');
+      ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+    }
+
+    /* particles with twinkle ✦ */
+    ctx.save();
+    this.particles.forEach(p=>{
+      p.x += p.vx + Math.sin(this.t + p.ph)*.18 + avg*.004;
+      p.y += p.vy * (1 + avg*.012);
+      if(App.world==='fire' && p.y < -12){ p.y = h+12; p.x = Math.random()*w; }
+      if(App.world!=='fire' && p.y > h+12){ p.y = -12; p.x = Math.random()*w; }
+      if(p.x < -12) p.x = w+12;
+      if(p.x > w+12) p.x = -12;
+
+      const tw = .55 + Math.sin(this.t*2.4 + p.tw)*.45;
+      ctx.globalAlpha = p.a * (0.5 + tw*.6 + avg/320);
+      ctx.fillStyle = theme;
+      ctx.shadowBlur = 8 + avg*.25 + tw*8;
+      ctx.shadowColor = theme;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (0.85 + tw*0.35), 0, Math.PI*2); ctx.fill();
+    });
+    ctx.restore();
+
+    /* constellation lines (cosmic only) */
+    if(App.world === 'cosmic'){
+      ctx.save(); ctx.globalAlpha = .10; ctx.strokeStyle = App.accent; ctx.lineWidth = .7;
+      for(let i=0;i<this.particles.length;i+=2){
+        for(let j=i+1;j<Math.min(i+4,this.particles.length);j++){
+          const a=this.particles[i], b=this.particles[j];
+          if(Math.hypot(a.x-b.x, a.y-b.y) < 110){
+            ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    /* audio-reactive border */
+    const breathe = Audio.playing ? (bass/255) : (Math.sin(this.t*.7)*.5+.5)*.12;
+    ctx.save();
+    ctx.strokeStyle = theme; ctx.shadowColor = theme;
+    ctx.shadowBlur = 14 + breathe*46;
+    ctx.lineWidth = 1.6 + breathe*5;
+    ctx.globalAlpha = .34 + breathe*.55;
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(7,7,w-14,h-14,22); else ctx.rect(7,7,w-14,h-14);
+    ctx.stroke();
+    ctx.restore();
+
+    /* travelling sparks */
+    ctx.save();
+    const per = 2*(w-14) + 2*(h-14);
+    for(let s=0;s<5;s++){
+      const prog = ((this.t * (.055 + bass/3400) + s/5) % 1) * per;
+      const pt = this.pointOnRect(prog, 7, 7, w-14, h-14);
+      ctx.globalAlpha = .85; ctx.fillStyle = '#ffffff';
+      ctx.shadowBlur = 22 + breathe*30; ctx.shadowColor = theme;
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, 1.9 + breathe*2.4, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+
+    /* vignette */
+    ctx.save();
+    const vg = ctx.createRadialGradient(w/2,h/2, Math.min(w,h)*.32, w/2,h/2, Math.max(w,h)*.75);
+    vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.5)');
+    ctx.fillStyle = vg; ctx.fillRect(0,0,w,h);
+    ctx.restore();
+  },
+  pointOnRect(d,x,y,w,h){
+    if(d < w)          return { x:x+d, y:y };
+    if(d < w+h)        return { x:x+w, y:y + (d-w) };
+    if(d < w+h+w)      return { x:x+w-(d-w-h), y:y+h };
+    return { x:x, y:y+h-(d-w-h-w) };
+  }
+};
+
+/* ── Bubbles ───────────────────────────────────────────────── */
+const Bubbles = {
+  layer:null, run:false,
+  start(){ this.layer = document.getElementById('bubble-layer'); this.run = true; requestAnimationFrame(()=> this.loop()); },
+  loop(){
+    if(!this.run) return;
+    requestAnimationFrame(()=> this.loop());
+    const W = window.innerWidth, H = window.innerHeight;
+    const avg = Audio.playing ? Audio.avg : 0;
+    App.bubbles.forEach(b=>{
+      if(b.dragging) return;
+      b.vx *= .995; b.vy *= .995;
+      b.vx += Math.sin((Date.now()/2600) + b.seed) * .006;
+      b.vy += Math.cos((Date.now()/3100) + b.seed) * .005;
+      const pulse = 1 + (avg/255) * .05;
+      b.x += b.vx; b.y += b.vy;
+      const pad = b.r + 8;
+      if(b.x < pad){ b.x = pad; b.vx = Math.abs(b.vx)*.8; }
+      if(b.x > W-pad){ b.x = W-pad; b.vx = -Math.abs(b.vx)*.8; }
+      if(b.y < pad+40){ b.y = pad+40; b.vy = Math.abs(b.vy)*.8; }
+      if(b.y > H-pad-150){ b.y = H-pad-150; b.vy = -Math.abs(b.vy)*.8; }
+      b.dom.style.transform = `translate3d(${b.x-b.r}px, ${b.y-b.r}px, 0) scale(${b.scale * pulse})`;
+    });
+  },
+  spawn(cfg){
+    const W = window.innerWidth, H = window.innerHeight;
+    const r = cfg.r || 54;
+    const b = {
+      id: App.nextId++, type: cfg.type, name: cfg.name||'untitled', text: cfg.text||'',
+      url: cfg.url||null, mime: cfg.mime||'', raw: cfg.raw||null,
+      r, x: cfg.x ?? (60 + Math.random()*(W-120)), y: cfg.y ?? (110 + Math.random()*(H-380)),
+      vx: (Math.random()-.5)*.55, vy: (Math.random()-.5)*.42,
+      scale:1, seed: Math.random()*Math.PI*2, dragging:false, dom:null, videoEl:null, audioEl:null
+    };
+    const el = document.createElement('div');
+    el.className = 'bubble';
+    el.style.width = (r*2)+'px';
+    el.style.height = (r*2)+'px';
+    el.innerHTML = this.innerHTML(b);
+    el.addEventListener('pointerdown', e=> this.onDown(e,b));
+    el.addEventListener('dblclick', e=>{ e.stopPropagation(); this.open(b); });
+    this.layer.appendChild(el);
+    b.dom = el;
+    b.videoEl = el.querySelector('video');
+    b.audioEl = el.querySelector('audio');
+    el.style.transform = `translate3d(${b.x-r}px, ${b.y-r}px, 0) scale(1)`;
+    App.bubbles.push(b);
+    this.updateCount();
+    Paulis.say(PAULIS_LINES.added[Math.random()*4|0], 2400);
+    el.animate(
+      [{opacity:0, transform:`translate3d(${b.x-r}px,${b.y-r}px,0) scale(.2)`},
+       {opacity:1, transform:`translate3d(${b.x-r}px,${b.y-r}px,0) scale(1)`}],
+      { duration:520, easing:'cubic-bezier(.34,1.56,.64,1)' }
+    );
+    return b;
+  },
+  innerHTML(b){
+    const c = CATEGORIES[this.catOf(b.type)] || CATEGORIES.files;
+    switch(b.type){
+      case 'image': return `<div class="glass-core"><img src="${b.url}" alt=""><span class="bubble-chip">🦋 ${this.esc(b.name)}</span></div>`;
+      case 'video': return `<div class="glass-core"><video src="${b.url}" muted loop playsinline preload="metadata"></video>
+        <div style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none">
+          <i class="fa-solid fa-play" style="color:#fff;font-size:15px;text-shadow:0 2px 8px #000"></i></div>
+        <span class="bubble-chip">🦊 ${this.esc(b.name)}</span></div>`;
+      case 'audio': {
+        const bars = Array.from({length:18},(_,i)=>`<span style="height:${8+Math.random()*26}px;transform:rotate(${i*20}deg)"></span>`).join('');
+        return `<div class="glass-core" style="background:radial-gradient(circle at 35% 30%, rgba(201,167,255,.55), rgba(20,10,40,.9))">
+          <div class="wave-ring">${bars}</div>
+          <i class="fa-solid fa-music" style="position:relative;color:#fff;font-size:17px;text-shadow:0 0 12px #c9a7ff"></i>
+          <span class="bubble-chip">🐺 ${this.esc(b.name)}</span></div>`;
+      }
+      case 'note': case 'text': return `<div class="glass-core" style="background:linear-gradient(150deg, rgba(255,217,142,.32), rgba(60,40,10,.85))">
+        <i class="fa-solid fa-scroll" style="color:#ffe9b8;font-size:19px;text-shadow:0 0 14px #ffd98e"></i>
+        <span class="bubble-chip">🐢 ${this.esc(b.name)}</span></div>`;
+      case 'web': return `<div class="glass-core" style="background:linear-gradient(150deg, rgba(154,230,180,.32), rgba(10,40,25,.85))">
+        <i class="fa-solid fa-globe" style="color:#c6f6d5;font-size:19px;text-shadow:0 0 14px #9ae6b4"></i>
+        <span class="bubble-chip">🕊️ ${this.esc(b.name)}</span></div>`;
+      case 'model': return `<div class="glass-core" style="background:linear-gradient(150deg, rgba(183,148,244,.32), rgba(30,15,55,.9))">
+        <i class="fa-solid fa-cube" style="color:#e9d8fd;font-size:19px;text-shadow:0 0 14px #b794f4"></i>
+        <span class="bubble-chip">🐘 ${this.esc(b.name)}</span></div>`;
+      case 'pdf': return `<div class="glass-core" style="background:linear-gradient(150deg, rgba(255,158,207,.3), rgba(50,15,35,.9))">
+        <i class="fa-solid fa-file-pdf" style="color:#ffd0e6;font-size:19px;text-shadow:0 0 14px #ff9ecf"></i>
+        <span class="bubble-chip">🦉 ${this.esc(b.name)}</span></div>`;
+      default: return `<div class="glass-core"><span class="emoji-face">📦</span>
+        <span class="bubble-chip">🐼 ${this.esc(b.name)}</span></div>`;
+    }
+  },
+  catOf(t){ return ({ image:'pictures', video:'videos', audio:'music', note:'stories', text:'text', web:'web', model:'models', pdf:'stories' })[t] || 'files'; },
+  esc(s){ return String(s||'').replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); },
+  onDown(e, b){
+    e.preventDefault(); e.stopPropagation();
+    b.dragging = true;
+    b.dom.setPointerCapture?.(e.pointerId);
+    const sx = e.clientX, sy = e.clientY, ox = b.x, oy = b.y;
+    let moved = 0, lastT = performance.now(), lastX = sx, lastY = sy;
+    const move = (ev)=>{
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      moved = Math.max(moved, Math.hypot(dx,dy));
+      b.x = ox + dx; b.y = oy + dy;
+      const now = performance.now(); const dt = Math.max(now-lastT, 1);
+      b.vx = (ev.clientX - lastX)/dt * 8;
+      b.vy = (ev.clientY - lastY)/dt * 8;
+      lastT = now; lastX = ev.clientX; lastY = ev.clientY;
+      b.dom.style.transform = `translate3d(${b.x-b.r}px, ${b.y-b.r}px, 0) scale(${b.scale*1.06})`;
+    };
+    const up = ()=>{
+      b.dragging = false;
+      b.dom.style.transform = `translate3d(${b.x-b.r}px, ${b.y-b.r}px, 0) scale(${b.scale})`;
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      if(moved < 6) this.select(b);
+    };
+    window.addEventListener('pointermove', move, { passive:false });
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  },
+  select(b){
+    App.bubbles.forEach(x=> x.dom.classList.remove('selected'));
+    b.dom.classList.add('selected');
+    App.selected = b;
+    Paulis.say(`"${b.name}" — double-tap to open.`, 3200);
+    Drawer.open('inspect', b);
+  },
+  resize(b, r){ if(!b) return; b.r = r; b.dom.style.width = (r*2)+'px'; b.dom.style.height = (r*2)+'px'; },
+  open(b){
+    const map = { image:'media', video:'media', audio:'media', note:'text', text:'text', web:'web', pdf:'pdf', model:'model' };
+    const fn = map[b.type] || 'file';
+    Modal[fn]?.(b);
+  },
+  remove(b){
+    b.dom.animate([{opacity:1, transform:b.dom.style.transform}, {opacity:0, transform:b.dom.style.transform+' scale(.2)'}],
+      { duration:320, easing:'ease-in' }).onfinish = ()=> b.dom.remove();
+    App.bubbles = App.bubbles.filter(x=> x.id !== b.id);
+    if(App.selected?.id === b.id) App.selected = null;
+    this.updateCount();
+    Toast.show('Released to the void 🌌');
+  },
+  updateCount(){ const el = document.getElementById('bubbleCount'); if(el) el.textContent = App.bubbles.length; }
+};
+
+/* ── HUD ───────────────────────────────────────────────────── */
+const HUD = {
+  pick(cat){
+    const c = CATEGORIES[cat];
+    const input = document.getElementById('fileInput');
+    input.accept = c.accept; input.value = '';
+    input.onchange = e => this.handle(e.target.files, cat);
+    input.click();
+    Paulis.say(`${c.animal} Bring me your ${c.label.toLowerCase()}…`, 2400);
+  },
+  async handle(files, cat){
+    if(!files || !files.length) return;
+    Toast.show(`Adding ${files.length} item${files.length>1?'s':''}…`);
+    for(const f of files) await this.ingest(f, cat);
+  },
+  async ingest(file){
+    const mime = file.type || '';
+    const name = file.name || 'untitled';
+    const ext  = (name.split('.').pop() || '').toLowerCase();
+    const url  = URL.createObjectURL(file);
+    try{
+      if(mime.startsWith('image/') || ['png','jpg','jpeg','webp','gif','svg','avif','heic','heif'].includes(ext))
+        return Bubbles.spawn({ type:'image', name, url, mime, raw:file });
+      if(mime.startsWith('video/') || ['mp4','mov','m4v','webm','ogv','avi','mkv'].includes(ext))
+        return Bubbles.spawn({ type:'video', name, url, mime, raw:file });
+      if(mime.startsWith('audio/') || ['mp3','m4a','wav','ogg','oga','flac','aac','opus'].includes(ext)){
+        Bubbles.spawn({ type:'audio', name, url, mime, raw:file });
+        Audio.load(url, name); return;
+      }
+      if(mime === 'application/pdf' || ext === 'pdf')
+        return Bubbles.spawn({ type:'pdf', name, url, mime, raw:file });
+      if(['glb','gltf'].includes(ext))
+        return Bubbles.spawn({ type:'model', name, url, mime, raw:file });
+      if(['html','htm','url','webloc'].includes(ext) || mime === 'text/html')
+        return Bubbles.spawn({ type:'web', name, url, mime, raw:file });
+      if(mime.startsWith('text/') || ['txt','md','markdown','json','csv','log','rtf'].includes(ext)){
+        const text = await file.text();
+        return Bubbles.spawn({ type: ext === 'md' ? 'text' : 'note', name, text: text.slice(0,6000), url, mime, raw:file });
+      }
+      Bubbles.spawn({ type:'file', name, url, mime, raw:file });
+    } catch(err){
+      console.warn('ingest failed', err);
+      Toast.show(`Could not read ${name}`);
+    }
+  }
+};
+
+/* ── Paulis ────────────────────────────────────────────────── */
+const Paulis = {
+  el:null, sayEl:null, timer:null, idleTimer:null,
+  start(){
+    this.el = document.getElementById('paulis');
+    this.makeDraggable();
+    this.scheduleIdle();
+    this.el.addEventListener('dblclick', ()=> this.speak(this.sayEl?.textContent || 'Hello, dear one.'));
+  },
+  makeDraggable(){
+    let drag = false, ox = 0, oy = 0;
+    const el = this.el;
+    el.addEventListener('pointerdown', e=>{
+      drag = true; el.setPointerCapture(e.pointerId);
+      const r = el.getBoundingClientRect();
+      ox = e.clientX - r.left; oy = e.clientY - r.top;
+      el.style.transition = 'none';
+    });
+    window.addEventListener('pointermove', e=>{
+      if(!drag) return;
+      const x = Math.min(Math.max(e.clientX - ox, 4), window.innerWidth - el.offsetWidth - 4);
+      const y = Math.min(Math.max(e.clientY - oy, 4), window.innerHeight - el.offsetHeight - 4);
+      el.style.left = x+'px'; el.style.right='auto';
+      el.style.top  = y+'px'; el.style.bottom='auto';
+      this.repositionSpeech();
+    });
+    window.addEventListener('pointerup', ()=>{ drag = false; el.style.transition=''; });
+  },
+  say(text, ms=3600){
+    if(!text) return;
+    this.hideSay();
+    const d = document.createElement('div');
+    d.className = 'paulis-says';
+    d.textContent = text;
+    document.body.appendChild(d);
+    this.sayEl = d;
+    this.repositionSpeech();
+    clearTimeout(this.timer);
+    this.timer = setTimeout(()=> this.hideSay(), ms);
+    this.el.animate([{transform:'scale(1)'},{transform:'scale(1.14)'},{transform:'scale(1)'}],
+      { duration:420, easing:'cubic-bezier(.34,1.56,.64,1)' });
+    this.scheduleIdle();
+  },
+  hideSay(){
+    if(this.sayEl){
+      const s = this.sayEl;
+      s.style.transition = 'opacity .28s, transform .28s';
+      s.style.opacity = '0';
+      s.style.transform = 'translateY(6px)';
+      setTimeout(()=> s.remove(), 300);
+      this.sayEl = null;
+    }
+  },
+  repositionSpeech(){
+    if(!this.sayEl) return;
+    const r = this.el.getBoundingClientRect();
+    const w = this.sayEl.offsetWidth || 200;
+    let left = r.left - w - 10;
+    if(left < 8) left = Math.min(r.right + 10, window.innerWidth - w - 8);
+    let top = r.top + 6;
+    if(top + 80 > window.innerHeight) top = window.innerHeight - 96;
+    this.sayEl.style.left = Math.max(8, left)+'px';
+    this.sayEl.style.top  = Math.max(8, top)+'px';
+  },
+  scheduleIdle(){
+    clearTimeout(this.idleTimer);
+    this.idleTimer = setTimeout(()=>{
+      const pool = App.bubbles.length === 0 ? PAULIS_LINES.empty : PAULIS_LINES.idle;
+      this.say(pool[Math.random()*pool.length|0], 4000);
+    }, 14000);
+  },
+  speak(text){
+    if(!('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = .94; u.pitch = 1.28; u.volume = .92;
+    const vs = speechSynthesis.getVoices();
+    const fem = vs.find(v=> /female|samantha|victoria|karen|zira|google uk english female/i.test(v.name));
+    if(fem) u.voice = fem;
+    speechSynthesis.speak(u);
+  }
+};
+
+/* ── Drawer ────────────────────────────────────────────────── */
+const Drawer = {
+  el:null,
+  open(kind, payload){
+    this.el = document.getElementById('drawer');
+    const body = document.getElementById('drawerBody');
+    if(kind === 'inspect' && payload) body.innerHTML = this.inspectHTML(payload);
+    else if(kind === 'story') body.innerHTML = this.storyHTML();
+    this.el.classList.add('open');
+  },
+  close(){ this.el?.classList.remove('open'); },
+  inspectHTML(b){
+    const c = CATEGORIES[Bubbles.catOf(b.type)];
+    return `
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-14 h-14 rounded-2xl grid place-items-center text-2xl shrink-0"
+             style="background:linear-gradient(140deg, ${c.color}55, rgba(255,255,255,.06)); border:1px solid ${c.color}66">${c.animal}</div>
+        <div class="min-w-0">
+          <div class="font-display font-bold text-[16px] truncate" style="color:#fff">${Bubbles.esc(b.name)}</div>
+          <div class="text-[10.5px] uppercase tracking-widest" style="color:${c.color}">${c.label} · ${b.mime||'unknown'}</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2.5 mb-5">
+        <button onclick="Bubbles.open(App.selected)" class="crystal py-3 rounded-2xl text-[12px] font-bold active:scale-95 transition-transform" style="pointer-events:auto; touch-action:manipulation"><i class="fa-solid fa-expand mr-1.5" style="color:var(--aqua)"></i>Open</button>
+        <button onclick="Snapshot.one(App.selected)" class="crystal py-3 rounded-2xl text-[12px] font-bold active:scale-95 transition-transform" style="pointer-events:auto; touch-action:manipulation"><i class="fa-solid fa-camera mr-1.5" style="color:var(--gold)"></i>Snapshot</button>
+        <button onclick="Bubbles.remove(App.selected); Drawer.close()" class="crystal py-3 rounded-2xl text-[12px] font-bold active:scale-95 transition-transform" style="pointer-events:auto; touch-action:manipulation"><i class="fa-solid fa-trash mr-1.5" style="color:#fca5a5"></i>Release</button>
+        <button onclick="Paulis.speak(${JSON.stringify((b.name||'').slice(0,80))})" class="crystal py-3 rounded-2xl text-[12px] font-bold active:scale-95 transition-transform" style="pointer-events:auto; touch-action:manipulation"><i class="fa-solid fa-volume-high mr-1.5" style="color:var(--lav)"></i>Read</button>
+      </div>
+      <div class="text-[11px] leading-relaxed mb-4 p-3 rounded-2xl" style="background:rgba(255,255,255,.05); color:rgba(244,241,255,.75)">
+        <b style="color:var(--aqua)">Size:</b> ${b.r*2}px · <b style="color:var(--aqua)">Pos:</b> ${Math.round(b.x)}, ${Math.round(b.y)}
+      </div>
+      <div class="text-[11px] mb-2 uppercase tracking-widest" style="color:rgba(244,241,255,.55)">Bubble Size</div>
+      <input type="range" min="36" max="120" value="${b.r}" class="w-full mb-5" oninput="Bubbles.resize(App.selected, +this.value)">
+      ${b.text ? `<div class="text-[11px] mb-2 uppercase tracking-widest" style="color:rgba(244,241,255,.55)">Content</div>
+        <div class="p-3 rounded-2xl text-[12px] leading-relaxed max-h-48 overflow-y-auto"
+             style="background:rgba(0,0,0,.35); color:rgba(244,241,255,.85); white-space:pre-wrap">${Bubbles.esc(b.text).slice(0,1500)}</div>` : ''}
+    `;
+  },
+  storyHTML(){
+    const chain = [
+      { icon:'👵', label:'Grandmother',   c:'#ffd98e', note:'The origin — her voice, her hands, her world.' },
+      { icon:'🎙️', label:'Voice',         c:'#ff9ecf', note:'Recorded warmth. The sound of belonging.' },
+      { icon:'📖', label:'Fairytale',     c:'#c9a7ff', note:'The story she told, again and again.' },
+      { icon:'🖼️', label:'Images',        c:'#7ee8fa', note:'Scanned photos, drawings, the old album.' },
+      { icon:'🎵', label:'Music',         c:'#9ae6b4', note:'The song she hummed while cooking.' },
+      { icon:'🌱', label:'Lesson',        c:'#ffd98e', note:'What she wanted you to carry forward.' },
+      { icon:'✦', label:'Youth Response', c:'#a855f7', note:'Your turn — remix, answer, continue.' },
+      { icon:'🌌', label:'New Story',     c:'#7ee8fa', note:'The chain extends. Forever.' }
+    ];
+    const items = chain.map((s,i)=>`
+      <div class="flex gap-3 items-start mb-3 fade-in" style="animation-delay:${i*60}ms">
+        <div class="w-11 h-11 rounded-2xl grid place-items-center text-lg shrink-0"
+             style="background:linear-gradient(140deg, ${s.c}44, rgba(255,255,255,.05)); border:1px solid ${s.c}66; box-shadow:0 0 18px -4px ${s.c}">${s.icon}</div>
+        <div class="pt-1 min-w-0">
+          <div class="font-display font-bold text-[13px]" style="color:${s.c}">${s.label}</div>
+          <div class="text-[11.5px] leading-snug" style="color:rgba(244,241,255,.68)">${s.note}</div>
+        </div>
+      </div>
+      ${i < chain.length-1 ? `<div class="ml-[21px] w-[1.5px] h-3 mb-1" style="background:linear-gradient(${s.c}, ${chain[i+1].c})"></div>` : ''}
+    `).join('');
+    return `
+      <div class="text-center mb-6">
+        <div class="font-display text-[20px] font-bold glow-gold mb-1" style="color:#ffd98e">Grandmother's Chain</div>
+        <div class="text-[11.5px]" style="color:rgba(244,241,255,.6)">Wisdom → Voice → Story → You</div>
+      </div>
+      <div class="mb-6">${items}</div>
+      <button onclick="Paulis.say(PAULIS_LINES.grandma[Math.floor(Math.random()*3)],6000); Drawer.close()"
+        class="w-full py-4 rounded-2xl font-display font-bold text-[14px] tracking-wide active:scale-[.98] transition-transform"
+        style="background:linear-gradient(120deg, #ffd98e, #ff9ecf, #c9a7ff); color:#160a24; box-shadow:0 0 30px -6px #ffd98e; pointer-events:auto; touch-action:manipulation">
+        <i class="fa-solid fa-heart mr-2"></i>Begin a story with Paulis
+      </button>
+    `;
+  }
+};
+
+/* ── Modal ─────────────────────────────────────────────────── */
+const Modal = {
+  el:null,
+  open(html){
+    this.el = document.getElementById('modal');
+    document.getElementById('modalBody').innerHTML = html;
+    this.el.classList.add('open');
+  },
+  close(){ this.el?.classList.remove('open'); },
+  media(b){
+    const inner = b.type === 'image'
+      ? `<img src="${b.url}" style="width:100%;border-radius:18px;display:block">`
+      : b.type === 'video'
+      ? `<video src="${b.url}" controls autoplay playsinline style="width:100%;border-radius:18px;display:block"></video>`
+      : `<div class="flex items-center gap-3 p-4 rounded-2xl mb-3" style="background:rgba(201,167,255,.14)">
+           <i class="fa-solid fa-music text-2xl" style="color:var(--lav)"></i>
+           <div class="text-left min-w-0"><div class="font-bold text-[13px] truncate">${Bubbles.esc(b.name)}</div>
+             <div class="text-[10px] uppercase tracking-widest" style="color:rgba(244,241,255,.5)">Loaded into player</div></div>
+         </div>
+         <audio src="${b.url}" controls autoplay style="width:100%"></audio>`;
+    this.open(`
+      <div class="text-left">
+        <div class="flex justify-between items-center mb-3">
+          <span class="text-[11px] uppercase tracking-widest" style="color:var(--aqua)">${b.type}</span>
+          <button onclick="Modal.close()" class="w-8 h-8 rounded-full grid place-items-center" style="background:rgba(255,255,255,.1); pointer-events:auto">✕</button>
+        </div>
+        ${inner}
+        <div class="mt-4 grid grid-cols-2 gap-2">
+          <button onclick="Snapshot.one(App.selected||App.bubbles.find(x=>x.id===${b.id}))" class="crystal py-2.5 rounded-2xl text-[12px] font-bold" style="pointer-events:auto; touch-action:manipulation">📸 Snapshot</button>
+          <button onclick="Paulis.speak(${JSON.stringify((b.name||'').slice(0,80))})" class="crystal py-2.5 rounded-2xl text-[12px] font-bold" style="pointer-events:auto; touch-action:manipulation">🔊 Read</button>
+        </div>
+      </div>
+    `);
+    if(b.type === 'audio') Audio.load(b.url, b.name);
+  },
+  text(b){
+    this.open(`
+      <div class="text-left">
+        <div class="flex justify-between items-center mb-3">
+          <span class="text-[11px] uppercase tracking-widest" style="color:var(--gold)">story</span>
+          <button onclick="Modal.close()" class="w-8 h-8 rounded-full grid place-items-center" style="background:rgba(255,255,255,.1); pointer-events:auto">✕</button>
+        </div>
+        <div class="font-display font-bold text-[17px] mb-3" style="color:#fff">${Bubbles.esc(b.name)}</div>
+        <div id="modalStoryText" class="max-h-[50vh] overflow-y-auto text-[13px] leading-relaxed p-4 rounded-2xl"
+             style="background:rgba(255,217,142,.09); color:rgba(244,241,255,.9); white-space:pre-wrap">${Bubbles.esc(b.text)}</div>
+        <div class="mt-4 grid grid-cols-2 gap-2">
+          <button onclick="Paulis.speak(document.getElementById('modalStoryText').innerText)" class="crystal py-2.5 rounded-2xl text-[12px] font-bold" style="pointer-events:auto; touch-action:manipulation">🔊 Read Aloud</button>
+          <button onclick="Snapshot.one(App.selected)" class="crystal py-2.5 rounded-2xl text-[12px] font-bold" style="pointer-events:auto; touch-action:manipulation">📸 Snapshot</button>
+        </div>
+      </div>
+    `);
+  },
+  web(b){
+    this.open(`
+      <div class="text-left">
+        <div class="flex justify-between items-center mb-3">
+          <span class="text-[11px] uppercase tracking-widest" style="color:var(--mint)">portal</span>
+          <button onclick="Modal.close()" class="w-8 h-8 rounded-full grid place-items-center" style="background:rgba(255,255,255,.1); pointer-events:auto">✕</button>
+        </div>
+        <div class="font-display font-bold text-[15px] mb-3">${Bubbles.esc(b.name)}</div>
+        <iframe src="${b.url}" sandbox="allow-scripts allow-same-origin"
+          style="width:100%;height:56vh;border-radius:18px;border:1px solid rgba(255,255,255,.15);background:#fff"></iframe>
+        <button onclick="Snapshot.one(App.selected)" class="crystal w-full py-2.5 rounded-2xl text-[12px] font-bold mt-3" style="pointer-events:auto; touch-action:manipulation">📸 Snapshot Portal</button>
+      </div>
+    `);
+  },
+  pdf(b){
+    this.open(`
+      <div class="text-left">
+        <div class="flex justify-between items-center mb-3">
+          <span class="text-[11px] uppercase tracking-widest" style="color:var(--pink)">document</span>
+          <button onclick="Modal.close()" class="w-8 h-8 rounded-full grid place-items-center" style="background:rgba(255,255,255,.1); pointer-events:auto">✕</button>
+        </div>
+        <div class="font-display font-bold text-[15px] mb-3">${Bubbles.esc(b.name)}</div>
+        <iframe src="${b.url}" style="width:100%;height:56vh;border-radius:18px;border:1px solid rgba(255,255,255,.15);background:#fff"></iframe>
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          <a href="${b.url}" target="_blank" class="crystal py-2.5 rounded-2xl text-[12px] font-bold text-center" style="pointer-events:auto">↗ Open</a>
+          <button onclick="Snapshot.one(App.selected)" class="crystal py-2.5 rounded-2xl text-[12px] font-bold" style="pointer-events:auto; touch-action:manipulation">📸 Snapshot</button>
+        </div>
+      </div>
+    `);
+  },
+  model(b){
+    this.open(`
+      <div class="text-left">
+        <div class="flex justify-between items-center mb-3">
+          <span class="text-[11px] uppercase tracking-widest" style="color:#b794f4">3d friend</span>
+          <button onclick="Modal.close()" class="w-8 h-8 rounded-full grid place-items-center" style="background:rgba(255,255,255,.1); pointer-events:auto">✕</button>
+        </div>
+        <div class="font-display font-bold text-[15px] mb-3">${Bubbles.esc(b.name)}</div>
+        <model-viewer src="${b.url}" camera-controls auto-rotate shadow-intensity="1"
+          style="width:100%;height:52vh;border-radius:18px;background:radial-gradient(circle,#1a1030,#07060f)"></model-viewer>
+        <button onclick="Snapshot.one(App.selected)" class="crystal w-full py-2.5 rounded-2xl text-[12px] font-bold mt-3" style="pointer-events:auto; touch-action:manipulation">📸 Snapshot</button>
+      </div>
+    `);
+  },
+  file(b){
+    this.open(`
+      <div class="text-center">
+        <div class="text-5xl mb-3">📦</div>
+        <div class="font-display font-bold text-[15px] mb-1">${Bubbles.esc(b.name)}</div>
+        <div class="text-[11px] mb-5" style="color:rgba(244,241,255,.55)">${b.mime || 'unknown type'}</div>
+        <div class="grid grid-cols-2 gap-2">
+          <a href="${b.url}" download="${Bubbles.esc(b.name)}" class="crystal py-2.5 rounded-2xl text-[12px] font-bold text-center" style="pointer-events:auto">⬇ Download</a>
+          <button onclick="Modal.close()" class="crystal py-2.5 rounded-2xl text-[12px] font-bold" style="pointer-events:auto; touch-action:manipulation">Close</button>
+        </div>
+      </div>
+    `);
+  }
+};
+
+/* ── Snapshot ──────────────────────────────────────────────── */
+const Snapshot = {
+  menu(){
+    this.open(`
+      <div class="text-center">
+        <div class="text-4xl mb-3">📸</div>
+        <div class="font-display font-bold text-[17px] mb-1 glow-gold" style="color:#ffd98e">Capture the Cosmos</div>
+        <div class="text-[11.5px] mb-6" style="color:rgba(244,241,255,.6)">Everything becomes an image you can share.</div>
+      </div>
+      <div class="flex flex-col gap-2.5">
+        <button onclick="Snapshot.full()" class="crystal py-4 rounded-2xl text-left px-4 active:scale-[.98] transition-transform" style="pointer-events:auto; touch-action:manipulation">
+          <div class="font-display font-bold text-[14px]" style="color:var(--aqua)">✦ Full Composition</div>
+          <div class="text-[11px] mt-0.5" style="color:rgba(244,241,255,.6)">Canvas + every floating bubble → PNG</div>
+        </button>
+        <button onclick="Snapshot.motion()" class="crystal py-4 rounded-2xl text-left px-4 active:scale-[.98] transition-transform" style="pointer-events:auto; touch-action:manipulation">
+          <div class="font-display font-bold text-[14px]" style="color:var(--pink)">🎞️ Motion Clip</div>
+          <div class="text-[11px] mt-0.5" style="color:rgba(244,241,255,.6)">5-second WebM of the living cosmos</div>
+        </button>
+        <button onclick="Snapshot.one(App.selected)" class="crystal py-4 rounded-2xl text-left px-4 active:scale-[.98] transition-transform" style="pointer-events:auto; touch-action:manipulation">
+          <div class="font-display font-bold text-[14px]" style="color:var(--mint)">🫧 Selected Bubble</div>
+          <div class="text-[11px] mt-0.5" style="color:rgba(244,241,255,.6)">${App.selected ? Bubbles.esc(App.selected.name) : 'Nothing selected yet'}</div>
+        </button>
+      </div>
+      <button onclick="Modal.close()" class="w-full mt-4 py-3 rounded-2xl text-[12px] font-bold" style="background:rgba(255,255,255,.08); color:rgba(244,241,255,.8); pointer-events:auto">Close</button>
+    `);
+  },
+  full(){
+    Modal.close();
+    Toast.show('Composing your cosmos… ✦');
+    setTimeout(()=>{
+      const W = window.innerWidth, H = window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const out = document.createElement('canvas');
+      out.width = W*dpr; out.height = H*dpr;
+      const g = out.getContext('2d');
+      g.setTransform(dpr,0,0,dpr,0,0);
+      const bg = g.createLinearGradient(0,0,W,H);
+      bg.addColorStop(0,'#07060f'); bg.addColorStop(.5,'#0b0819'); bg.addColorStop(1,'#07060f');
+      g.fillStyle = bg; g.fillRect(0,0,W,H);
+      try { g.drawImage(Cosmos.cv, 0, 0, W, H); } catch(e){}
+      App.bubbles.forEach(b=> this.drawBubble(g, b));
+      g.save();
+      g.globalAlpha = .55;
+      g.font = '600 10px Quicksand, sans-serif';
+      g.fillStyle = '#7ee8fa'; g.textAlign = 'right';
+      g.fillText('PAULIS COSMOS · X42 ✦', W-14, H-14);
+      g.restore();
+      this.preview(out.toDataURL('image/png'), `paulis-cosmos-${Date.now()}.png`);
+    }, 120);
+  },
+  drawBubble(g, b){
+    const x = b.x, y = b.y, r = b.r * b.scale;
+    g.save(); g.shadowColor = App.theme; g.shadowBlur = 28;
+    g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fillStyle = 'rgba(12,9,26,.85)'; g.fill(); g.restore();
+    const sph = g.createRadialGradient(x-r*.34, y-r*.38, r*.08, x, y, r);
+    sph.addColorStop(0,'rgba(255,255,255,.55)');
+    sph.addColorStop(.42,'rgba(255,255,255,.10)');
+    sph.addColorStop(1,'rgba(0,0,0,.42)');
+    g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fillStyle = sph; g.fill();
+    g.lineWidth = 1.6; g.strokeStyle = 'rgba(255,255,255,.5)'; g.stroke();
+    g.save();
+    g.beginPath(); g.arc(x,y,r-1,0,Math.PI*2); g.clip();
+    if(b.type === 'image' && b.dom){
+      const img = b.dom.querySelector('img');
+      if(img && img.complete){ try{ g.drawImage(img, x-r, y-r, r*2, r*2); }catch(e){} }
+    } else if(b.type === 'video' && b.videoEl && b.videoEl.readyState >= 2){
+      try{ g.drawImage(b.videoEl, x-r, y-r, r*2, r*2); }catch(e){}
+    } else if(b.type === 'audio'){
+      g.strokeStyle = '#c9a7ff'; g.lineWidth = 2;
+      const bars = 22;
+      for(let i=0;i<bars;i++){
+        const a = (i/bars)*Math.PI*2 - Math.PI/2;
+        const amp = 6 + (Audio.data[i*2]||60)/255 * (r*.62);
+        g.beginPath();
+        g.moveTo(x + Math.cos(a)*(r*.34), y + Math.sin(a)*(r*.34));
+        g.lineTo(x + Math.cos(a)*(r*.34+amp), y + Math.sin(a)*(r*.34+amp));
+        g.stroke();
+      }
+    } else {
+      const glyph = { note:'📜', text:'📜', web:'🌐', model:'🧊', pdf:'📕' }[b.type] || '📦';
+      g.fillStyle = 'rgba(255,255,255,.10)';
+      g.fillRect(x-r, y-r, r*2, r*2);
+      g.font = `${Math.round(r*.6)}px serif`;
+      g.textAlign='center'; g.textBaseline='middle';
+      g.fillText(glyph, x, y);
+    }
+    g.restore();
+    const label = (CATEGORIES[Bubbles.catOf(b.type)]?.animal || '📦') + ' ' + b.name;
+    g.font = '700 9.5px Quicksand, sans-serif';
+    const tw = Math.min(g.measureText(label).width + 18, r*2.4);
+    g.save();
+    g.beginPath();
+    if(g.roundRect) g.roundRect(x - tw/2, y + r + 5, tw, 17, 9); else g.rect(x - tw/2, y + r + 5, tw, 17);
+    g.fillStyle = 'rgba(10,8,20,.85)'; g.fill();
+    g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 1; g.stroke();
+    g.fillStyle = '#fff'; g.textAlign='center'; g.textBaseline='middle';
+    g.fillText(label, x, y + r + 13.5, tw - 12);
+    g.restore();
+  },
+  one(b){
+    if(!b || !b.id){ Toast.show('Select a bubble first 🫧'); return; }
+    Modal.close();
+    const S = 420;
+    const out = document.createElement('canvas');
+    out.width = out.height = S;
+    const g = out.getContext('2d');
+    const bg = g.createRadialGradient(S/2,S/2,10, S/2,S/2,S*.7);
+    bg.addColorStop(0,'#151030'); bg.addColorStop(1,'#07060f');
+    g.fillStyle = bg; g.fillRect(0,0,S,S);
+    g.fillStyle = 'rgba(255,255,255,.5)';
+    for(let i=0;i<70;i++){
+      g.globalAlpha = Math.random()*.6;
+      g.beginPath(); g.arc(Math.random()*S, Math.random()*S, Math.random()*1.4, 0, Math.PI*2); g.fill();
+    }
+    g.globalAlpha = 1;
+    this.drawBubble(g, { ...b, x:S/2, y:S/2 - 12, r:120, scale:1 });
+    g.font = '700 9px Quicksand, sans-serif';
+    g.fillStyle = 'rgba(126,232,250,.6)';
+    g.textAlign = 'center';
+    g.fillText('PAULIS COSMOS · X42 ✦', S/2, S-14);
+    this.preview(out.toDataURL('image/png'), `paulis-${(b.name||'bubble').replace(/\W+/g,'_')}-${Date.now()}.png`);
+  },
+  motion(){
+    Modal.close();
+    if(!('MediaRecorder' in window) || !Cosmos.cv){ Toast.show('Recording not supported here 😔'); return; }
+    const stream = Cosmos.cv.captureStream(30);
+    const types = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+    const mime = types.find(t => MediaRecorder.isTypeSupported(t));
+    if(!mime){ Toast.show('WebM not supported'); return; }
+    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 5_000_000 });
+    const chunks = [];
+    rec.ondataavailable = e => { if(e.data.size) chunks.push(e.data); };
+    rec.onstop = ()=>{
+      const blob = new Blob(chunks, { type:'video/webm' });
+      this.preview(URL.createObjectURL(blob), `paulis-motion-${Date.now()}.webm`, true);
+    };
+    rec.start();
+    Toast.show('Recording 5 seconds… 🎞️');
+    Paulis.say('Dance, little stars! ✦', 3000);
+    setTimeout(()=> rec.stop(), 5000);
+  },
+  preview(url, filename, isVideo=false){
+    const body = document.getElementById('modalBody');
+    document.getElementById('modal').classList.add('open');
+    body.innerHTML = `
+      <div class="text-center">
+        <div class="text-[11px] uppercase tracking-widest mb-3" style="color:var(--mint)">✦ captured ✦</div>
+        ${ isVideo
+          ? `<video src="${url}" autoplay loop muted controls style="width:100%;border-radius:18px;display:block;margin-bottom:14px"></video>`
+          : `<img src="${url}" style="width:100%;border-radius:18px;display:block;margin-bottom:14px">` }
+        <div class="text-[11px] mb-4 truncate" style="color:rgba(244,241,255,.55)">${filename}</div>
+        <div class="grid grid-cols-2 gap-2">
+          <a href="${url}" download="${filename}" class="py-3 rounded-2xl font-display font-bold text-[13px] text-center active:scale-[.98] transition-transform"
+             style="background:linear-gradient(120deg,#7ee8fa,#c9a7ff,#ff9ecf); color:#0b0616; box-shadow:0 0 26px -6px #7ee8fa; pointer-events:auto">⬇ Save</a>
+          <button onclick="Modal.close()" class="crystal py-3 rounded-2xl font-bold text-[13px]" style="pointer-events:auto; touch-action:manipulation">Done</button>
+        </div>
+      </div>
+    `;
+    Paulis.say(PAULIS_LINES.snapshot[Math.random()*3|0], 2800);
+  }
+};
+
+/* ── Toast ─────────────────────────────────────────────────── */
+const Toast = {
+  t:null,
+  show(msg, ms=2400){
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(this.t);
+    this.t = setTimeout(()=> el.classList.remove('show'), ms);
+  }
+};
+
+/* ── Polyfills ─────────────────────────────────────────────── */
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
+    r = Math.min(r, w/2, h/2);
+    this.beginPath();
+    this.moveTo(x+r,y);
+    this.arcTo(x+w,y,   x+w,y+h, r);
+    this.arcTo(x+w,y+h, x,  y+h, r);
+    this.arcTo(x,  y+h, x,  y,   r);
+    this.arcTo(x,  y,   x+w,y,   r);
+    this.closePath(); return this;
+  };
+}
+
+/* prevent double-tap zoom / pinch outside sheets */
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('touchmove', e=>{
+  if(e.target.closest('.drawer-panel, #drawer, #modal')) return;
+  if(e.touches.length > 1) e.preventDefault();
+}, { passive:false });
+
+/* boot visual state */
+Worlds.set('cosmic');
+
+/* keyboard (desktop convenience) */
+window.addEventListener('keydown', e=>{
+  if(!App.ready) return;
+  if(e.key === ' '){ e.preventDefault(); Player.toggle(); }
+  if(e.key === 's' || e.key === 'S') Snapshot.menu();
+  if(e.key === 'Escape'){ Modal.close(); Drawer.close(); }
+  if(e.key === 'p' || e.key === 'P') Paulis.say('Hello, dear one ✦', 3000);
+});
+
+/* welcome log */
+window.addEventListener('load', ()=>{
+  console.log('%c✦ PAULIS COSMOS · X42 Crystal Nexus ✦', 'color:#c9a7ff;font-size:14px;font-weight:700');
+  console.log('%cFixed: canvas & bubble-layer pointer-events:none — buttons are clickable.', 'color:#7ee8fa;font-size:11px');
+});
+</script>
+</body>
+</html>
