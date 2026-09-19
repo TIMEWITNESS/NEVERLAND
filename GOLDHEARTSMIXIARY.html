@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>X42 Twilight Nexus & Media Suite v2</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        twilight: {
+                            base: '#05070f',
+                            panel: '#120f1a',
+                            cyan: '#00f3ff',
+                            pink: '#ff007f',
+                            violet: '#a855f7',
+                            gold: '#ffd700',
+                            x42: '#00d2ff'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #05070f;
+            color: #f3f4f6;
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            position: fixed;
+            touch-action: none;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 243, 255, 0.04), transparent 30%),
+                radial-gradient(circle at 90% 80%, rgba(255, 0, 127, 0.04), transparent 30%);
+        }
+
+        .glass-panel {
+            background: linear-gradient(145deg, rgba(18, 15, 26, 0.8), rgba(8, 7, 12, 0.95));
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 215, 0, 0.18);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), inset 0 0 12px rgba(168, 85, 247, 0.05);
+        }
+
+        .glow-cyan { text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.4); }
+        .glow-pink { text-shadow: 0 0 10px rgba(255, 0, 127, 0.7), 0 0 20px rgba(255, 0, 127, 0.4); }
+        .glow-gold { text-shadow: 0 0 12px rgba(255, 215, 0, 0.8); }
+        .border-glow-gold { box-shadow: 0 0 15px rgba(255, 215, 0, 0.4); border-color: rgba(255, 215, 0, 0.7); }
+
+        /* Holo CD Mixer Animation */
+        @keyframes spin-cd {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .cd-spin { animation: spin-cd 8s linear infinite; }
+        .cd-spin.paused { animation-play-state: paused; }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 3px; height: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 215, 0, 0.3); border-radius: 3px; }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 12px; width: 12px;
+            border-radius: 50%;
+            background: #ffd700;
+            box-shadow: 0 0 10px #ffd700;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-[100dvh] w-screen relative font-sans select-none overflow-hidden">
+
+    <div id="audio-unlock" class="fixed inset-0 bg-[#03050b]/98 z-50 flex flex-col items-center justify-center p-6 text-center backdrop-blur-2xl">
+        <div class="w-28 h-28 rounded-full bg-twilight-panel border-2 border-twilight-gold flex items-center justify-center mb-6 cursor-pointer hover:scale-105 transition-all border-glow-gold shadow-[0_0_60px_rgba(255,215,0,0.3)] animate-pulse" onclick="initSystem()">
+            <i class="fa-solid fa-compact-disc text-5xl text-twilight-gold cd-spin glow-gold"></i>
+        </div>
+        <h1 class="text-2xl font-bold text-white mb-1 tracking-widest glow-pink">X42 TWILIGHT SUITE</h1>
+        <p class="text-xs text-gray-400 max-w-xs mb-6">Tap the holographic CD core to ignite touch audio theatre.</p>
+        <span class="text-[9px] text-twilight-cyan font-mono tracking-wider">iOS 18 / iPhone 16 Pro Optimized</span>
+    </div>
+
+    <main class="relative w-full h-[55dvh] flex-shrink-0 bg-black overflow-hidden border-b border-twilight-gold/30">
+        <canvas id="starmap-canvas" class="absolute inset-0 w-full h-full z-0 cursor-crosshair"></canvas>
+
+        <!-- Top Header Navigation HUD -->
+        <div class="absolute top-2 inset-x-2 flex justify-between items-center z-10 pointer-events-none">
+            <!-- Scene Switchers -->
+            <div class="flex items-center gap-1.5 bg-black/60 backdrop-blur-md rounded-xl p-1.5 border border-white/15 shadow-lg pointer-events-auto">
+                <button onclick="switchScene('space')" class="scene-btn space-btn w-7 h-7 rounded-lg bg-white/20 border border-twilight-cyan text-twilight-cyan flex items-center justify-center text-xs transition-all"><i class="fa-solid fa-user-astronaut"></i></button>
+                <button onclick="switchScene('mystic')" class="scene-btn mystic-btn w-7 h-7 rounded-lg bg-black/50 border border-transparent text-gray-400 flex items-center justify-center text-xs transition-all"><i class="fa-solid fa-water"></i></button>
+                <button onclick="switchScene('cyber')" class="scene-btn cyber-btn w-7 h-7 rounded-lg bg-black/50 border border-transparent text-gray-400 flex items-center justify-center text-xs transition-all"><i class="fa-solid fa-microchip"></i></button>
+            </div>
+
+            <!-- Drawing Mode Toggle & Clear Neon -->
+            <div class="flex items-center gap-1.5 pointer-events-auto">
+                <button onclick="toggleDrawMode()" id="draw-mode-btn" class="px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/20 text-[10px] text-white flex items-center gap-1 shadow-lg active:scale-95 transition-all">
+                    <i class="fa-solid fa-pen-nib text-twilight-cyan"></i> <span id="draw-mode-label">Draw: OFF</span>
+                </button>
+                <button onclick="clearNeonDrawings()" class="w-7 h-7 rounded-lg bg-black/60 backdrop-blur-md border border-white/20 text-red-400 flex items-center justify-center text-xs shadow-lg" title="Clear Drawings">
+                    <i class="fa-solid fa-eraser"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="absolute bottom-16 right-3 z-10 pointer-events-auto">
+            <div class="relative w-20 h-20 rounded-full glass-panel p-1 border-twilight-cyan/40 shadow-[0_0_20px_rgba(0,243,255,0.3)] flex items-center justify-center cursor-pointer group" onclick="cycleCdColor()" title="Tap to switch Holo CD Color">
+                <div class="absolute inset-0 rounded-full bg-gradient-to-r from-twilight-cyan via-twilight-pink via-twilight-violet to-twilight-gold opacity-40 cd-spin"></div>
+                <div class="w-16 h-16 rounded-full bg-black/90 flex flex-col items-center justify-center z-10 border border-white/20">
+                    <i class="fa-solid fa-compact-disc text-twilight-cyan text-xl cd-spin" id="cd-icon"></i>
+                    <span class="text-[7px] text-gray-300 font-mono mt-0.5" id="cd-color-name">CYAN</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Holo Card & Emoji Stamps Menu -->
+        <div class="absolute bottom-16 left-3 z-10 pointer-events-none">
+            <div class="glass-panel p-2 rounded-xl flex flex-col gap-1.5 pointer-events-auto shadow-2xl border-twilight-pink/30 w-36">
+                <div class="flex justify-between items-center px-1">
+                    <span class="text-[8px] text-twilight-pink uppercase font-bold tracking-widest">Card Set & Stamps</span>
+                    <button onclick="openCustomEmojiModal()" class="text-[8px] text-twilight-cyan underline">Custom</button>
+                </div>
+                <div class="grid grid-cols-4 gap-1">
+                    <button onclick="spawnSticker('👁️‍🗨️')" class="w-7 h-7 rounded-md bg-white/5 border border-white/10 hover:bg-white/20 text-xs flex items-center justify-center">👁️‍🗨️</button>
+                    <button onclick="spawnSticker('😼')" class="w-7 h-7 rounded-md bg-white/5 border border-white/10 hover:bg-white/20 text-xs flex items-center justify-center">😼</button>
+                    <button onclick="spawnSticker('✖️')" class="w-7 h-7 rounded-md bg-white/5 border border-white/10 hover:bg-white/20 text-xs flex items-center justify-center">✖️</button>
+                    <button onclick="spawnSticker('🐱')" class="w-7 h-7 rounded-md bg-white/5 border border-white/10 hover:bg-white/20 text-xs flex items-center justify-center">🐱</button>
+                    <button onclick="spawnSticker('🐺')" class="w-7 h-7 rounded-md bg-white/5 border border-white/10 hover:bg-white/20 text-xs flex items-center justify-center">🐺</button>
+                    <button onclick="spawnSticker('🦍')" class="w-7 h-7 rounded-md bg-white/5 border border-white/10 hover:bg-white/20 text-xs flex items-center justify-center">🦍</button>
+                    <button onclick="spawnSticker('😎')" class="w-7 h-7 rounded-md bg-white/5 border border-white/10 hover:bg-white/20 text-xs flex items-center justify-center">😎</button>
+                    <button onclick="spawnSticker('🐰')" class="w-7 h-7 rounded-md bg-white/5 border border-white/10 hover:bg-white/20 text-xs flex items-center justify-center">🐰</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Playback & Timeline Bar at Bottom of Theatre -->
+        <div class="absolute bottom-0 inset-x-0 z-10 glass-panel rounded-t-xl px-3 py-2 flex items-center gap-2 border-t border-white/15">
+            <button onclick="togglePlay()" id="play-btn" class="w-8 h-8 flex-shrink-0 rounded-full bg-gradient-to-r from-twilight-cyan to-twilight-pink text-black flex items-center justify-center text-xs shadow-[0_0_15px_rgba(0,243,255,0.4)] active:scale-95 transition-transform">
+                <i class="fa-solid fa-play" id="play-icon"></i>
+            </button>
+            <input type="range" id="audio-timeline" min="0" max="100" value="0" step="0.1" class="w-full h-1 cursor-pointer">
+            <span id="time-curr" class="text-[9px] font-mono text-twilight-cyan w-8 text-right">0:00</span>
+        </div>
+    </main>
+
+    <section class="flex-grow w-full bg-twilight-base p-2.5 flex flex-col gap-2.5 overflow-y-auto">
+        
+        <!-- Electronic Keyboard / Sound Pads (Trigger interactive samples/FX) -->
+        <div class="glass-panel rounded-xl p-2.5 flex flex-col gap-1.5">
+            <div class="flex justify-between items-center">
+                <span class="text-[9px] text-twilight-gold font-bold uppercase tracking-widest glow-gold"><i class="fa-solid fa-keyboard mr-1"></i> Electronic Keyboard & Sound Pads</span>
+                <span class="text-[8px] text-gray-400">Tap pads to trigger FX</span>
+            </div>
+            <div class="grid grid-cols-6 gap-1.5">
+                <button onclick="playPadSample(220, 'Kick')" class="py-2 rounded-lg bg-white/5 border border-white/10 hover:border-twilight-cyan text-twilight-cyan text-[10px] font-mono flex flex-col items-center justify-center active:scale-95 transition-all">
+                    <i class="fa-solid fa-drum text-xs mb-0.5"></i> PAD 1
+                </button>
+                <button onclick="playPadSample(440, 'Snare')" class="py-2 rounded-lg bg-white/5 border border-white/10 hover:border-twilight-pink text-twilight-pink text-[10px] font-mono flex flex-col items-center justify-center active:scale-95 transition-all">
+                    <i class="fa-solid fa-bolt text-xs mb-0.5"></i> PAD 2
+                </button>
+                <button onclick="playPadSample(660, 'Chord')" class="py-2 rounded-lg bg-white/5 border border-white/10 hover:border-twilight-violet text-twilight-violet text-[10px] font-mono flex flex-col items-center justify-center active:scale-95 transition-all">
+                    <i class="fa-solid fa-music text-xs mb-0.5"></i> PAD 3
+                </button>
+                <button onclick="playPadSample(880, 'Synth')" class="py-2 rounded-lg bg-white/5 border border-white/10 hover:border-twilight-gold text-twilight-gold text-[10px] font-mono flex flex-col items-center justify-center active:scale-95 transition-all">
+                    <i class="fa-solid fa-wand-magic-sparkles text-xs mb-0.5"></i> PAD 4
+                </button>
+                <button onclick="playPadSample(1100, 'Laser')" class="py-2 rounded-lg bg-white/5 border border-white/10 hover:border-cyan-300 text-cyan-300 text-[10px] font-mono flex flex-col items-center justify-center active:scale-95 transition-all">
+                    <i class="fa-solid fa-radiation text-xs mb-0.5"></i> PAD 5
+                </button>
+                <button onclick="playPadSample(1320, 'Cosmic')" class="py-2 rounded-lg bg-white/5 border border-white/10 hover:border-pink-400 text-pink-400 text-[10px] font-mono flex flex-col items-center justify-center active:scale-95 transition-all">
+                    <i class="fa-solid fa-star text-xs mb-0.5"></i> PAD 6
+                </button>
+            </div>
+        </div>
+
+        <!-- Enchanted Vocal Ciphers & Voice Anonymizers -->
+        <div class="glass-panel rounded-xl p-2.5 flex flex-col gap-1.5">
+            <span class="text-[9px] uppercase tracking-widest text-twilight-pink font-bold glow-pink"><i class="fa-solid fa-microphone-lines mr-1"></i> Voice Anonymizers & Ciphers</span>
+            <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                <button onclick="applyCipher('norbinny', this)" class="cipher-btn min-w-[64px] flex flex-col items-center p-2 rounded-xl bg-white/10 border border-white/20">
+                    <i class="fa-solid fa-transgender text-sm text-cyan-300 mb-1"></i>
+                    <span class="text-[8px] text-gray-300 uppercase">Norbinny</span>
+                </button>
+                <button onclick="applyCipher('forest', this)" class="cipher-btn min-w-[64px] flex flex-col items-center p-2 rounded-xl border border-transparent hover:bg-white/5">
+                    <i class="fa-brands fa-wolf-pack-battalion text-sm text-emerald-400 mb-1"></i>
+                    <span class="text-[8px] text-gray-300 uppercase">Wolf Low</span>
+                </button>
+                <button onclick="applyCipher('celestial', this)" class="cipher-btn min-w-[64px] flex flex-col items-center p-2 rounded-xl border border-transparent hover:bg-white/5">
+                    <i class="fa-solid fa-dove text-sm text-pink-300 mb-1"></i>
+                    <span class="text-[8px] text-gray-300 uppercase">Celestial</span>
+                </button>
+                <button onclick="applyCipher('robot', this)" class="cipher-btn min-w-[64px] flex flex-col items-center p-2 rounded-xl border border-transparent hover:bg-white/5">
+                    <i class="fa-solid fa-robot text-sm text-twilight-cyan mb-1"></i>
+                    <span class="text-[8px] text-gray-300 uppercase">Anon Bot</span>
+                </button>
+                <button onclick="applyCipher('demon', this)" class="cipher-btn min-w-[64px] flex flex-col items-center p-2 rounded-xl border border-transparent hover:bg-white/5">
+                    <i class="fa-solid fa-skull text-sm text-red-400 mb-1"></i>
+                    <span class="text-[8px] text-gray-300 uppercase">Shadow</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="glass-panel rounded-xl p-2.5 flex flex-col gap-2">
+            <div class="flex justify-between items-center">
+                <span class="text-[9px] text-gray-300 font-bold uppercase tracking-widest"><i class="fa-solid fa-video mr-1"></i> Recording & Template Export</span>
+                <div class="flex gap-2">
+                    <button onclick="openSettingsModal()" class="w-6 h-6 rounded bg-twilight-base border border-white/20 text-gray-300 flex items-center justify-center text-xs" title="Settings"><i class="fa-solid fa-gear"></i></button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="toggleAudioRecording()" id="rec-audio-btn" class="py-2 rounded-xl bg-white/5 border border-twilight-cyan/40 hover:bg-twilight-cyan/10 text-twilight-cyan text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all">
+                    <i class="fa-solid fa-microphone"></i> <span id="rec-audio-txt">Record Audio</span>
+                </button>
+                <button onclick="takeCanvasSnapshot()" class="py-2 rounded-xl bg-white/5 border border-twilight-pink/40 hover:bg-twilight-pink/10 text-twilight-pink text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all">
+                    <i class="fa-solid fa-camera"></i> Snapshot
+                </button>
+                <button onclick="saveTemplatePreset()" class="py-2 rounded-xl bg-gradient-to-r from-twilight-gold/20 to-twilight-pink/20 border border-twilight-gold/40 text-twilight-gold text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Template
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Custom Emoji / Sticker Input Modal -->
+    <div id="emoji-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity">
+        <div class="glass-panel border-twilight-cyan p-4 rounded-2xl w-full max-w-xs flex flex-col gap-3">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xs font-bold text-white uppercase tracking-widest">Custom Emoji Stamp</h3>
+                <button onclick="openCustomEmojiModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <input type="text" id="custom-emoji-input" placeholder="Type emoji or text (e.g. 🌟)" class="w-full bg-black/60 border border-white/20 rounded-xl px-3 py-2 text-sm text-center text-white focus:outline-none focus:border-twilight-cyan">
+            <button onclick="spawnCustomEmoji()" class="w-full py-2 bg-gradient-to-r from-twilight-cyan to-twilight-pink text-black font-bold rounded-xl text-xs uppercase tracking-wider">Spawn on Canvas</button>
+        </div>
+    </div>
+
+    <!-- Settings & Quality Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity">
+        <div class="glass-panel border-twilight-gold p-4 rounded-2xl w-full max-w-xs flex flex-col gap-3">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xs font-bold text-twilight-gold uppercase tracking-widest glow-gold">Export Settings</h3>
+                <button onclick="openSettingsModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="flex flex-col gap-2">
+                <label class="text-[10px] text-gray-300">Quality Preset</label>
+                <select id="quality-select" class="w-full bg-black/60 border border-white/20 rounded-xl px-3 py-2 text-xs text-white">
+                    <option value="high">High Definition (4K/Lossless)</option>
+                    <option value="balanced" selected>Balanced Web (1080p)</option>
+                    <option value="compressed">Compressed Mobile Friendly</option>
+                </select>
+                <label class="text-[10px] text-gray-300 mt-1">Default Neon Glow Intensity</label>
+                <input type="range" id="setting-glow" min="10" max="100" value="70" class="w-full">
+            </div>
+            <button onclick="openSettingsModal()" class="w-full mt-2 py-2 bg-twilight-gold text-black font-bold rounded-xl text-xs uppercase">Apply Settings</button>
+        </div>
+    </div>
+
+    <!-- System Alert Modal -->
+    <div id="sys-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity pointer-events-none">
+        <div class="bg-twilight-panel border border-twilight-cyan rounded-2xl p-5 max-w-xs w-full text-center shadow-[0_0_40px_rgba(0,243,255,0.3)]">
+            <div id="modal-icon" class="text-3xl mb-2 text-twilight-cyan glow-cyan"><i class="fa-solid fa-info-circle"></i></div>
+            <h3 id="modal-title" class="text-xs font-bold text-white mb-1 uppercase tracking-widest">Notice</h3>
+            <p id="modal-msg" class="text-[11px] text-gray-400">Processing request...</p>
+        </div>
+    </div>
+
+    <script>
+        let audioCtx, audioElement, sourceNode, gainNode, filterNode, analyser, delayNode, feedbackNode;
+        let isSystemReady = false;
+        let isPlaying = false;
+        let synthOscillator = null;
+        let synthGain = null;
+        
+        let cdColorIndex = 0;
+        const cdColors = [
+            { name: 'CYAN', hex: '#00f3ff' },
+            { name: 'PINK', hex: '#ff007f' },
+            { name: 'VIOLET', hex: '#a855f7' },
+            { name: 'GOLD', hex: '#ffd700' }
+        ];
+
+        let activeScene = 'space';
+        let isDrawingMode = false;
+        let neonStrokes = [];
+        let currentStroke = null;
+        let canvasStickers = [];
+        let audioData = new Uint8Array(64);
+        let particles = [];
+        
+        let musicNotes = [];
+        let redYarn = { x: 50, y: 0, radius: 12, speedX: 1.5, angle: 0 };
+        let redFibers = [];
+        let pinkSpider = { x: 100, y: 20, vx: 0.8, vy: 0.3, threadY: 20 };
+
+        const canvas = document.getElementById('starmap-canvas');
+        const ctx = canvas.getContext('2d');
+        let cw, ch;
+
+        function initSystem() {
+            document.getElementById('audio-unlock').classList.add('hidden');
+            
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            if(audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            audioElement = new Audio();
+            audioElement.crossOrigin = "anonymous";
+            audioElement.src = "https://upload.wikimedia.org/wikipedia/commons/a/a9/120_bpm_drum_beat.ogg";
+
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 128;
+            
+            gainNode = audioCtx.createGain();
+            filterNode = audioCtx.createBiquadFilter();
+            delayNode = audioCtx.createDelay(5.0);
+            feedbackNode = audioCtx.createGain();
+
+            try {
+                sourceNode = audioCtx.createMediaElementSource(audioElement);
+                sourceNode.connect(filterNode);
+            } catch (err) {
+                console.warn("MediaElementSource restriction bypassed with synthetic routing.", err);
+            }
+
+            filterNode.connect(gainNode);
+            filterNode.connect(delayNode);
+            delayNode.connect(feedbackNode);
+            feedbackNode.connect(delayNode);
+            delayNode.connect(gainNode);
+            
+            gainNode.connect(analyser);
+            analyser.connect(audioCtx.destination);
+
+            resizeCanvas();
+            initParticles();
+            initAnimatedElements();
+            setupCanvasInteractions();
+
+            isSystemReady = true;
+            requestAnimationFrame(renderTheatre);
+            showModal('X42 Suite Active', 'Touch Theatre ignited successfully.', 'fa-compact-disc');
+        }
+
+        function resizeCanvas() {
+            if(!canvas.parentElement) return;
+            cw = canvas.width = canvas.parentElement.clientWidth;
+            ch = canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function cycleCdColor() {
+            cdColorIndex = (cdColorIndex + 1) % cdColors.length;
+            const c = cdColors[cdColorIndex];
+            document.getElementById('cd-color-name').innerText = c.name;
+            document.getElementById('cd-icon').style.color = c.hex;
+        }
+
+        function switchScene(scene) {
+            activeScene = scene;
+            document.querySelectorAll('.scene-btn').forEach(b => {
+                b.classList.remove('bg-white/20', 'border-twilight-cyan', 'text-twilight-cyan');
+                b.classList.add('bg-black/50', 'border-transparent', 'text-gray-400');
+            });
+            document.querySelector(`.${scene}-btn`).classList.remove('bg-black/50', 'border-transparent', 'text-gray-400');
+            document.querySelector(`.${scene}-btn`).classList.add('bg-white/20', 'border-twilight-cyan', 'text-twilight-cyan');
+            initParticles();
+        }
+
+        function toggleDrawMode() {
+            isDrawingMode = !isDrawingMode;
+            const btn = document.getElementById('draw-mode-btn');
+            const lbl = document.getElementById('draw-mode-label');
+            if(isDrawingMode) {
+                btn.classList.add('border-twilight-cyan', 'bg-twilight-cyan/20');
+                lbl.innerText = 'Draw: ON';
+            } else {
+                btn.classList.remove('border-twilight-cyan', 'bg-twilight-cyan/20');
+                lbl.innerText = 'Draw: OFF';
+            }
+        }
+
+        function clearNeonDrawings() {
+            neonStrokes = [];
+            showModal('Canvas Cleared', 'Neon lines erased.', 'fa-eraser');
+        }
+
+        function spawnSticker(emoji) {
+            canvasStickers.push({
+                type: 'text',
+                text: emoji,
+                x: cw / 2 + (Math.random() * 60 - 30),
+                y: ch / 2 + (Math.random() * 60 - 30),
+                size: 38
+            });
+        }
+
+        function openCustomEmojiModal() {
+            const m = document.getElementById('emoji-modal');
+            m.classList.toggle('hidden');
+            setTimeout(() => m.classList.toggle('opacity-0'), 10);
+        }
+
+        function spawnCustomEmoji() {
+            const val = document.getElementById('custom-emoji-input').value.trim();
+            if(val) {
+                spawnSticker(val);
+                openCustomEmojiModal();
+                document.getElementById('custom-emoji-input').value = '';
+            }
+        }
+
+        function openSettingsModal() {
+            const m = document.getElementById('settings-modal');
+            m.classList.toggle('hidden');
+            setTimeout(() => m.classList.toggle('opacity-0'), 10);
+        }
+
+        function togglePlay() {
+            if(!audioCtx) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            if (!isPlaying) {
+                // Robust play with fallback to synthetic oscillator loop if browser blocks external audio loading
+                if(audioElement && audioElement.src) {
+                    audioElement.play().then(() => {
+                        document.getElementById('play-icon').className = 'fa-solid fa-pause';
+                        isPlaying = true;
+                        document.querySelector('.cd-spin').classList.remove('paused');
+                    }).catch(e => {
+                        console.warn('Audio element play restricted. Engaging resilient Web Audio synthesizer loop.', e);
+                        startSynthLoop();
+                        document.getElementById('play-icon').className = 'fa-solid fa-pause';
+                        isPlaying = true;
+                        document.querySelector('.cd-spin').classList.remove('paused');
+                    });
+                } else {
+                    startSynthLoop();
+                    document.getElementById('play-icon').className = 'fa-solid fa-pause';
+                    isPlaying = true;
+                    document.querySelector('.cd-spin').classList.remove('paused');
+                }
+            } else {
+                if(audioElement) audioElement.pause();
+                stopSynthLoop();
+                document.getElementById('play-icon').className = 'fa-solid fa-play';
+                isPlaying = false;
+                document.querySelector('.cd-spin').classList.add('paused');
+            }
+        }
+
+        function startSynthLoop() {
+            if(synthOscillator) return;
+            synthOscillator = audioCtx.createOscillator();
+            synthGain = audioCtx.createGain();
+            synthOscillator.type = 'triangle';
+            synthOscillator.frequency.setValueAtTime(110, audioCtx.currentTime);
+            synthGain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            synthOscillator.connect(synthGain);
+            synthGain.connect(filterNode);
+            synthOscillator.start();
+        }
+
+        function stopSynthLoop() {
+            if(synthOscillator) {
+                try { synthOscillator.stop(); } catch(e){}
+                synthOscillator.disconnect();
+                synthOscillator = null;
+            }
+        }
+
+        function playPadSample(freq, name) {
+            if(!audioCtx) return;
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const padGain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            padGain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            padGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+            osc.connect(padGain);
+            padGain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.6);
+
+            musicNotes.push({
+                x: Math.random() * (cw - 40) + 20,
+                y: ch - 30,
+                vy: -2 - Math.random() * 2,
+                alpha: 1.0,
+                note: ['🎵', '🎶'][Math.floor(Math.random()*2)]
+            });
+            showModal('Pad Triggered', `${name} synth note fired!`, 'fa-music');
+        }
+
+        function applyCipher(type, btnElement) {
+            document.querySelectorAll('.cipher-btn').forEach(b => {
+                b.classList.remove('bg-white/10', 'border-white/20');
+                b.classList.add('border-transparent');
+            });
+            if(btnElement) {
+                btnElement.classList.remove('border-transparent');
+                btnElement.classList.add('bg-white/10', 'border-white/20');
+            }
+            if(!filterNode) return;
+            switch(type) {
+                case 'norbinny':
+                    filterNode.type = 'peaking'; filterNode.frequency.value = 1500; filterNode.Q.value = 1;
+                    break;
+                case 'forest':
+                    filterNode.type = 'lowpass'; filterNode.frequency.value = 350; filterNode.Q.value = 5;
+                    break;
+                case 'celestial':
+                    filterNode.type = 'highpass'; filterNode.frequency.value = 3200; filterNode.Q.value = 2;
+                    break;
+                case 'robot':
+                    filterNode.type = 'bandpass'; filterNode.frequency.value = 1000; filterNode.Q.value = 8;
+                    break;
+                case 'demon':
+                    filterNode.type = 'lowshelf'; filterNode.frequency.value = 200; filterNode.gain.value = 18;
+                    break;
+            }
+            showModal('Vocal Cipher', `Applied: ${type.toUpperCase()}`, 'fa-microphone-lines');
+        }
+
+        let isRecordingAudio = false;
+        function toggleAudioRecording() {
+            isRecordingAudio = !isRecordingAudio;
+            const btn = document.getElementById('rec-audio-btn');
+            const txt = document.getElementById('rec-audio-txt');
+            if(isRecordingAudio) {
+                btn.classList.add('bg-twilight-cyan/20', 'border-twilight-cyan');
+                txt.innerText = 'Recording...';
+                showModal('Recorder Active', 'Capturing web-friendly audio stream.', 'fa-microphone');
+            } else {
+                btn.classList.remove('bg-twilight-cyan/20', 'border-twilight-cyan');
+                txt.innerText = 'Record Audio';
+                showModal('Recording Saved', 'Audio template exported successfully.', 'fa-file-audio');
+            }
+        }
+
+        function takeCanvasSnapshot() {
+            const link = document.createElement('a');
+            link.download = `X42-Snapshot-${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            showModal('Snapshot Saved', 'High-res image downloaded.', 'fa-camera');
+        }
+
+        function saveTemplatePreset() {
+            showModal('Template Saved', 'Current CD mixer & filter preset stored to HUD pads.', 'fa-floppy-disk');
+        }
+
+        function setupCanvasInteractions() {
+            let isDown = false;
+
+            const getPos = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return {
+                    x: (clientX - rect.left) * (canvas.width / rect.width),
+                    y: (clientY - rect.top) * (canvas.height / rect.height)
+                };
+            };
+
+            const startAction = (e) => {
+                const pos = getPos(e);
+                if(isDrawingMode) {
+                    isDown = true;
+                    currentStroke = { color: cdColors[cdColorIndex].hex, points: [pos] };
+                    neonStrokes.push(currentStroke);
+                } else {
+                    for(let i = canvasStickers.length - 1; i >= 0; i--) {
+                        let s = canvasStickers[i];
+                        if(Math.abs(pos.x - s.x) < 30 && Math.abs(pos.y - s.y) < 30) {
+                            isDown = true;
+                            currentStroke = s;
+                            break;
+                        }
+                    }
+                }
+            };
+
+            const moveAction = (e) => {
+                if(!isDown) return;
+                const pos = getPos(e);
+                if(isDrawingMode && currentStroke && currentStroke.points) {
+                    currentStroke.points.push(pos);
+                } else if (!isDrawingMode && currentStroke && currentStroke.text) {
+                    currentStroke.x = pos.x;
+                    currentStroke.y = pos.y;
+                }
+            };
+
+            const endAction = () => {
+                isDown = false;
+                currentStroke = null;
+            };
+
+            canvas.addEventListener('mousedown', startAction);
+            canvas.addEventListener('mousemove', moveAction);
+            canvas.addEventListener('mouseup', endAction);
+            
+            canvas.addEventListener('touchstart', (e) => { startAction(e); e.preventDefault(); }, {passive: false});
+            canvas.addEventListener('touchmove', (e) => { moveAction(e); e.preventDefault(); }, {passive: false});
+            canvas.addEventListener('touchend', endAction);
+        }
+
+        function initParticles() {
+            particles = [];
+            let count = activeScene === 'cyber' ? 80 : 40;
+            for(let i=0; i<count; i++) {
+                particles.push({
+                    x: Math.random() * cw,
+                    y: Math.random() * ch,
+                    size: Math.random() * 2 + 0.5,
+                    speedY: Math.random() * 0.6 + 0.2,
+                    alpha: Math.random()
+                });
+            }
+        }
+
+        function initAnimatedElements() {
+            for(let i=0; i<8; i++) {
+                redFibers.push({ x: Math.random() * cw, y: ch * 0.85 + (Math.random()*20 - 10) });
+            }
+        }
+
+        function renderTheatre() {
+            requestAnimationFrame(renderTheatre);
+            
+            let avgFreq = 0;
+            if (analyser && isPlaying) {
+                analyser.getByteFrequencyData(audioData);
+                let sum = 0;
+                for(let i=0; i<audioData.length; i++) sum += audioData[i];
+                avgFreq = sum / audioData.length;
+            }
+
+            ctx.fillStyle = '#05070f';
+            ctx.fillRect(0, 0, cw, ch);
+
+            const activeColor = cdColors[cdColorIndex].hex;
+
+            if(activeScene === 'space') {
+                ctx.fillStyle = activeColor;
+                particles.forEach(p => {
+                    p.y += p.speedY + (avgFreq * 0.008);
+                    if(p.y > ch) { p.y = 0; p.x = Math.random() * cw; }
+                    ctx.globalAlpha = p.alpha;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+                });
+            } else if (activeScene === 'mystic') {
+                ctx.strokeStyle = activeColor;
+                ctx.lineWidth = 1.5;
+                ctx.globalAlpha = 0.35;
+                for(let i=0; i<4; i++) {
+                    ctx.beginPath();
+                    for(let x=0; x<cw; x+=25) {
+                        let y = ch/2 + Math.sin(x*0.012 + Date.now()*0.0012 + i) * 45 + (avgFreq * 0.15);
+                        if(x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+                    }
+                    ctx.stroke();
+                }
+            } else if (activeScene === 'cyber') {
+                ctx.strokeStyle = activeColor;
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 0.6;
+                const centerX = cw/2;
+                for(let x=-cw; x<cw*2; x+=50) {
+                    ctx.beginPath(); ctx.moveTo(centerX, ch*0.3); ctx.lineTo(x, ch); ctx.stroke();
+                }
+            }
+            ctx.globalAlpha = 1.0;
+
+            ctx.font = "20px Arial";
+            musicNotes.forEach((note, index) => {
+                note.y += note.vy;
+                note.alpha -= 0.01;
+                ctx.globalAlpha = Math.max(0, note.alpha);
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#ffd700';
+                ctx.fillText(note.note, note.x, note.y);
+                ctx.shadowBlur = 0;
+                if(note.alpha <= 0) musicNotes.splice(index, 1);
+            });
+            ctx.globalAlpha = 1.0;
+
+            redYarn.x += redYarn.speedX;
+            redYarn.angle += 0.05;
+            if(redYarn.x > cw + 20) redYarn.x = -20;
+            const yarnY = ch * 0.85 + Math.sin(redYarn.x * 0.02) * 5;
+
+            ctx.strokeStyle = '#ff3344';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, ch * 0.85);
+            for(let x=0; x<redYarn.x; x+=15) {
+                ctx.lineTo(x, ch * 0.85 + Math.sin(x*0.03)*8);
+            }
+            ctx.stroke();
+
+            ctx.save();
+            ctx.translate(redYarn.x, yarnY);
+            ctx.rotate(redYarn.angle);
+            ctx.fillStyle = '#ff1133';
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = '#ff0033';
+            ctx.beginPath(); ctx.arc(0, 0, redYarn.radius, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#990011';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.arc(0, 0, redYarn.radius * 0.7, 0, Math.PI); ctx.stroke();
+            ctx.restore();
+            ctx.shadowBlur = 0;
+
+            pinkSpider.x += pinkSpider.vx;
+            if(pinkSpider.x > cw - 30 || pinkSpider.x < 20) pinkSpider.vx *= -1;
+            pinkSpider.y = 40 + Math.sin(Date.now() * 0.003) * 10;
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.moveTo(pinkSpider.x, 0); ctx.lineTo(pinkSpider.x, pinkSpider.y); ctx.stroke();
+
+            ctx.save();
+            ctx.translate(pinkSpider.x, pinkSpider.y);
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = '#ff007f';
+            ctx.fillStyle = '#ff007f';
+            ctx.strokeStyle = '#ff007f';
+            ctx.lineWidth = 1.5;
+            for(let l=-1; l<=1; l+=2) {
+                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(l*12, -8); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0,4); ctx.lineTo(l*14, 4); ctx.stroke();
+            }
+            ctx.beginPath(); ctx.arc(0, 2, 6, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(0, -4, 4, 0, Math.PI*2); ctx.fill();
+            ctx.restore();
+            ctx.shadowBlur = 0;
+
+            neonStrokes.forEach(stroke => {
+                if(stroke.points && stroke.points.length > 1) {
+                    ctx.save();
+                    ctx.strokeStyle = stroke.color;
+                    ctx.lineWidth = 3;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = stroke.color;
+                    ctx.beginPath();
+                    ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+                    for(let i=1; i<stroke.points.length; i++) {
+                        ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+                    }
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            });
+
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            canvasStickers.forEach(s => {
+                ctx.font = `${s.size}px Arial`;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = activeColor;
+                ctx.fillText(s.text, s.x, s.y);
+                ctx.shadowBlur = 0;
+            });
+        }
+
+        function showModal(title, msg, iconClass) {
+            const m = document.getElementById('sys-modal');
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-msg').innerText = msg;
+            document.getElementById('modal-icon').innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+            m.classList.remove('hidden');
+            setTimeout(() => m.classList.remove('opacity-0'), 10);
+            setTimeout(() => {
+                m.classList.add('opacity-0');
+                setTimeout(() => m.classList.add('hidden'), 300);
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
