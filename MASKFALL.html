@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>STARWEBER OS v3: Polly Pocket Hub</title>
+    
+    <!-- Three.js & Loaders -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-heart: #ff4b72;   
+            --color-club: #00ff7f;    
+            --color-spade: #9d4edd;   
+            --color-diamond: #00e5ff; 
+            --color-x: #ffffff;       
+            --bg-color: #05020a;
+            --glass-bg: rgba(10, 10, 15, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.15);
+        }
+
+        /* STRICT NO SCROLLBARS */
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+        body, html {
+            width: 100vw; height: 100vh; background-color: var(--bg-color);
+            overflow: hidden !important; overscroll-behavior: none;
+            font-family: 'Courier New', Courier, monospace; color: white;
+            touch-action: none; /* Prevents pull-to-refresh and scrolling on mobile */
+        }
+
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+        
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 10; pointer-events: none; display: flex; flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .interactive { pointer-events: auto; }
+
+        .hud-top {
+            padding: 15px 20px; background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%);
+            display: flex; justify-content: space-between; align-items: flex-start;
+        }
+        .title-box h1 { font-size: 1.2rem; text-shadow: 0 0 10px currentColor; letter-spacing: 2px; }
+        .title-box p { font-size: 0.75rem; color: #aaa; margin-top: 4px; }
+        
+        .toolbar { display: flex; gap: 10px; background: var(--glass-bg); padding: 8px; border-radius: 12px; border: 1px solid var(--glass-border); backdrop-filter: blur(8px); }
+        .btn-icon {
+            width: 40px; height: 40px; border-radius: 8px; background: rgba(255,255,255,0.05);
+            border: 1px solid #444; color: white; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            transition: 0.2s;
+        }
+        .btn-icon.active { background: white; color: black; box-shadow: 0 0 10px white; }
+        .btn-icon:active { transform: scale(0.9); }
+
+        /* Left Side Tools */
+        .side-tools { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; }
+
+        /* Bottom Deck & Timeline */
+        .bottom-deck {
+            background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, transparent 100%);
+            padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 15px;
+        }
+
+        /* D-PAD: X center, Clockwise: Heart, Club, Spade, Diamond */
+        .d-pad { position: relative; width: 140px; height: 140px; }
+        .d-btn {
+            position: absolute; width: 44px; height: 44px; border-radius: 50%;
+            background: var(--glass-bg); border: 2px solid #555;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.2rem; cursor: pointer; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(5px);
+        }
+        .d-btn.active { transform: scale(1.15); box-shadow: 0 0 15px currentColor; border-color: currentColor; background: rgba(255,255,255,0.1); }
+        
+        .btn-x { top: 48px; left: 48px; color: var(--color-x); }
+        .btn-heart { top: 0; left: 48px; color: var(--color-heart); }
+        .btn-club { top: 48px; right: 0; color: var(--color-club); }
+        .btn-spade { bottom: 0; left: 48px; color: var(--color-spade); }
+        .btn-diamond { top: 48px; left: 0; color: var(--color-diamond); }
+
+        /* Timeline Scrubber */
+        .timeline-container {
+            width: 90%; max-width: 600px; display: flex; align-items: center; gap: 15px;
+            background: var(--glass-bg); padding: 10px 20px; border-radius: 20px; border: 1px solid var(--glass-border);
+        }
+        .timeline-slider { flex-grow: 1; -webkit-appearance: none; height: 4px; background: #444; border-radius: 2px; outline: none; }
+        .timeline-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--color-diamond); box-shadow: 0 0 8px var(--color-diamond); cursor: pointer; }
+
+        /* HTML Iframe Modal */
+        #html-modal {
+            position: absolute; top: 10%; left: 10%; width: 80%; height: 80%;
+            background: white; border: 2px solid var(--color-diamond); border-radius: 10px;
+            display: none; z-index: 100; box-shadow: 0 0 30px rgba(0,229,255,0.5);
+            overflow: hidden; pointer-events: auto;
+        }
+        #html-iframe { width: 100%; height: 100%; border: none; }
+        .close-modal { position: absolute; top: -15px; right: -15px; width: 35px; height: 35px; background: red; color: white; border-radius: 50%; font-weight: bold; border: 2px solid white; cursor: pointer; z-index: 101;}
+
+        /* Universal Upload Hidden Input */
+        #universal-upload { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- Hidden Media Elements for Universal Loading -->
+    <video id="hidden-video" loop muted playsinline style="display:none;"></video>
+    <audio id="hidden-audio" loop style="display:none;"></audio>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer">
+        
+        <div class="hud-top">
+            <div class="title-box">
+                <h1 id="status-title" style="color: var(--color-x)">HUB: X-CORE</h1>
+                <p>Polly Pocket Handspiegel Matrix.</p>
+            </div>
+            
+            <div class="toolbar interactive">
+                <button class="btn-icon" id="mode-orbit" onclick="setMode('orbit')" title="Orbit / View"><i class="fas fa-eye"></i></button>
+                <button class="btn-icon active" id="mode-draw" onclick="setMode('draw')" title="Stamp / Edit"><i class="fas fa-paint-brush"></i></button>
+                
+                <label class="btn-icon" title="Universal Inject (MP3, MP4, GLB, HTML, PNG)">
+                    <i class="fas fa-upload"></i>
+                    <input type="file" id="universal-upload" accept="*/*" class="interactive">
+                </label>
+                
+                <button class="btn-icon" onclick="exportScene()" title="Export .GLB"><i class="fas fa-download"></i></button>
+            </div>
+        </div>
+
+        <div class="side-tools interactive">
+            <button class="btn-icon" onclick="clearActiveStage()" title="Clear Active Stage"><i class="fas fa-trash"></i></button>
+            <button class="btn-icon" onclick="toggleAudioPulse()" id="btn-audio-pulse" title="Microphone Reactivity"><i class="fas fa-microphone"></i></button>
+        </div>
+
+        <div class="bottom-deck interactive">
+            <!-- D-Pad -->
+            <div class="d-pad">
+                <div class="d-btn btn-heart" id="btn-heart" onclick="selectSuit('heart')" title="Bio / Heart">♥️</div>
+                <div class="d-btn btn-diamond" id="btn-diamond" onclick="selectSuit('diamond')" title="Caro / Diamond">♦️</div>
+                <div class="d-btn btn-x active" id="btn-x" onclick="selectSuit('x')" title="Hub / X">✖</div>
+                <div class="d-btn btn-club" id="btn-club" onclick="selectSuit('club')" title="Kreuz / Club">♣️</div>
+                <div class="d-btn btn-spade" id="btn-spade" onclick="selectSuit('spade')" title="Pike / Spade">♠️</div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="timeline-container">
+                <i class="fas fa-play" style="color: #aaa; cursor:pointer;" onclick="this.classList.toggle('fa-pause'); isPlaying = !isPlaying;"></i>
+                <input type="range" class="timeline-slider" id="timeline" min="0" max="1000" value="0">
+                <i class="fas fa-infinity" style="color: var(--color-diamond)"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- HTML Preview Modal -->
+    <div id="html-modal">
+        <button class="close-modal" onclick="document.getElementById('html-modal').style.display='none'">X</button>
+        <iframe id="html-iframe"></iframe>
+    </div>
+
+    <script>
+        const LORE = {
+            'heart': { name: '♥️ HERZ POCKET', color: 0xff4b72, pos: {x: 0, y: 15, z: 0} }, // Top
+            'club': { name: '♣️ KREUZ POCKET', color: 0x00ff7f, pos: {x: 15, y: 0, z: 0} }, // Right
+            'spade': { name: '♠️ PIKE POCKET', color: 0x9d4edd, pos: {x: 0, y: -15, z: 0} },// Bottom
+            'diamond': { name: '♦️ CARO POCKET', color: 0x00e5ff, pos: {x: -15, y: 0, z: 0} },// Left
+            'x': { name: '✖ X-HUB CORE', color: 0xffffff, pos: {x: 0, y: 0, z: 0} }
+        };
+
+        // State
+        let currentSuit = 'x';
+        let interactionMode = 'draw'; // 'draw' or 'orbit'
+        let isPlaying = true;
+        let globalTime = 0;
+        let audioScale = 1;
+
+        // Setup Scene
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x05020a, 0.015);
+
+        // Camera
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, -30, 40);
+
+        // Renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        container.appendChild(renderer.domElement);
+
+        // OrbitControls (Disabled by default, enabled when mode=='orbit')
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.enabled = false; 
+
+        // Lights & Neon Grid
+        const ambLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambLight);
+        
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+        dirLight.position.set(10, 20, 30);
+        scene.add(dirLight);
+
+        // Neon Grid Background
+        const gridHelper = new THREE.GridHelper(200, 100, 0x00e5ff, 0x440044);
+        gridHelper.position.z = -10;
+        gridHelper.rotation.x = Math.PI / 2; // Make it a back wall
+        gridHelper.material.transparent = true;
+        gridHelper.material.opacity = 0.3;
+        scene.add(gridHelper);
+        
+        // Floor Grid
+        const floorGrid = new THREE.GridHelper(200, 100, 0x00e5ff, 0x440044);
+        floorGrid.position.y = -20;
+        floorGrid.material.transparent = true;
+        floorGrid.material.opacity = 0.15;
+        scene.add(floorGrid);
+
+        // 3D Shape Definitions (Extruded Paths)
+        function getShape(type) {
+            const s = new THREE.Shape();
+            if (type === 'heart') {
+                s.moveTo(0, 1.5); s.bezierCurveTo(2, 3.5, 4, 1.5, 0, -3); s.bezierCurveTo(-4, 1.5, -2, 3.5, 0, 1.5);
+            } else if (type === 'diamond') {
+                s.moveTo(0, 3.5); s.lineTo(2.5, 0); s.lineTo(0, -3.5); s.lineTo(-2.5, 0); s.lineTo(0, 3.5);
+            } else if (type === 'club') {
+                s.moveTo(0, -1); s.absarc(0, 1.5, 1.2, 0, Math.PI*2, false); s.absarc(1.5, -0.5, 1.2, 0, Math.PI*2, false); s.absarc(-1.5, -0.5, 1.2, 0, Math.PI*2, false);
+                s.moveTo(-0.5, -1); s.lineTo(0.5, -1); s.lineTo(1, -3); s.lineTo(-1, -3);
+            } else if (type === 'spade') {
+                s.moveTo(0, -1.5); s.bezierCurveTo(2, -3.5, 4, -1.5, 0, 3); s.bezierCurveTo(-4, -1.5, -2, -3.5, 0, -1.5);
+                s.moveTo(-0.5, -1.5); s.lineTo(0.5, -1.5); s.lineTo(1, -3.5); s.lineTo(-1, -3.5);
+            }
+            return s;
+        }
+
+        // Polly Pocket / Handspiegel Generator
+        const pockets = {};
+        
+        function createPocket(suit) {
+            const shape = getShape(suit);
+            
+            // Base geometry (thicker)
+            const baseExtrude = { depth: 1.0, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.2, bevelThickness: 0.2 };
+            const baseGeo = new THREE.ExtrudeGeometry(shape, baseExtrude);
+            baseGeo.center();
+            
+            // Lid geometry (thinner)
+            const lidExtrude = { depth: 0.3, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.1, bevelThickness: 0.1 };
+            const lidGeo = new THREE.ExtrudeGeometry(shape, lidExtrude);
+            lidGeo.center();
+
+            const color = LORE[suit].color;
+
+            // Materials
+            const shellMat = new THREE.MeshPhysicalMaterial({
+                color: color, metalness: 0.7, roughness: 0.2, clearcoat: 1.0, transmission: 0.2
+            });
+            const screenMat = new THREE.MeshBasicMaterial({ color: 0x111115, side: THREE.DoubleSide }); // Inner screen for drawing/videos
+
+            // Create Base
+            const baseMesh = new THREE.Mesh(baseGeo, shellMat);
+            
+            // Create Inner Screen Canvas (where user draws and videos play)
+            // Determine size based on bounding box
+            baseGeo.computeBoundingBox();
+            const w = baseGeo.boundingBox.max.x - baseGeo.boundingBox.min.x - 1;
+            const h = baseGeo.boundingBox.max.y - baseGeo.boundingBox.min.y - 1;
+            
+            const screenGeo = new THREE.PlaneGeometry(w, h);
+            const innerScreen = new THREE.Mesh(screenGeo, screenMat);
+            innerScreen.position.z = 0.55; // Just slightly above the front face of the extruded base
+            baseMesh.add(innerScreen);
+
+            // Layer to hold stamped items
+            const stageLayer = new THREE.Group();
+            innerScreen.add(stageLayer);
+
+            // Create Lid and Hinge
+            const lidMesh = new THREE.Mesh(lidGeo, shellMat);
+            const hinge = new THREE.Group();
+            
+            // Calculate top edge for hinge
+            const maxY = baseGeo.boundingBox.max.y;
+            hinge.position.y = maxY;
+            hinge.position.z = 0.5; // Surface level
+            
+            lidMesh.position.y = -maxY; // Offset lid relative to hinge
+            lidMesh.position.z = 0.15;
+            
+            hinge.add(lidMesh);
+            baseMesh.add(hinge);
+
+            // Master Group to move the entire pocket
+            const masterGroup = new THREE.Group();
+            masterGroup.add(baseMesh);
+            
+            // Initial positioning
+            masterGroup.position.copy(LORE[suit].pos);
+            masterGroup.scale.set(1.5, 1.5, 1.5);
+            scene.add(masterGroup);
+
+            return {
+                root: masterGroup, hinge: hinge, screen: innerScreen, stage: stageLayer,
+                screenMat: screenMat, // Keep reference to change texture easily
+                targetRot: new THREE.Euler(), targetPos: new THREE.Vector3(), targetLidAngle: 0,
+                baseMesh: baseMesh
+            };
+        }
+
+        ['heart', 'club', 'spade', 'diamond'].forEach(suit => {
+            pockets[suit] = createPocket(suit);
+        });
+
+        // Center X Hub visual
+        const xGeo = new THREE.OctahedronGeometry(2, 0);
+        const xMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, emissive: 0x555555, wireframe: true });
+        const xHub = new THREE.Mesh(xGeo, xMat);
+        scene.add(xHub);
+
+        // UI & Logic
+        function selectSuit(suit) {
+            currentSuit = suit;
+            document.querySelectorAll('.d-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${suit}`).classList.add('active');
+
+            const title = document.getElementById('status-title');
+            title.innerText = LORE[suit].name;
+            title.style.color = '#' + LORE[suit].color.toString(16).padStart(6, '0');
+            title.style.textShadow = `0 0 10px ${title.style.color}`;
+
+            // Handle Layout Engine
+            if (suit === 'x') {
+                // Spread out, close all lids
+                xHub.visible = true;
+                Object.keys(pockets).forEach(s => {
+                    const p = pockets[s];
+                    p.targetPos.copy(LORE[s].pos);
+                    p.targetRot.set(0, 0, 0);
+                    p.targetLidAngle = 0; // Close
+                });
+            } else {
+                // Focus on selected, open lid, push others away
+                xHub.visible = false;
+                Object.keys(pockets).forEach(s => {
+                    const p = pockets[s];
+                    if (s === suit) {
+                        p.targetPos.set(0, 0, 0);
+                        p.targetRot.set(0, 0, 0);
+                        p.targetLidAngle = -Math.PI * 0.75; // Open wide like a laptop
+                    } else {
+                        // Push others back and fade (conceptual, mostly moving them Z-back)
+                        p.targetPos.copy(LORE[s].pos).multiplyScalar(1.5);
+                        p.targetPos.z = -30;
+                        p.targetRot.set(Math.random(), Math.random(), 0);
+                        p.targetLidAngle = 0; // Close
+                    }
+                });
+            }
+        }
+
+        function setMode(mode) {
+            interactionMode = mode;
+            document.getElementById('mode-orbit').classList.remove('active');
+            document.getElementById('mode-draw').classList.remove('active');
+            document.getElementById(`mode-${mode}`).classList.add('active');
+
+            controls.enabled = (mode === 'orbit');
+        }
+
+        function clearActiveStage() {
+            if (currentSuit !== 'x') {
+                const stage = pockets[currentSuit].stage;
+                while(stage.children.length > 0) stage.remove(stage.children[0]);
+                // Reset texture
+                pockets[currentSuit].screenMat.map = null;
+                pockets[currentSuit].screenMat.needsUpdate = true;
+            }
+        }
+
+        // Raycasting & Drawing
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let isDrawing = false;
+        let lastDrawPos = new THREE.Vector3();
+
+        function getIntersects(clientX, clientY) {
+            if (currentSuit === 'x' || interactionMode !== 'draw') return null;
+            
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            
+            // Intersect with the active pocket's inner screen
+            const hit = raycaster.intersectObject(pockets[currentSuit].screen);
+            return hit.length > 0 ? hit[0] : null;
+        }
+
+        function drawShape(hit) {
+            if(!hit) return;
+            const pt = hit.point;
+            if (lastDrawPos.distanceTo(pt) < 1.0) return; // spacing
+            lastDrawPos.copy(pt);
+
+            // Pick a primitive based on suit
+            let geo;
+            if (currentSuit === 'heart') geo = new THREE.SphereGeometry(0.5, 16, 16);
+            else if (currentSuit === 'diamond') geo = new THREE.OctahedronGeometry(0.6, 0);
+            else if (currentSuit === 'club') geo = new THREE.TorusGeometry(0.4, 0.2, 8, 16);
+            else geo = new THREE.TetrahedronGeometry(0.6, 0); // Spade
+
+            const mat = new THREE.MeshStandardMaterial({ 
+                color: LORE[currentSuit].color, emissive: LORE[currentSuit].color, 
+                emissiveIntensity: 0.5, roughness: 0.1, metalness: 0.8 
+            });
+
+            const mesh = new THREE.Mesh(geo, mat);
+            
+            // Randomize rotation
+            mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+            
+            // Transform world point to local coordinate of the screen
+            pockets[currentSuit].screen.worldToLocal(pt);
+            mesh.position.copy(pt);
+            mesh.position.z += 0.5; // Pop out slightly
+            
+            // Save base scale for audio react
+            mesh.userData.baseScale = mesh.scale.clone();
+
+            pockets[currentSuit].stage.add(mesh);
+        }
+
+        // Event Listeners for Touch / Mouse
+        container.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            drawShape(getIntersects(e.clientX, e.clientY));
+        });
+        container.addEventListener('mousemove', (e) => {
+            if(isDrawing) drawShape(getIntersects(e.clientX, e.clientY));
+        });
+        window.addEventListener('mouseup', () => { isDrawing = false; lastDrawPos.set(0,0,0); });
+        
+        container.addEventListener('touchstart', (e) => {
+            if(e.touches.length > 1) return; // let orbit handle multi-touch if enabled
+            isDrawing = true;
+            drawShape(getIntersects(e.touches[0].clientX, e.touches[0].clientY));
+        }, {passive: false});
+        container.addEventListener('touchmove', (e) => {
+            if(interactionMode === 'draw') e.preventDefault(); // Stop scrolling
+            if(isDrawing && e.touches.length === 1) drawShape(getIntersects(e.touches[0].clientX, e.touches[0].clientY));
+        }, {passive: false});
+        window.addEventListener('touchend', () => { isDrawing = false; lastDrawPos.set(0,0,0); });
+
+
+        // Universal Data Injector (MP3, MP4, GLB, HTML, PNG)
+        document.getElementById('universal-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+
+            const url = URL.createObjectURL(file);
+            const ext = file.name.split('.').pop().toLowerCase();
+            const type = file.type;
+
+            // Target Material (Active Pocket)
+            let targetMat = pockets[currentSuit] ? pockets[currentSuit].screenMat : null;
+
+            if (type.startsWith('image/')) {
+                // PNG / JPG -> Texture
+                const loader = new THREE.TextureLoader();
+                loader.load(url, (tex) => {
+                    if(targetMat) { targetMat.map = tex; targetMat.needsUpdate = true; }
+                });
+
+            } else if (type.startsWith('video/') || ext === 'mp4') {
+                // MP4 -> VideoTexture
+                const vid = document.getElementById('hidden-video');
+                vid.src = url;
+                vid.play();
+                const tex = new THREE.VideoTexture(vid);
+                if(targetMat) { targetMat.map = tex; targetMat.needsUpdate = true; }
+
+            } else if (type.startsWith('audio/') || ext === 'mp3') {
+                // MP3 -> AudioContext and play
+                const aud = document.getElementById('hidden-audio');
+                aud.src = url;
+                aud.play();
+                setupAudioNodes(aud); // Connect to visualizer
+
+            } else if (ext === 'glb' || ext === 'gltf') {
+                // GLB -> 3D Model
+                if (currentSuit === 'x') { alert("Select a Pocket (♥️♣️♠️♦️) to place a 3D model."); return; }
+                const loader = new THREE.GLTFLoader();
+                loader.load(url, (gltf) => {
+                    const model = gltf.scene;
+                    // Auto-scale to fit pocket
+                    const box = new THREE.Box3().setFromObject(model);
+                    const size = box.getSize(new THREE.Vector3()).length();
+                    const scale = 5 / size; // Fit to size 5
+                    model.scale.set(scale, scale, scale);
+                    model.position.z = 1.0;
+                    
+                    // Add animation baseScale flag for audio reactivity
+                    model.traverse((child) => { if(child.isMesh) child.userData.baseScale = child.scale.clone(); });
+                    
+                    pockets[currentSuit].stage.add(model);
+                });
+
+            } else if (ext === 'html' || type === 'text/html') {
+                // HTML -> iFrame overlay
+                const iframe = document.getElementById('html-iframe');
+                iframe.src = url;
+                document.getElementById('html-modal').style.display = 'block';
+            } else {
+                alert("Format unsupported by Universal Injector.");
+            }
+        });
+
+
+        // Audio Reactivity System
+        let audioCtx, analyser, dataArray;
+        let isMicReactive = false;
+
+        async function toggleAudioPulse() {
+            const btn = document.getElementById('btn-audio-pulse');
+            if (isMicReactive) {
+                isMicReactive = false;
+                btn.classList.remove('active');
+                if (audioCtx) audioCtx.suspend();
+                return;
+            }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                setupAudioNodes(stream);
+                isMicReactive = true;
+                btn.classList.add('active');
+            } catch (err) { alert("Microphone access needed."); }
+        }
+
+        function setupAudioNodes(sourceMedia) {
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 64;
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            
+            let source;
+            if(sourceMedia instanceof HTMLMediaElement) {
+                source = audioCtx.createMediaElementSource(sourceMedia);
+                source.connect(analyser);
+                analyser.connect(audioCtx.destination); // Play through speakers
+            } else {
+                source = audioCtx.createMediaStreamSource(sourceMedia);
+                source.connect(analyser);
+            }
+        }
+
+
+        // Exporter
+        function exportScene() {
+            const exporter = new THREE.GLTFExporter();
+            // Export the active pocket or the whole scene based on state
+            const target = currentSuit === 'x' ? scene : pockets[currentSuit].root;
+            exporter.parse(target, function (gltf) {
+                const blob = new Blob([JSON.stringify(gltf)], { type: 'text/plain' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'Starweber_V3_Export.gltf';
+                link.click();
+            }, console.error);
+        }
+
+        // Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if(controls.enabled) controls.update();
+
+            const lerpSpeed = 0.08;
+
+            // Timeline logic (Visual mock/driver)
+            if(isPlaying) {
+                globalTime += 0.01;
+                const tl = document.getElementById('timeline');
+                tl.value = (parseFloat(tl.value) + 1) % 1000;
+            }
+
+            // Audio processing
+            if (analyser && (isMicReactive || document.getElementById('hidden-audio').paused === false)) {
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
+                audioScale = 1 + ((sum / dataArray.length) / 256) * 1.5;
+            } else {
+                audioScale = 1;
+            }
+
+            // Update Pockets (Lerping pos, rot, and lid angle)
+            Object.keys(pockets).forEach((key, index) => {
+                const p = pockets[key];
+                
+                // Lerp Position and Rotation of entire pocket
+                p.root.position.lerp(p.targetPos, lerpSpeed);
+                
+                // Convert target rotation Euler to Quaternion for smooth slerp
+                const targetQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(p.targetRot.x, p.targetRot.y, p.targetRot.z));
+                p.root.quaternion.slerp(targetQuat, lerpSpeed);
+
+                // Lerp Hinge (Opening the lid)
+                p.hinge.rotation.x += (p.targetLidAngle - p.hinge.rotation.x) * lerpSpeed;
+
+                // Idle floating if in X mode
+                if (currentSuit === 'x') {
+                    p.root.position.y += Math.sin(globalTime * 2 + index) * 0.05;
+                    p.root.rotation.z = Math.sin(globalTime + index) * 0.1;
+                }
+
+                // Audio react stamped objects
+                p.stage.children.forEach(mesh => {
+                    if (mesh.userData.baseScale) {
+                        mesh.scale.copy(mesh.userData.baseScale).multiplyScalar(audioScale);
+                    }
+                    mesh.rotation.x += 0.01; // Constant rotation
+                    mesh.rotation.y += 0.02;
+                });
+            });
+
+            // X-Hub core rotation
+            xHub.rotation.y += 0.01;
+            xHub.rotation.x += 0.005;
+            xHub.scale.setScalar(audioScale);
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Start
+        selectSuit('x');
+        animate();
+
+    </script>
+</body>
+</html>
