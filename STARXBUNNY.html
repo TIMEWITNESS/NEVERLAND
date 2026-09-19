@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Der Rote Faden - Extended RPG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Press+Start+2P&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            touch-action: manipulation; 
+            overflow: hidden;
+            background-color: #030712;
+            color: #f1f5f9;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+        }
+        .fairytale-font { font-family: 'Cinzel', serif; }
+        .pixel-font { font-family: 'Press Start 2P', monospace; }
+        
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.8); }
+        }
+        .glow-red { animation: pulseGlow 3s infinite; }
+        .glow-neon { box-shadow: 0 0 25px rgba(236, 72, 153, 0.4), inset 0 0 12px rgba(6, 182, 212, 0.3); }
+        
+        .scanlines::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(to bottom, rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+            touch-action: none;
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .glass-panel {
+            background: rgba(10, 15, 30, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(236, 72, 153, 0.35);
+        }
+
+        /* Custom Scrollbar for File Manager */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #ec4899; border-radius: 3px; }
+    </style>
+</head>
+<body class="h-full flex flex-col items-center justify-between p-0 m-0 overflow-hidden">
+
+    <header class="w-full border-b border-pink-900/40 bg-slate-950/95 backdrop-blur-md px-4 py-2.5 flex items-center justify-between z-40 shrink-0">
+        <div class="flex items-center space-x-2.5">
+            <div class="w-8 h-8 rounded-full bg-pink-950 border border-pink-500 flex items-center justify-center shadow-lg animate-pulse">
+                <span class="text-sm">🐇</span>
+            </div>
+            <div>
+                <h1 class="fairytale-font text-xs sm:text-sm font-bold text-pink-400 tracking-wider flex items-center gap-1.5">
+                    DER ROTE FADEN <span class="text-cyan-400 text-[9px] pixel-font">v4.0</span>
+                </h1>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button id="btnSmartDevice" class="px-3 py-1.5 rounded-lg bg-pink-950/90 border border-pink-500/70 text-xs font-bold text-pink-300 hover:bg-pink-900 transition flex items-center gap-1.5 shadow-[0_0_12px_rgba(236,72,153,0.3)] cursor-pointer">
+                📲 Cyberdeck Hub 🗂️
+            </button>
+            <button id="btnDevMode" class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-medium text-slate-300 hover:bg-slate-800 transition flex items-center gap-1 cursor-pointer">
+                🛠️ Dev
+            </button>
+        </div>
+    </header>
+
+    <main class="relative flex-1 w-full max-w-5xl bg-black border-y sm:border border-pink-900/40 shadow-2xl overflow-hidden scanlines flex flex-col justify-center items-center">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Start Screen -->
+        <div id="startScreen" class="absolute inset-0 bg-slate-950/98 z-50 flex flex-col items-center justify-center backdrop-blur-xl p-6 pointer-events-auto">
+            <div class="inline-block px-3.5 py-1 rounded-full bg-pink-950/80 border border-pink-500 text-[9px] pixel-font text-pink-300 mb-3 shadow-[0_0_15px_rgba(236,72,153,0.3)]">AGENCY OF ETERNITY • ST. PAULI CONNECT</div>
+            <h1 class="fairytale-font text-3xl sm:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300 font-bold mb-3 text-center">Der Rote Faden</h1>
+            <p class="text-cyan-300 text-xs sm:text-sm mb-2 max-w-lg text-center font-mono">"KEIN MENSCH IST ILLEGAL • UNITE THE PACKS • TRACK THE SIGNAL"</p>
+            <p class="text-slate-400 text-xs mb-8 max-w-md text-center italic">Witness X durchquert den Park. Die Daten müssen über die Bücherzelle gesichert werden.</p>
+            <button id="startBtn" class="px-8 py-3.5 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white pixel-font text-xs rounded-xl shadow-[0_0_25px_rgba(236,72,153,0.6)] border border-pink-300 transition transform hover:scale-105 cursor-pointer">
+                MISSION STARTEN 🐇
+            </button>
+        </div>
+
+        <!-- Dialogue Box -->
+        <div id="dialogueBox" class="absolute bottom-20 left-1/2 -translate-x-1/2 w-[94%] max-w-xl glass-panel p-4 rounded-2xl shadow-2xl z-30 hidden border border-cyan-500/50 pointer-events-auto">
+            <div class="flex justify-between items-center mb-1.5">
+                <span id="speakerName" class="text-xs font-bold text-pink-400 pixel-font">SYSTEM</span>
+                <button id="btnReadSpeech" onclick="speakCurrentText()" class="text-[10px] bg-cyan-950 border border-cyan-500/70 px-2.5 py-1 rounded text-cyan-300 hover:bg-cyan-800 cursor-pointer">🔊 Vorlesen</button>
+            </div>
+            <p id="dialogueText" class="text-slate-100 text-xs sm:text-sm leading-relaxed font-mono min-h-[48px]"></p>
+            <div class="mt-2.5 flex justify-end">
+                <span class="text-pink-400 text-xs pixel-font animate-pulse cursor-pointer" onclick="advanceDialogue()">[WEITER ➔]</span>
+            </div>
+        </div>
+
+        <div id="battleUI" class="absolute inset-0 bg-slate-950/98 z-30 hidden flex-col justify-between p-6 backdrop-blur-xl pointer-events-auto">
+            <div class="text-center pt-2">
+                <span class="text-[9px] pixel-font text-pink-400">AGENCY OF ETERNITY CONFRONTATION</span>
+                <h2 class="fairytale-font text-2xl sm:text-3xl text-red-400 font-bold">ZEITEINNEHMER BLOCKADE</h2>
+                <p class="text-cyan-300 text-xs font-mono mt-1" id="battleLog">Ignoranz droht das Signal zu stören!</p>
+            </div>
+            
+            <div class="flex justify-around items-center w-full max-w-lg mx-auto my-4">
+                <div class="text-center w-1/3 glass-panel p-3 rounded-2xl border border-pink-500/40">
+                    <div class="text-4xl mb-1">🐇</div>
+                    <p class="text-white text-xs font-bold">Witness X</p>
+                    <div class="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden mt-2 border border-slate-700">
+                        <div id="playerHP" class="bg-gradient-to-r from-emerald-500 to-green-400 h-full transition-all duration-300" style="width: 100%"></div>
+                    </div>
+                </div>
+                
+                <div class="text-xl font-bold text-pink-500 fairytale-font">VS</div>
+                
+                <div class="text-center w-1/3 glass-panel p-3 rounded-2xl border border-purple-500/40">
+                    <div class="text-4xl mb-1" id="battleEnemySprite">👾</div>
+                    <p class="text-white text-xs font-bold" id="enemyName">Zeiteinnehmer</p>
+                    <div class="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden mt-2 border border-slate-700">
+                        <div id="enemyHP" class="bg-gradient-to-r from-red-600 to-pink-500 h-full transition-all duration-300" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 max-w-lg mx-auto w-full pb-6">
+                <button onclick="executeBattleAction('debate')" class="py-3 bg-blue-950/90 border border-blue-400/80 rounded-xl hover:bg-blue-900 text-cyan-200 font-bold font-mono text-xs shadow-lg cursor-pointer">🗣️ Debatte</button>
+                <button onclick="executeBattleAction('dance')" class="py-3 bg-purple-950/90 border border-purple-400/80 rounded-xl hover:bg-purple-900 text-purple-200 font-bold font-mono text-xs shadow-lg cursor-pointer">🕺 Tanz</button>
+                <button onclick="executeBattleAction('card')" class="py-3 bg-pink-950/90 border border-pink-400/80 rounded-xl hover:bg-pink-900 text-pink-200 font-bold font-mono text-xs shadow-lg cursor-pointer">🃏 UNO Rev</button>
+            </div>
+        </div>
+
+        <div id="smartDeviceModal" class="absolute inset-0 bg-slate-950/98 z-[60] hidden flex-col p-4 sm:p-6 backdrop-blur-2xl overflow-y-auto pointer-events-auto">
+            <div class="flex justify-between items-center pb-3 border-b border-pink-900/50 mb-4 sticky top-0 bg-slate-950/95 z-20 backdrop-blur">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-xl">📲</span>
+                    <div>
+                        <h3 class="fairytale-font text-base sm:text-lg font-bold text-pink-400">CYBERDECK 42 OS • UNIVERSAL MEDIA HUB</h3>
+                        <p class="text-[10px] text-cyan-400 font-mono">Automatic Format Categorization & PC-Style File Manager</p>
+                    </div>
+                </div>
+                <button id="btnCloseSmartDevice" class="px-3.5 py-1.5 bg-pink-900/80 hover:bg-pink-700 rounded-xl text-xs font-bold border border-pink-500 cursor-pointer shadow">✕ Schließen</button>
+            </div>
+
+            <!-- Media Hub Tabs -->
+            <div class="flex gap-1.5 overflow-x-auto pb-2 mb-4 text-xs font-mono shrink-0">
+                <button onclick="switchMediaTab('all')" id="tabBtn-all" class="media-tab-btn px-3.5 py-2 rounded-xl bg-pink-900/60 border border-pink-500 text-pink-200 whitespace-nowrap cursor-pointer">📂 Alle Dateien (<span id="count-all">0</span>)</button>
+                <button onclick="switchMediaTab('video')" id="tabBtn-video" class="media-tab-btn px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:bg-slate-800 whitespace-nowrap cursor-pointer">🎬 Videos (<span id="count-video">0</span>)</button>
+                <button onclick="switchMediaTab('image')" id="tabBtn-image" class="media-tab-btn px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:bg-slate-800 whitespace-nowrap cursor-pointer">🖼️ Bilder (<span id="count-image">0</span>)</button>
+                <button onclick="switchMediaTab('audio')" id="tabBtn-audio" class="media-tab-btn px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:bg-slate-800 whitespace-nowrap cursor-pointer">🎵 Audio (<span id="count-audio">0</span>)</button>
+                <button onclick="switchMediaTab('text')" id="tabBtn-text" class="media-tab-btn px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:bg-slate-800 whitespace-nowrap cursor-pointer">📄 Texte (<span id="count-text">0</span>)</button>
+                <button onclick="switchMediaTab('threed')" id="tabBtn-threed" class="media-tab-btn px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:bg-slate-800 whitespace-nowrap cursor-pointer">🧊 3D Files (<span id="count-threed">0</span>)</button>
+                <button onclick="switchMediaTab('quests')" id="tabBtn-quests" class="media-tab-btn px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:bg-slate-800 whitespace-nowrap cursor-pointer">📋 Quests & Notes</button>
+            </div>
+
+            <!-- Upload Toolbar -->
+            <div class="glass-panel p-4 rounded-2xl border border-pink-500/30 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div>
+                    <h4 class="text-xs font-bold text-pink-400 font-mono">📤 UNIVERSAL MEDIA UPLOADER & PREVIEW SELECTOR</h4>
+                    <p class="text-[10px] text-slate-400">Lade beliebige Dateien hoch. Wähle optional ein Vorschaubild für dein Album oder File:</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <div class="flex flex-col">
+                        <label class="text-[9px] text-cyan-300 font-mono mb-0.5">Vorschaubild (Optional):</label>
+                        <input type="file" id="previewCoverInput" accept="image/*" class="text-[10px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg p-1 w-44">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-[9px] text-pink-300 font-mono mb-0.5">Media Datei(en):</label>
+                        <input type="file" id="universalFileInput" multiple onchange="handleUniversalUpload(event)" class="text-[10px] text-slate-300 bg-slate-900 border border-pink-500/50 rounded-lg p-1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Media Grid View (PC File Manager Style) -->
+            <div id="mediaGridView" class="space-y-4">
+                <div id="mediaFilesGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    <!-- Dynamic files injected here -->
+                </div>
+            </div>
+
+            <!-- Quests Tab Content (Hidden by default) -->
+            <div id="tabContent-quests" class="hidden glass-panel p-5 rounded-2xl border border-yellow-500/40 font-mono text-xs space-y-3">
+                <h4 class="font-bold text-yellow-400 text-sm">📋 MISSION QUEST LOG & CONTACTS</h4>
+                <ul class="space-y-2 text-slate-300 text-xs">
+                    <li class="bg-slate-900 p-2.5 rounded-xl border border-slate-700">✓ <span class="text-pink-400">Signal orten:</span> Folge dem roten Faden durch den Stadtgarten.</li>
+                    <li class="bg-slate-900 p-2.5 rounded-xl border border-slate-700">⏳ <span class="text-yellow-400">Bücherzelle finden:</span> Verstecke das Datenpaket vor dem 26. August.</li>
+                    <li class="bg-slate-900 p-2.5 rounded-xl border border-slate-700">⏳ <span class="text-cyan-400">Omas gegen Rechts:</span> Briefkasten-Übermittlung aktivieren.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="devModeUI" class="absolute inset-0 bg-slate-950/98 z-[60] hidden flex-col p-6 overflow-y-auto backdrop-blur-lg pointer-events-auto">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-700 mb-4">
+                <h3 class="fairytale-font text-base font-bold text-slate-200">🛠️ DEV CONSOLE</h3>
+                <button onclick="document.getElementById('devModeUI').classList.add('hidden')" class="px-3.5 py-1.5 bg-slate-800 rounded-xl text-xs font-bold border border-slate-600 cursor-pointer">✕ Schließen</button>
+            </div>
+            <p class="text-xs text-slate-400 font-mono mb-4">Spielzustand direkt manipulieren:</p>
+            <div class="space-y-3 max-w-sm">
+                <button onclick="triggerBattle(); document.getElementById('devModeUI').classList.add('hidden');" class="w-full py-2.5 bg-red-950 border border-red-500/60 rounded-xl text-xs font-mono text-red-200 cursor-pointer">Test-Kampf starten</button>
+                <button onclick="triggerSuccess(); document.getElementById('devModeUI').classList.add('hidden');" class="w-full py-2.5 bg-emerald-950 border border-emerald-500/60 rounded-xl text-xs font-mono text-emerald-200 cursor-pointer">Sieg / Signal gesichert erzwingen</button>
+            </div>
+        </div>
+
+        <!-- Media Preview / Player Modal -->
+        <div id="mediaViewerModal" class="absolute inset-0 bg-black/95 z-[80] hidden flex-col items-center justify-center p-4 backdrop-blur-xl pointer-events-auto">
+            <div class="bg-slate-900 border border-cyan-500/60 rounded-2xl max-w-2xl w-full p-4 flex flex-col shadow-2xl">
+                <div class="flex justify-between items-center pb-2 border-b border-slate-800 mb-3">
+                    <span id="viewerTitle" class="text-xs font-mono text-cyan-300 font-bold truncate">Media Viewer</span>
+                    <button onclick="closeMediaViewer()" class="px-3 py-1 bg-red-950 text-red-300 rounded-lg text-xs font-bold border border-red-500/50 cursor-pointer">✕ Schließen</button>
+                </div>
+                <div id="viewerContentArea" class="w-full aspect-video bg-black rounded-xl flex items-center justify-center overflow-hidden relative">
+                    <!-- Dynamic media preview/player injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Sideview Video Player -->
+        <div id="sideVideoContainer" class="absolute bottom-20 right-4 w-44 sm:w-60 bg-slate-900/95 border border-cyan-500/60 rounded-2xl shadow-2xl z-20 overflow-hidden hidden transition-all duration-300 pointer-events-auto">
+            <div class="bg-slate-950 px-3 py-2 flex justify-between items-center border-b border-cyan-500/40">
+                <span id="videoTitleLabel" class="text-[10px] font-mono text-cyan-300 truncate">🎬 Media Player</span>
+                <div class="flex items-center gap-1.5">
+                    <button onclick="toggleExpandVideo()" id="btnExpandVideo" class="text-[10px] text-cyan-400 hover:text-white px-1">🗖</button>
+                    <button onclick="closeSideVideo()" class="text-[10px] text-red-400 hover:text-red-300 px-1">✕</button>
+                </div>
+            </div>
+            <div class="relative bg-black aspect-video flex items-center justify-center">
+                <video id="sideVideoPlayer" class="w-full h-full object-cover" controls playsinline></video>
+            </div>
+        </div>
+
+        <div class="absolute bottom-3 left-3 grid grid-cols-3 gap-1 z-25 sm:hidden opacity-95 pointer-events-auto">
+            <div></div>
+            <button id="btnUp" class="w-11 h-11 bg-slate-900/95 border border-pink-500/60 rounded-2xl flex justify-center items-center text-pink-300 active:bg-pink-700 shadow-lg text-lg">▲</button>
+            <div></div>
+            <button id="btnLeft" class="w-11 h-11 bg-slate-900/95 border border-pink-500/60 rounded-2xl flex justify-center items-center text-pink-300 active:bg-pink-700 shadow-lg text-lg">◀</button>
+            <button id="btnDown" class="w-11 h-11 bg-slate-900/95 border border-pink-500/60 rounded-2xl flex justify-center items-center text-pink-300 active:bg-pink-700 shadow-lg text-lg">▼</button>
+            <button id="btnRight" class="w-11 h-11 bg-slate-900/95 border border-pink-500/60 rounded-2xl flex justify-center items-center text-pink-300 active:bg-pink-700 shadow-lg text-lg">▶</button>
+        </div>
+        <div class="absolute bottom-3 right-3 z-25 sm:hidden opacity-95 pointer-events-auto">
+            <button id="btnAction" class="w-14 h-14 bg-gradient-to-r from-pink-600 to-red-600 border-2 border-pink-300 rounded-full flex justify-center items-center text-white font-bold text-lg active:scale-95 pixel-font shadow-[0_0_20px_rgba(236,72,153,0.7)]">A</button>
+        </div>
+    </main>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black/95 backdrop-blur-xl z-[90] flex items-center justify-center p-4 hidden pointer-events-auto">
+        <div class="bg-slate-900 border border-pink-500 rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl relative glow-neon">
+            <div class="w-16 h-16 bg-pink-950 border border-pink-500 rounded-full flex items-center justify-center mx-auto text-3xl shadow-inner animate-bounce">
+                👵🛡️
+            </div>
+            <div>
+                <h3 class="fairytale-font text-xl font-bold text-pink-400 mb-1">Signal gesichert!</h3>
+                <p class="text-xs text-cyan-200 leading-relaxed font-mono">
+                    Das Datenpaket wurde erfolgreich an die <span class="text-pink-400 font-bold">Omas gegen Rechts</span> übermittelt.
+                </p>
+            </div>
+            <button onclick="location.reload()" class="w-full py-3 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white rounded-xl font-medium text-xs pixel-font shadow-lg cursor-pointer">
+                NOCHMAL SPIELEN
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- UNIVERSAL MEDIA MANAGER & FORMAT AUTO-SORTING ---
+        let mediaLibrary = [
+            { id: 1, name: "St_Pauli_Resistance_EP.mp3", type: "audio", url: "#", preview: "💿", size: "3.4 MB", category: "audio" },
+            { id: 2, name: "Anonymous_Hub_Blueprint.png", type: "image", url: "https://placehold.co/400x300/1e1b4b/ec4899?text=Blueprint", preview: "🖼️", size: "1.2 MB", category: "image" },
+            { id: 3, name: "City_Garden_Route.mp4", type: "video", url: "#", preview: "🎬", size: "14.8 MB", category: "video" },
+            { id: 4, name: "Manifesto_Final.txt", type: "text", url: "#", preview: "📄", size: "24 KB", category: "text" },
+            { id: 5, name: "Rabbit_Avatar_3D.obj", type: "threed", url: "#", preview: "🧊", size: "4.5 MB", category: "threed" }
+        ];
+
+        let activeMediaTab = 'all';
+
+        function handleUniversalUpload(event) {
+            const files = event.target.files;
+            const coverInput = document.getElementById('previewCoverInput');
+            let customPreviewIcon = "📁";
+            
+            if(files.length === 0) return;
+
+            // If a custom preview cover image was uploaded
+            let coverUrl = null;
+            if(coverInput.files && coverInput.files[0]) {
+                coverUrl = URL.createObjectURL(coverInput.files[0]);
+            }
+
+            for(let i=0; i<files.length; i++) {
+                let file = files[i];
+                let ext = file.name.split('.').pop().toLowerCase();
+                let cat = 'text';
+                let preview = '📄';
+
+                if(['mp4', 'webm', 'mov', 'avi'].includes(ext)) { cat = 'video'; preview = '🎬'; }
+                else if(['mp3', 'wav', 'ogg', 'aac', 'flac'].includes(ext)) { cat = 'audio'; preview = '🎵'; }
+                else if(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) { cat = 'image'; preview = '🖼️'; }
+                else if(['obj', 'gltf', 'glb', 'stl', 'fbx'].includes(ext)) { cat = 'threed'; preview = '🧊'; }
+                else if(['txt', 'md', 'json', 'pdf', 'doc'].includes(ext)) { cat = 'text'; preview = '📄'; }
+
+                let fileObj = {
+                    id: Date.now() + i,
+                    name: file.name,
+                    type: cat,
+                    url: URL.createObjectURL(file),
+                    preview: coverUrl || preview,
+                    isCustomCover: !!coverUrl,
+                    size: (file.size / (1024*1024)).toFixed(1) + ' MB',
+                    category: cat
+                };
+                mediaLibrary.push(fileObj);
+            }
+
+            renderMediaLibrary();
+            event.target.value = '';
+            coverInput.value = '';
+        }
+
+        function switchMediaTab(tab) {
+            activeMediaTab = tab;
+            document.querySelectorAll('.media-tab-btn').forEach(b => {
+                b.classList.remove('bg-pink-900/60', 'border-pink-500', 'text-pink-200');
+                b.classList.add('bg-slate-900', 'border-slate-700', 'text-slate-300');
+            });
+            document.getElementById('tabBtn-' + tab).classList.add('bg-pink-900/60', 'border-pink-500', 'text-pink-200');
+            document.getElementById('tabBtn-' + tab).classList.remove('bg-slate-900', 'border-slate-700', 'text-slate-300');
+
+            if(tab === 'quests') {
+                document.getElementById('mediaGridView').classList.add('hidden');
+                document.getElementById('tabContent-quests').classList.remove('hidden');
+            } else {
+                document.getElementById('mediaGridView').classList.remove('hidden');
+                document.getElementById('tabContent-quests').classList.add('hidden');
+                renderMediaLibrary();
+            }
+        }
+
+        function renderMediaLibrary() {
+            // Update counts
+            document.getElementById('count-all').innerText = mediaLibrary.length;
+            ['video', 'image', 'audio', 'text', 'threed'].forEach(c => {
+                document.getElementById('count-' + c).innerText = mediaLibrary.filter(m => m.category === c).length;
+            });
+
+            const grid = document.getElementById('mediaFilesGrid');
+            grid.innerHTML = '';
+
+            let filtered = activeMediaTab === 'all' ? mediaLibrary : mediaLibrary.filter(m => m.category === activeMediaTab);
+
+            if(filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full py-12 text-center text-slate-500 font-mono text-xs">Keine Dateien in dieser Kategorie vorhanden.</div>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                let card = document.createElement('div');
+                card.className = "bg-slate-900/90 border border-slate-800 hover:border-pink-500/60 rounded-2xl p-3 flex flex-col justify-between transition group shadow-md";
+                
+                let previewHTML = '';
+                if(item.isCustomCover || item.category === 'image') {
+                    previewHTML = `<div class="w-full h-24 sm:h-28 bg-black rounded-xl overflow-hidden mb-2 border border-slate-800 flex items-center justify-center"><img src="${item.url}" class="w-full h-full object-cover"></div>`;
+                } else {
+                    previewHTML = `<div class="w-full h-24 sm:h-28 bg-slate-950 rounded-xl overflow-hidden mb-2 border border-slate-800 flex items-center justify-center text-3xl shadow-inner">${item.preview}</div>`;
+                }
+
+                card.innerHTML = `
+                    <div>
+                        ${previewHTML}
+                        <p class="text-[11px] font-bold text-slate-200 truncate mb-0.5" title="${item.name}">${item.name}</p>
+                        <p class="text-[9px] font-mono text-slate-400 uppercase tracking-wider">${item.category} • ${item.size}</p>
+                    </div>
+                    <div class="mt-3 flex gap-1.5">
+                        <button onclick="openMediaItem(${item.id})" class="flex-1 py-1.5 bg-pink-950 border border-pink-500/50 rounded-xl text-[10px] text-pink-200 hover:bg-pink-900 font-mono cursor-pointer">Öffnen</button>
+                        <button onclick="deleteMediaItem(${item.id})" class="px-2 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-[10px] text-red-400 hover:bg-red-950 font-mono cursor-pointer" title="Löschen">🗑️</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function openMediaItem(id) {
+            let item = mediaLibrary.find(m => m.id === id);
+            if(!item) return;
+
+            if(item.category === 'video') {
+                const videoEl = document.getElementById('sideVideoPlayer');
+                videoEl.src = item.url;
+                videoEl.play();
+                document.getElementById('videoTitleLabel').innerText = "🎬 " + item.name;
+                document.getElementById('sideVideoContainer').classList.remove('hidden');
+                document.getElementById('smartDeviceModal').classList.add('hidden');
+            } else if(item.category === 'audio') {
+                const a = new Audio(item.url);
+                a.play();
+                alertBox("Audiodatei gestartet: " + item.name);
+            } else {
+                // Open media viewer modal
+                document.getElementById('viewerTitle').innerText = item.name;
+                const area = document.getElementById('viewerContentArea');
+                if(item.category === 'image') {
+                    area.innerHTML = `<img src="${item.url}" class="max-h-full max-w-full object-contain">`;
+                } else {
+                    area.innerHTML = `<div class="text-center font-mono text-xs text-cyan-300 p-6">Vorschau für Format [${item.category}] geladen.<br><span class="text-slate-400 text-[10px]">Dateiname: ${item.name}</span></div>`;
+                }
+                document.getElementById('mediaViewerModal').classList.remove('hidden');
+                document.getElementById('mediaViewerModal').classList.add('flex');
+            }
+        }
+
+        function deleteMediaItem(id) {
+            mediaLibrary = mediaLibrary.filter(m => m.id !== id);
+            renderMediaLibrary();
+        }
+
+        function closeMediaViewer() {
+            document.getElementById('mediaViewerModal').classList.add('hidden');
+            document.getElementById('mediaViewerModal').classList.remove('flex');
+            document.getElementById('viewerContentArea').innerHTML = '';
+        }
+
+        function alertBox(msg) {
+            alert(msg); // Will be enhanced if needed, standard browser fallback ok for quick notice
+        }
+
+        // --- CYBERDECK MODAL TOGGLES ---
+        const smartModal = document.getElementById('smartDeviceModal');
+        document.getElementById('btnSmartDevice').addEventListener('click', () => {
+            smartModal.classList.toggle('hidden');
+            smartModal.classList.toggle('flex');
+            renderMediaLibrary();
+        });
+        document.getElementById('btnCloseSmartDevice').addEventListener('click', () => {
+            smartModal.classList.add('hidden');
+            smartModal.classList.remove('flex');
+        });
+        document.getElementById('btnDevMode').addEventListener('click', () => {
+            const devModal = document.getElementById('devModeUI');
+            devModal.classList.toggle('hidden');
+            devModal.classList.toggle('flex');
+        });
+
+        // --- SIDEVIEW VIDEO PLAYER CONTROLS ---
+        let isVideoExpanded = false;
+        function toggleExpandVideo() {
+            const container = document.getElementById('sideVideoContainer');
+            isVideoExpanded = !isVideoExpanded;
+            if(isVideoExpanded) {
+                container.classList.remove('w-44', 'sm:w-60');
+                container.classList.add('w-80', 'sm:w-96');
+                document.getElementById('btnExpandVideo').innerText = "🗗";
+            } else {
+                container.classList.add('w-44', 'sm:w-60');
+                container.classList.remove('w-80', 'sm:w-96');
+                document.getElementById('btnExpandVideo').innerText = "🗖";
+            }
+        }
+        function closeSideVideo() {
+            const videoEl = document.getElementById('sideVideoPlayer');
+            videoEl.pause();
+            videoEl.src = "";
+            document.getElementById('sideVideoContainer').classList.add('hidden');
+        }
+
+        // --- TEXT TO SPEECH ---
+        let currentText = "";
+        function speakCurrentText() {
+            if('speechSynthesis' in window) {
+                let cleanText = currentText.replace(/<[^>]*>?/gm, '');
+                let utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.lang = 'de-DE';
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // --- GAME ENGINE & CANVAS SETUP (FIXED BATTLE LOOP & COOLDOWN) ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        
+        const LOGICAL_WIDTH = 512;
+        const LOGICAL_HEIGHT = 288;
+        
+        function resizeCanvas() {
+            canvas.width = LOGICAL_WIDTH;
+            canvas.height = LOGICAL_HEIGHT;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        let gameStarted = false;
+        let player = { x: 50, y: 140, size: 18, speed: 2.8, dir: 'down' };
+        let keys = {};
+        let battleActive = false;
+        let lastBattleX = -999; // Cooldown tracker so battle loop doesn't instantly re-trigger
+
+        window.addEventListener('keydown', e => { keys[e.key] = true; });
+        window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+        function setupTouchBtn(id, keyName) {
+            const btn = document.getElementById(id);
+            if(!btn) return;
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyName] = true; });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyName] = false; });
+            btn.addEventListener('mousedown', () => { keys[keyName] = true; });
+            btn.addEventListener('mouseup', () => { keys[keyName] = false; });
+        }
+        setupTouchBtn('btnUp', 'ArrowUp');
+        setupTouchBtn('btnDown', 'ArrowDown');
+        setupTouchBtn('btnLeft', 'ArrowLeft');
+        setupTouchBtn('btnRight', 'ArrowRight');
+        setupTouchBtn('btnAction', 'Enter');
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            document.getElementById('startScreen').classList.add('hidden');
+            gameStarted = true;
+            startDialogue("Witness X", "Willkommen im St. Pauli Stadtgarten! Folge dem Roten Faden bis zur Bücherzelle, um das Datenpaket zu übergeben.");
+        });
+
+        function startDialogue(speaker, text) {
+            currentText = text;
+            document.getElementById('speakerName').innerText = speaker;
+            document.getElementById('dialogueText').innerText = text;
+            document.getElementById('dialogueBox').classList.remove('hidden');
+        }
+
+        function advanceDialogue() {
+            document.getElementById('dialogueBox').classList.add('hidden');
+        }
+
+        function triggerBattle() {
+            if(battleActive) return;
+            battleActive = true;
+            document.getElementById('battleUI').classList.remove('hidden');
+            document.getElementById('battleUI').classList.add('flex');
+        }
+
+        function executeBattleAction(type) {
+            document.getElementById('enemyHP').style.width = '15%';
+            document.getElementById('battleLog').innerText = "Witness X setzt schlagkräftige Argumente ein! Blockade bricht ein.";
+            setTimeout(() => {
+                document.getElementById('battleUI').classList.add('hidden');
+                document.getElementById('battleUI').classList.remove('flex');
+                document.getElementById('enemyHP').style.width = '100%';
+                battleActive = false;
+                lastBattleX = player.x; // Set cooldown position
+                startDialogue("Rainbow Rabbit", "Hervorragend! Der Weg zur Bücherzelle ist frei.");
+            }, 1200);
+        }
+
+        function triggerSuccess() {
+            document.getElementById('successModal').classList.remove('hidden');
+        }
+
+        function update() {
+            if (!gameStarted || battleActive) return;
+            if (keys['ArrowUp'] || keys['w'] || keys['W']) { player.y -= player.speed; player.dir = 'up'; }
+            if (keys['ArrowDown'] || keys['s'] || keys['S']) { player.y += player.speed; player.dir = 'down'; }
+            if (keys['ArrowLeft'] || keys['a'] || keys['A']) { player.x -= player.speed; player.dir = 'left'; }
+            if (keys['ArrowRight'] || keys['d'] || keys['D']) { player.x += player.speed; player.dir = 'right'; }
+
+            // Boundaries
+            player.x = Math.max(15, Math.min(LOGICAL_WIDTH - 30, player.x));
+            player.y = Math.max(30, Math.min(LOGICAL_HEIGHT - 35, player.y));
+
+            // Trigger battle condition with cooldown check (must move at least 100px away before next trigger)
+            if(player.x > 380 && Math.abs(player.x - lastBattleX) > 100 && Math.random() < 0.015) {
+                triggerBattle();
+            }
+
+            // Trigger success at target bookshelf
+            if(player.x > 460) {
+                triggerSuccess();
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#050814';
+            ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+
+            // Park Background Art
+            ctx.fillStyle = '#0b1329';
+            ctx.fillRect(0, 170, LOGICAL_WIDTH, 118);
+            
+            // Red Thread path
+            ctx.strokeStyle = '#ec4899';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(30, 190);
+            ctx.bezierCurveTo(160, 230, 260, 130, 480, 190);
+            ctx.stroke();
+
+            // Trees / Obstacles
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(110, 85, 32, 65);
+            ctx.fillStyle = '#065f46';
+            ctx.beginPath();
+            ctx.arc(126, 80, 26, 0, Math.PI*2);
+            ctx.fill();
+
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(340, 95, 35, 75);
+            ctx.fillStyle = '#065f46';
+            ctx.beginPath();
+            ctx.arc(357, 90, 28, 0, Math.PI*2);
+            ctx.fill();
+
+            // Bookshelf / Target Box
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(470, 145, 26, 38);
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(473, 148, 20, 32);
+            ctx.fillStyle = '#fef3c7';
+            ctx.font = '8px monospace';
+            ctx.fillText("📚 Bücherzelle", 445, 138);
+
+            // Player character (Witness X)
+            ctx.fillStyle = '#ec4899';
+            ctx.beginPath();
+            ctx.arc(player.x + 8, player.y + 6, 8, 0, Math.PI * 2);
+            ctx.fill();
+            // Rabbit Ears
+            ctx.fillRect(player.x + 4, player.y - 6, 3, 10);
+            ctx.fillRect(player.x + 10, player.y - 6, 3, 10);
+
+            // HUD overlay text
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = '9px monospace';
+            ctx.fillText("📍 Ort: St. Pauli Stadtgarten | Ziel: Bücherzelle ➔", 12, 20);
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>

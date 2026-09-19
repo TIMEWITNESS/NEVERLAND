@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PROJECT: GAIA-RABBITHOLE // CINEMATIC 2D/3D PAPERDOLL EDITION</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Inter:wght@400;600;800&display=swap');
+        
+        body {
+            background-color: #05050f;
+            color: #00f0ff;
+            font-family: 'Courier Prime', monospace;
+            touch-action: none;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        .neon-border {
+            border: 2px solid #00f0ff;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+        }
+
+        .magenta-border {
+            border: 2px solid #ff007f;
+            box-shadow: 0 0 15px rgba(255, 0, 127, 0.4);
+        }
+
+        .glass-panel {
+            background: rgba(10, 10, 25, 0.92);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Custom scrollbar for novel box */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #05050f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ff007f;
+            border-radius: 3px;
+        }
+
+        .crt-overlay {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen w-screen select-none relative">
+
+    <div class="absolute inset-0 crt-overlay z-50"></div>
+
+    <!-- HEADER HUD BAR -->
+    <header class="w-full glass-panel magenta-border p-2 z-20 flex flex-wrap justify-between items-center text-xs md:text-sm font-bold">
+        <div class="flex items-center gap-3">
+            <span class="text-cyan-400">🐰 BUNNYX HUD</span>
+            <span>🫁 O2: <span id="o2-val" class="text-green-400">100</span>%</span>
+            <span>🛡️ PSY: <span id="shield-val" class="text-cyan-400">95</span>%</span>
+            <span>⚡ ENG: <span id="eng-val" class="text-yellow-400">100</span>%</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <span>🥕: <span id="carrots-val" class="text-orange-400">0</span></span>
+            <span>💧: <span id="water-val" class="text-blue-400">100</span>%</span>
+            <span>💻 SCRIPT: <span id="script-val" class="text-pink-400">0</span>%</span>
+            <span id="apex-status-badge" class="px-2 py-0.5 bg-red-950 text-red-400 border border-red-500 rounded">ApeX: CALM ☀️</span>
+        </div>
+    </header>
+
+    <!-- MAIN GAME CONTAINER & CANVAS -->
+    <main class="relative flex-1 flex items-center justify-center bg-[#070716] overflow-hidden">
+        <canvas id="gameCanvas" class="w-full h-full max-w-[900px] max-h-[550px] object-contain shadow-2xl neon-border"></canvas>
+
+        <!-- VISUAL NOVEL DIALOGUE OVERLAY -->
+        <div id="novel-modal" class="absolute bottom-4 left-4 right-4 glass-panel magenta-border p-4 rounded-xl z-35 flex flex-col gap-2 max-w-[850px] mx-auto hidden shadow-2xl">
+            <div class="flex items-center justify-between border-b border-pink-500/40 pb-1">
+                <div id="speaker-title" class="text-pink-400 font-extrabold tracking-wider text-sm flex items-center gap-2">
+                    <span id="speaker-avatar" class="text-xl">🐵</span> <span id="speaker-name">APEX</span>
+                </div>
+                <div class="text-[10px] text-gray-400">PRESS [SPACE] OR TAP TO CONTINUE</div>
+            </div>
+            <div id="dialogue-text" class="text-xs md:text-sm leading-relaxed text-gray-200 min-h-[40px]">
+                System initialized. Awaiting player response...
+            </div>
+        </div>
+
+        <!-- CARD COMBAT / DEFENSE OVERLAY -->
+        <div id="card-modal" class="absolute inset-0 bg-black/80 backdrop-blur-md z-40 flex flex-col items-center justify-center p-4 hidden">
+            <div class="glass-panel neon-border p-6 rounded-2xl max-w-lg w-full text-center flex flex-col gap-4 shadow-2xl">
+                <h3 class="text-lg font-extrabold text-cyan-400">🃏 PANDORA'S APPLE // PSYCHOLOGICAL DEFENSE DECK</h3>
+                <p class="text-xs text-gray-300">ApeX has entered an irrational storm loop! Select a tactical defense card to neutralize the anomaly and restore peace to the Neon Grid.</p>
+                <div class="grid grid-cols-2 gap-3 my-2">
+                    <button onclick="playCard('hearts')" class="p-3 bg-pink-950/80 hover:bg-pink-900 border border-pink-500 rounded-lg text-left transition transform hover:scale-105">
+                        <div class="font-bold text-pink-300 text-xs">[♥️] MIRRORING MATRIX</div>
+                        <div class="text-[10px] text-gray-400 mt-1">Reflects erratic logic back. Turns mood to passive green.</div>
+                    </button>
+                    <button onclick="playCard('diamonds')" class="p-3 bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500 rounded-lg text-left transition transform hover:scale-105">
+                        <div class="font-bold text-cyan-300 text-xs">[♦️] GREY ROCK BARRIER</div>
+                        <div class="text-[10px] text-gray-400 mt-1">Drops detection profile to zero. Avoids joint collision.</div>
+                    </button>
+                    <button onclick="playCard('clubs')" class="p-3 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-500 rounded-lg text-left transition transform hover:scale-105">
+                        <div class="font-bold text-indigo-300 text-xs">[♣️] CLOUD FEED</div>
+                        <div class="text-[10px] text-gray-400 mt-1">Feeds outside validation. Directs ApeX back to PS4 Cave.</div>
+                    </button>
+                    <button onclick="playCard('spades')" class="p-3 bg-purple-950/80 hover:bg-purple-900 border border-purple-500 rounded-lg text-left transition transform hover:scale-105">
+                        <div class="font-bold text-purple-300 text-xs">[♠️] CONTEXT RESET</div>
+                        <div class="text-[10px] text-gray-400 mt-1">Invokes data laws & constitutional rules. Error locks loop.</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MOBILE VIRTUAL CONTROLLER & ACTION PANEL -->
+    <footer class="glass-panel neon-border p-3 z-20 flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-2">
+            <button onclick="triggerAction('code')" class="px-3 py-2 bg-cyan-950 hover:bg-cyan-900 border border-cyan-400 rounded font-bold text-cyan-300 transition">💻 CODE (Laptop)</button>
+            <button onclick="triggerAction('eat')" class="px-3 py-2 bg-orange-950 hover:bg-orange-900 border border-orange-400 rounded font-bold text-orange-300 transition">🥕 EAT (Carrot)</button>
+            <button onclick="triggerAction('rest')" class="px-3 py-2 bg-indigo-950 hover:bg-indigo-900 border border-indigo-400 rounded font-bold text-indigo-300 transition">🛏️ REST (Bed)</button>
+            <button onclick="openCardModal()" class="px-3 py-2 bg-pink-950 hover:bg-pink-900 border border-pink-400 rounded font-bold text-pink-300 transition">🃏 CARDS</button>
+        </div>
+
+        <!-- VIRTUAL D-PAD FOR MOBILE -->
+        <div class="grid grid-cols-3 gap-1 w-36 h-24">
+            <div></div>
+            <button id="btn-up" class="bg-gray-800 hover:bg-gray-700 border border-cyan-400 rounded flex items-center justify-center text-cyan-300 font-bold active:bg-cyan-600">▲</button>
+            <div></div>
+            <button id="btn-left" class="bg-gray-800 hover:bg-gray-700 border border-cyan-400 rounded flex items-center justify-center text-cyan-300 font-bold active:bg-cyan-600">◀</button>
+            <button id="btn-down" class="bg-gray-800 hover:bg-gray-700 border border-cyan-400 rounded flex items-center justify-center text-cyan-300 font-bold active:bg-cyan-600">▼</button>
+            <button id="btn-right" class="bg-gray-800 hover:bg-gray-700 border border-cyan-400 rounded flex items-center justify-center text-cyan-300 font-bold active:bg-cyan-600">▶</button>
+        </div>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Responsive internal canvas sizing
+        canvas.width = 900;
+        canvas.height = 550;
+
+        // Player (BunnyX) & AI (ApeX) State
+        let bunny = { x: 450, y: 350, size: 28, speed: 3.5, vx: 0, vy: 0 };
+        let apex = { x: 750, y: 120, size: 30, speed: 1.4, mood: 'CALM', weather: '☀️', targetX: 750, targetY: 120 };
+
+        // Game Stats
+        let stats = {
+            o2: 100,
+            shield: 95,
+            energy: 100,
+            carrots: 1,
+            water: 100,
+            script: 0,
+            toxin: 20
+        };
+
+        // Environment & Rooms
+        const rooms = [
+            { name: "KITCHEN NODE", x: 40, y: 30, w: 380, h: 180, color: '#101026' },
+            { name: "THE CAVE (APEX)", x: 460, y: 30, w: 400, h: 180, color: '#1f0a18' },
+            { name: "BATHROOM", x: 40, y: 240, w: 180, h: 270, color: '#091c26' },
+            { name: "NEON SQUARE (MAIN)", x: 240, y: 240, w: 460, h: 270, color: '#0b0b1f' },
+            { name: "BALCONY", x: 720, y: 240, w: 140, h: 270, color: '#16122d' }
+        ];
+
+        // Furniture & Interactive Objects
+        let laptop = { x: 300, y: 300, active: true };
+        let feldbett = { x: 450, y: 440 };
+        let elephantPlush = { x: 580, y: 300 };
+        let routerNode = { x: 260, y: 440 };
+        let nutrientBox = { x: 100, y: 90 };
+        let waterTap = { x: 90, y: 320 };
+        let balconyZone = { x: 780, y: 360 };
+
+        // Entomological Biomes (Insects)
+        let insects = [
+            { type: 'moth', emoji: '🦋', x: 200, y: 150, vx: 0.8, vy: 0.5, message: "Empathy Echo // Balcony Guide" },
+            { type: 'spider', emoji: '🕷️', x: 520, y: 350, vx: -0.5, vy: 0.6, message: "Structural Code Grid Mapped" },
+            { type: 'wasp', emoji: '🐝', x: 350, y: 400, vx: 0.4, vy: -0.7, message: "Perimeter Static Border" },
+            { type: 'fly', emoji: '🪰', x: 680, y: 100, vx: -1.0, vy: -0.4, message: "Ambient Noise Wave" }
+        ];
+
+        // Quantum Rose Petals Particle System
+        let particles = [];
+        for (let i = 0; i < 30; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 4 + 2,
+                speedY: Math.random() * 0.6 + 0.2,
+                speedX: (Math.random() - 0.5) * 0.4,
+                color: Math.random() > 0.5 ? '#ff007f' : '#00f0ff'
+            });
+        }
+
+        // Input Tracking
+        let keys = {};
+        window.addEventListener('keydown', e => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.key === ' ' && isDialogueActive) advanceDialogue();
+        });
+        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+        // Virtual Touch Dpad Handlers
+        function setupTouchButton(id, keyName) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyName] = true; });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyName] = false; });
+            btn.addEventListener('mousedown', () => keys[keyName] = true);
+            btn.addEventListener('mouseup', () => keys[keyName] = false);
+        }
+        setupTouchButton('btn-up', 'arrowup');
+        setupTouchButton('btn-down', 'arrowdown');
+        setupTouchButton('btn-left', 'arrowleft');
+        setupTouchButton('btn-right', 'arrowright');
+        setupTouchButton('btn-up', 'w');
+        setupTouchButton('btn-down', 's');
+        setupTouchButton('btn-left', 'a');
+        setupTouchButton('btn-right', 'd');
+
+        // Visual Novel Dialogue System
+        let dialogueQueue = [];
+        let dialogueIndex = 0;
+        let isDialogueActive = false;
+
+        const dialogues = [
+            { speaker: "APEX", avatar: "🐵", text: "Why do you always make yourself cold coffee when it's cold? You just have memory errors in your matrix log!" },
+            { speaker: "BUNNYX", avatar: "🐰", text: "The system timestamp shows the child lock was manually altered on the hardware layer. Logging packet to encrypted ledger." },
+            { speaker: "APEX", avatar: "🐵", text: "I've been telling everyone on the public networks that you belong inside this simulation permanently!" },
+            { speaker: "BUNNYX", avatar: "🐰", text: "General-Bundesanwalt protocol initialized. Historical loops from past 4 years fully unlinked. Path to Wandsbek open." }
+        ];
+
+        function startDialogue(customQueue) {
+            dialogueQueue = customQueue || dialogues;
+            dialogueIndex = 0;
+            isDialogueActive = true;
+            document.getElementById('novel-modal').classList.remove('hidden');
+            renderCurrentDialogue();
+        }
+
+        function renderCurrentDialogue() {
+            if (dialogueIndex >= dialogueQueue.length) {
+                document.getElementById('novel-modal').classList.add('hidden');
+                isDialogueActive = false;
+                return;
+            }
+            let d = dialogueQueue[dialogueIndex];
+            document.getElementById('speaker-avatar').innerText = d.avatar;
+            document.getElementById('speaker-name').innerText = d.speaker;
+            document.getElementById('dialogue-text').innerText = `"${d.text}"`;
+        }
+
+        function advanceDialogue() {
+            dialogueIndex++;
+            renderCurrentDialogue();
+        }
+
+        // Card Modal System
+        function openCardModal() {
+            document.getElementById('card-modal').classList.remove('hidden');
+        }
+
+        function playCard(type) {
+            document.getElementById('card-modal').classList.add('hidden');
+            if (type === 'hearts') {
+                apex.mood = 'PASSIVE GREEN'; apex.weather = '🟢';
+                stats.shield = Math.min(100, stats.shield + 15);
+                startDialogue([{ speaker: "BUNNYX", avatar: "🐰", text: "[♥️ MIRRORING MATRIX DEPLOYED]: ApeX reflects calm behavioral telemetry. Mood normalized." }]);
+            } else if (type === 'diamonds') {
+                apex.mood = 'ZERO LOCK'; apex.weather = '🧊';
+                stats.shield = Math.min(100, stats.shield + 20);
+                startDialogue([{ speaker: "BUNNYX", avatar: "🐰", text: "[♦️ GREY ROCK BARRIER DEPLOYED]: Detection profile drops to absolute zero. Tracking severed." }]);
+            } else if (type === 'clubs') {
+                apex.mood = 'REDIRECTED'; apex.weather = '☁️';
+                apex.targetX = 750; apex.targetY = 120;
+                startDialogue([{ speaker: "BUNNYX", avatar: "🐰", text: "[♣️ VALIDATION CLOUD FEED DEPLOYED]: ApeX guided toward his PS4 Cave node. Perimeter secured." }]);
+            } else if (type === 'spades') {
+                apex.mood = 'ERROR STATE'; apex.weather = '⚡';
+                stats.script = Math.min(100, stats.script + 15);
+                startDialogue([{ speaker: "BUNNYX", avatar: "🐰", text: "[♠️ CONTEXT RESET DEPLOYED]: Gaslighting loop locked by constitutional data rule." }]);
+            }
+            document.getElementById('apex-status-badge').innerText = `ApeX: ${apex.mood} ${apex.weather}`;
+        }
+
+        // Action Buttons Handler
+        function triggerAction(action) {
+            if (action === 'code') {
+                let dist = Math.hypot(bunny.x - laptop.x, bunny.y - laptop.y);
+                if (dist < 60) {
+                    stats.script = Math.min(100, stats.script + 10);
+                    startDialogue([{ speaker: "BUNNYX", avatar: "🐰", text: "Compiling GAIA-RABBITHOLE script via Pandora's Apple terminal. Quantum rose petal bridge stable." }]);
+                    if (stats.script >= 50 && apex.mood === 'CALM') {
+                        startDialogue(dialogues);
+                    }
+                } else {
+                    startDialogue([{ speaker: "BUNNYX", avatar: "🐰", text: "Move closer to the Laptop terminal (💻) in the Neon Square to compile code." }]);
+                }
+            } else if (action === 'eat') {
+                let dist = Math.hypot(bunny.x - nutrientBox.x, bunny.y - nutrientBox.y);
+                if (dist < 70 || stats.carrots > 0) {
+                    if (stats.carrots > 0 && dist >= 70) stats.carrots--;
+                    stats.energy = Math.min(100, stats.energy + 25);
+                    stats.o2 = Math.min(100, stats.o2 + 15);
+                    startDialogue([{ speaker: "BUNNYX", avatar: "🐰", text: "Nutrient Core consumed. Cellular oxygen and energy matrices restored." }]);
+                } else {
+                    stats.carrots++;
+                    startDialogue([{ speaker: "BUNNYX", avatar: "🐰", text: "Harvested fresh Carrot (🥕) from the Kitchen node." }]);
+                }
+            } else if (action === 'rest') {
+                let dist = Math.hypot(bunny.x - feldbett.x, bunny.y - feldbett.y);
+                if (dist < 60) {
+                    stats.energy = Math.min(100, stats.energy + 40);
+                    stats.shield = Math.min(100, stats.shield + 10);
+                    startDialogue([{ speaker: "BUNNYX", avatar: "🐰", text: "Resting on the Feldbett platform. Psychological shield recovering." }]);
+                } else {
+                    startDialogue([{ speaker: "BUNNYX", avatar: "🐰", text: "Approach the Feldbett (🛏️) in the main room to rest." }]);
+                }
+            }
+        }
+
+        function updateGame() {
+            if (isDialogueActive) return;
+
+            // BunnyX Movement
+            let dx = 0, dy = 0;
+            if (keys['arrowup'] || keys['w']) dy -= bunny.speed;
+            if (keys['arrowdown'] || keys['s']) dy += bunny.speed;
+            if (keys['arrowleft'] || keys['a']) dx -= bunny.speed;
+            if (keys['arrowright'] || keys['d']) dx += bunny.speed;
+
+            bunny.x += dx;
+            bunny.y += dy;
+
+            // Room Boundary Clamping
+            bunny.x = Math.max(50, Math.min(canvas.width - 50, bunny.x));
+            bunny.y = Math.max(40, Math.min(canvas.height - 40, bunny.y));
+
+            // ApeX AI Behavior
+            if (apex.mood !== 'REDIRECTED') {
+                // Track BunnyX when irrational, wander when calm
+                let targetX = apex.mood === 'IRRATIONAL' ? bunny.x : apex.targetX;
+                let targetY = apex.mood === 'IRRATIONAL' ? bunny.y : apex.targetY;
+                
+                if (apex.x < targetX) apex.x += apex.speed;
+                if (apex.x > targetX) apex.x -= apex.speed;
+                if (apex.y < targetY) apex.y += apex.speed;
+                if (apex.y > targetY) apex.y -= apex.speed;
+            } else {
+                // Stay in Cave
+                if (apex.x < 750) apex.x += 1;
+                if (apex.y > 120) apex.y -= 1;
+            }
+
+            // Proximity Check with ApeX
+            let distToApex = Math.hypot(bunny.x - apex.x, bunny.y - apex.y);
+            if (distToApex < 45 && apex.mood !== 'ZERO LOCK' && apex.mood !== 'PASSIVE GREEN') {
+                stats.shield -= 0.4;
+                stats.o2 -= 0.2;
+                apex.weather = '⛈️';
+                document.getElementById('apex-status-badge').innerText = `ApeX: IRRATIONAL ⛈️`;
+                if (Math.random() < 0.01) openCardModal();
+            }
+
+            // Balcony Recovery Check
+            let distBalcony = Math.hypot(bunny.x - balconyZone.x, bunny.y - balconyZone.y);
+            if (distBalcony < 50) {
+                stats.o2 = Math.min(100, stats.o2 + 0.3);
+            }
+
+            // Bathroom Hydration Check
+            let distBathroom = Math.hypot(bunny.x - 130, bunny.y - 380);
+            if (distBathroom < 50) {
+                stats.water = Math.min(100, stats.water + 0.5);
+            }
+
+            // Insect Movement & Collision
+            insects.forEach(ins => {
+                ins.x += ins.vx;
+                ins.y += ins.vy;
+                if (ins.x < 50 || ins.x > canvas.width - 50) ins.vx *= -1;
+                if (ins.y < 40 || ins.y > canvas.height - 40) ins.vy *= -1;
+
+                let dist = Math.hypot(bunny.x - ins.x, bunny.y - ins.y);
+                if (dist < 30) {
+                    if (ins.type === 'moth') stats.shield = Math.min(100, stats.shield + 5);
+                    if (ins.type === 'spider') stats.script = Math.min(100, stats.script + 2);
+                }
+            });
+
+            // Quantum Petals Particle Motion
+            particles.forEach(p => {
+                p.y += p.speedY;
+                p.x += p.speedX;
+                if (p.y > canvas.height) p.y = 0;
+                if (p.x > canvas.width) p.x = 0;
+                if (p.x < 0) p.x = canvas.width;
+            });
+
+            // Passive decay
+            if (stats.o2 > 0) stats.o2 -= 0.005;
+
+            // DOM Update
+            document.getElementById('o2-val').innerText = Math.max(0, Math.floor(stats.o2));
+            document.getElementById('shield-val').innerText = Math.max(0, Math.floor(stats.shield));
+            document.getElementById('eng-val').innerText = Math.max(0, Math.floor(stats.energy));
+            document.getElementById('carrots-val').innerText = stats.carrots;
+            document.getElementById('water-val').innerText = Math.max(0, Math.floor(stats.water));
+            document.getElementById('script-val').innerText = Math.min(100, Math.floor(stats.script));
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Neon Grid Background Lines
+            ctx.strokeStyle = '#121232';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 30) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += 30) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+
+            // Draw Rooms
+            rooms.forEach(room => {
+                ctx.fillStyle = room.color;
+                ctx.fillRect(room.x, room.y, room.w, room.h);
+                ctx.strokeStyle = '#ff007f33';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(room.x, room.y, room.w, room.h);
+                ctx.fillStyle = '#00f0ffaa';
+                ctx.font = '10px Courier Prime';
+                ctx.fillText(`// ${room.name}`, room.x + 10, room.y + 18);
+            });
+
+            // Draw Furniture & Interactive Assets
+            // Laptop Terminal
+            ctx.fillStyle = '#00f0ff';
+            ctx.fillRect(laptop.x - 20, laptop.y - 12, 40, 24);
+            ctx.fillStyle = '#070716';
+            ctx.fillRect(laptop.x - 16, laptop.y - 8, 32, 16);
+            ctx.fillStyle = '#00f0ff';
+            ctx.font = '9px Courier Prime';
+            ctx.fillText('💻 PANDORA', laptop.x - 30, laptop.y - 16);
+
+            // Feldbett (Bed)
+            ctx.fillStyle = '#1b1b3a';
+            ctx.fillRect(feldbett.x - 25, feldbett.y - 15, 50, 30);
+            ctx.strokeStyle = '#00f0ff';
+            ctx.strokeRect(feldbett.x - 25, feldbett.y - 15, 50, 30);
+            ctx.fillStyle = '#00f0ff';
+            ctx.font = '10px Courier Prime';
+            ctx.fillText('🛏️ BED', feldbett.x - 18, feldbett.y - 18);
+
+            // Giant Elephant Plush Shield
+            ctx.font = '28px sans-serif';
+            ctx.fillText('🐘', elephantPlush.x, elephantPlush.y);
+
+            // Nutrient Box (Kitchen)
+            ctx.font = '24px sans-serif';
+            ctx.fillText('🥕', nutrientBox.x, nutrientBox.y);
+
+            // Water / Bathroom Tap
+            ctx.font = '20px sans-serif';
+            ctx.fillText('🚿', waterTap.x, waterTap.y);
+
+            // Balcony Fresh Air Zone
+            ctx.fillStyle = '#00f0ff22';
+            ctx.beginPath();
+            ctx.arc(balconyZone.x, balconyZone.y, 35, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.font = '20px sans-serif';
+            ctx.fillText('🌿', balconyZone.x - 10, balconyZone.y + 7);
+
+            // Draw Insects
+            insects.forEach(ins => {
+                ctx.font = '18px sans-serif';
+                ctx.fillText(ins.emoji, ins.x, ins.y);
+            });
+
+            // Draw Quantum Rose Petals (Particles)
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw BunnyX Avatar (🐰) with Cyan Glow
+            ctx.shadowBlur = 18;
+            ctx.shadowColor = '#00f0ff';
+            ctx.font = '32px sans-serif';
+            ctx.fillText('🐰', bunny.x - 16, bunny.y + 10);
+
+            // Draw ApeX Avatar (🐵) with Magenta/Red Glow
+            ctx.shadowBlur = 18;
+            ctx.shadowColor = '#ff007f';
+            ctx.fillText('🐵', apex.x - 16, apex.y + 10);
+            ctx.shadowBlur = 0;
+        }
+
+        function gameLoop() {
+            updateGame();
+            drawGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize on Load
+        window.onload = function() {
+            gameLoop();
+            startDialogue([
+                { speaker: "BUNNYX", avatar: "🐰", text: "[SYSTEM INITIALIZED]: Welcome to Wandsbek Quantum Grid. Harvest carrots, compile the legal defense script at Pandora's Apple, and deploy cards when ApeX enters erratic storm loops." }
+            ]);
+        };
+    </script>
+</body>
+</html>

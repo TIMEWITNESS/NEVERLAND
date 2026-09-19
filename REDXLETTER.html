@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Der Rote Faden - 2D RPG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Press+Start+2P&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            touch-action: none; /* Prevents scroll on mobile when playing */
+            overflow: hidden;
+        }
+        .fairytale-font { font-family: 'Cinzel', serif; }
+        .pixel-font { font-family: 'Press Start 2P', monospace; }
+        
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.8); }
+        }
+        .glow-red { animation: pulseGlow 3s infinite; }
+        
+        /* CRT Scanline Effect */
+        .scanlines::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(
+                to bottom,
+                rgba(18, 16, 16, 0) 50%,
+                rgba(0, 0, 0, 0.25) 50%
+            );
+            background-size: 100% 4px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        /* Image Rendering for crisp pixel art */
+        canvas {
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 flex flex-col items-center justify-center">
+
+    <!-- Background Ambient Glow -->
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-red-950/20 via-slate-950 to-slate-950 -z-10 pointer-events-none"></div>
+
+    <!-- Header -->
+    <header class="w-full border-b border-red-900/30 bg-slate-900/80 backdrop-blur-md absolute top-0 z-20 px-4 py-2 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-full bg-red-900/40 border border-red-600 flex items-center justify-center shadow-lg">
+                <span class="text-xs">🐇</span>
+            </div>
+            <div>
+                <h1 class="fairytale-font text-sm md:text-base font-bold text-red-400 tracking-wider">Der Rote Faden</h1>
+            </div>
+        </div>
+        <div class="px-3 py-1 rounded-full bg-red-900/30 border border-red-700/50 text-[10px] md:text-xs font-medium text-red-300 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+            24.08.2026 • 23:59
+        </div>
+    </header>
+
+    <!-- Game Container -->
+    <main class="relative w-full max-w-5xl aspect-[16/9] md:aspect-[21/9] bg-black border border-red-900/50 shadow-2xl rounded-lg overflow-hidden scanlines mt-12 md:mt-0">
+        
+        <!-- The Game Canvas -->
+        <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+        <!-- Start Screen Overlay -->
+        <div id="startScreen" class="absolute inset-0 bg-slate-950/90 z-30 flex flex-col items-center justify-center backdrop-blur-sm">
+            <h1 class="fairytale-font text-3xl md:text-5xl text-red-500 font-bold mb-4 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] text-center">Der Rote Faden</h1>
+            <p class="text-slate-300 text-sm md:text-base mb-8 max-w-lg text-center px-4">Eine diplomatische Mission der Zivilcourage. Sammle die Beweise, weiche den Zeiteinnehmern aus und erreiche Schrödingers Briefkasten, bevor die Zeit abläuft.</p>
+            <button id="startBtn" class="px-8 py-3 bg-red-700 hover:bg-red-600 text-white pixel-font text-xs rounded shadow-lg border border-red-400 transition transform hover:scale-105">
+                MISSION STARTEN
+            </button>
+            <p class="text-slate-500 text-[10px] mt-8 pixel-font">Desktop: Pfeiltasten/WASD + E/Space | Mobile: Touch Buttons</p>
+        </div>
+
+        <!-- Dialogue Box -->
+        <div id="dialogueBox" class="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-3xl bg-slate-900/95 border-2 border-red-700 p-4 rounded-lg shadow-2xl z-20 hidden backdrop-blur-md">
+            <p id="dialogueText" class="text-slate-200 text-sm md:text-base leading-relaxed font-mono min-h-[60px]"></p>
+            <div class="mt-3 flex justify-end">
+                <span class="text-red-400 text-xs pixel-font animate-pulse">[AKTION] weiter</span>
+            </div>
+        </div>
+
+        <!-- Mobile Controls (Visible only on touch/small screens) -->
+        <div class="absolute bottom-4 left-4 grid grid-cols-3 gap-1 z-20 md:hidden opacity-60">
+            <div></div>
+            <button id="btnUp" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-lg flex justify-center items-center text-white active:bg-slate-600">▲</button>
+            <div></div>
+            <button id="btnLeft" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-lg flex justify-center items-center text-white active:bg-slate-600">◀</button>
+            <button id="btnDown" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-lg flex justify-center items-center text-white active:bg-slate-600">▼</button>
+            <button id="btnRight" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-lg flex justify-center items-center text-white active:bg-slate-600">▶</button>
+        </div>
+        <div class="absolute bottom-4 right-4 z-20 md:hidden opacity-80">
+            <button id="btnAction" class="w-16 h-16 bg-red-700/80 border-2 border-red-500 rounded-full flex justify-center items-center text-white font-bold text-xl active:bg-red-500 pixel-font shadow-[0_0_15px_rgba(239,68,68,0.5)]">A</button>
+        </div>
+
+    </main>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-red-700 rounded-2xl max-w-md w-full p-8 text-center space-y-6 shadow-2xl relative glow-red">
+            <div class="w-20 h-20 bg-red-900/40 border border-red-500 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner">
+                🛡️
+            </div>
+            <div>
+                <h3 class="fairytale-font text-2xl font-bold text-slate-100 mb-2">Der Faden ist verbunden!</h3>
+                <p class="text-sm text-slate-300 leading-relaxed font-mono">
+                    Trotz digitaler Stürme und Zeiteinnehmer wurde die Nachricht gesichert. Die Omas gegen Rechts haben das Signal erhalten. Die Tradition der Ehre lebt weiter.
+                </p>
+            </div>
+            <button onclick="location.reload()" class="w-full py-3 mt-4 bg-red-700 hover:bg-red-600 text-white rounded-xl font-medium text-sm transition duration-200 pixel-font">
+                NOCHMAL SPIELEN
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME CONSTANTS & GLOBALS ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        
+        // Logical resolution (retro feel)
+        const LOGICAL_WIDTH = 480;
+        const LOGICAL_HEIGHT = 270;
+        const TILE_SIZE = 16;
+        
+        // Resizing
+        function resizeCanvas() {
+            // Keep aspect ratio via CSS, but set logical canvas size
+            canvas.width = LOGICAL_WIDTH;
+            canvas.height = LOGICAL_HEIGHT;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Game State
+        let gameState = 'START'; // START, PLAY, DIALOGUE, END
+        let lastTime = 0;
+        let dialogueQueue = [];
+        let currentText = "";
+        let textIndex = 0;
+        let typingTimer = 0;
+
+        // Input handling
+        const keys = { w:false, a:false, s:false, d:false, arrowup:false, arrowdown:false, arrowleft:false, arrowright:false, e:false, space:false, actionPressed: false };
+        let actionJustPressed = false;
+
+        window.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase();
+            if (keys.hasOwnProperty(k) || k === ' ') {
+                if(k === ' ') keys['space'] = true;
+                else keys[k] = true;
+                e.preventDefault();
+            }
+            if ((k === 'e' || k === ' ') && !keys.actionPressed) {
+                keys.actionPressed = true;
+                actionJustPressed = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const k = e.key.toLowerCase();
+            if (keys.hasOwnProperty(k) || k === ' ') {
+                if(k === ' ') keys['space'] = false;
+                else keys[k] = false;
+            }
+            if (k === 'e' || k === ' ') {
+                keys.actionPressed = false;
+            }
+        });
+
+        // Mobile Controls setup
+        function setupTouchButton(id, keyMapping) {
+            const btn = document.getElementById(id);
+            if(!btn) return;
+            
+            const press = (e) => {
+                e.preventDefault();
+                keyMapping.forEach(k => keys[k] = true);
+                if (keyMapping.includes('space') && !keys.actionPressed) {
+                    keys.actionPressed = true;
+                    actionJustPressed = true;
+                }
+            };
+            const release = (e) => {
+                e.preventDefault();
+                keyMapping.forEach(k => keys[k] = false);
+                if (keyMapping.includes('space')) {
+                    keys.actionPressed = false;
+                }
+            };
+
+            btn.addEventListener('touchstart', press, {passive: false});
+            btn.addEventListener('touchend', release, {passive: false});
+            btn.addEventListener('mousedown', press);
+            btn.addEventListener('mouseup', release);
+            btn.addEventListener('mouseleave', release);
+        }
+
+        setupTouchButton('btnUp', ['w', 'arrowup']);
+        setupTouchButton('btnDown', ['s', 'arrowdown']);
+        setupTouchButton('btnLeft', ['a', 'arrowleft']);
+        setupTouchButton('btnRight', ['d', 'arrowright']);
+        setupTouchButton('btnAction', ['space', 'e']);
+
+        // Palette
+        const PALETTE = {
+            0: null, // transparent
+            1: '#ffffff', // white
+            2: '#dc2626', // red
+            3: '#0f172a', // dark blue/wall
+            4: '#1e293b', // lighter wall
+            5: '#8b5cf6', // purple (enemies)
+            6: '#fcd34d', // gold (sign)
+            7: '#27272a', // mailbox dark
+            8: '#a1a1aa'  // mailbox light
+        };
+
+        // 8x8 Sprites
+        const SPRITES = {
+            player: [
+                [0,0,1,0,0,1,0,0],
+                [0,0,1,0,0,1,0,0],
+                [0,0,1,1,1,1,0,0],
+                [0,1,1,1,1,1,1,0],
+                [0,1,1,3,1,3,1,0], // Eyes (using dark wall color for contrast)
+                [0,1,1,1,1,1,1,0],
+                [2,2,2,2,2,2,2,2], // Red Cape
+                [2,2,2,2,2,2,2,2]
+            ],
+            enemy: [
+                [0,0,5,5,5,0,0,0],
+                [0,5,5,5,5,5,0,0],
+                [5,5,0,5,0,5,5,0],
+                [5,5,5,5,5,5,5,0],
+                [0,5,5,5,5,5,0,0],
+                [0,5,0,0,0,5,0,0],
+                [5,5,0,0,0,5,5,0],
+                [0,0,0,0,0,0,0,0]
+            ],
+            sign: [
+                [0,0,6,6,6,6,0,0],
+                [0,6,6,6,6,6,6,0],
+                [0,6,3,3,3,3,6,0],
+                [0,6,6,6,6,6,6,0],
+                [0,0,0,6,6,0,0,0],
+                [0,0,0,6,6,0,0,0],
+                [0,0,0,6,6,0,0,0],
+                [0,0,0,6,6,0,0,0]
+            ],
+            mailbox: [
+                [7,7,7,7,7,7,7,7],
+                [7,8,8,8,8,8,8,7],
+                [7,8,0,0,0,0,8,7], // Slot
+                [7,8,8,8,8,8,8,7],
+                [7,8,8,8,8,8,8,7],
+                [7,7,7,7,7,7,7,7],
+                [0,0,7,7,7,7,0,0],
+                [0,0,7,7,7,7,0,0]
+            ]
+        };
+
+        // W=Wall, .=Floor, R=Red Thread, S=Sign, M=Mailbox, E=Enemy, P=Player Start
+        const mapData = [
+            "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+            "W..............................................W",
+            "W......................E.......................W",
+            "W..S...........................................W",
+            "W..P...R.R................WWWWW................W",
+            "WWWW.....R................W...W................W",
+            "W........R................W.M.W................W",
+            "W..E.....R.R.R.R.R........W...W................W",
+            "W................R........WW.WW................W",
+            "W................R...........R.................W",
+            "W................R.R.R.R.R.R.R.................W",
+            "W..............................................W",
+            "W...WWWWWW.E...................................W",
+            "W..............................................W",
+            "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+        ];
+
+        const mapCols = mapData[0].length;
+        const mapRows = mapData.length;
+
+        // Player State
+        const player = {
+            gridX: 0,
+            gridY: 0,
+            pixelX: 0,
+            pixelY: 0,
+            isMoving: false,
+            dirX: 0,
+            dirY: 0,
+            speed: 0.1, // percentage of tile per frame (approx 60fps)
+            facing: 'down' // for interaction
+        };
+
+        // Entities container
+        const entities = [];
+
+        // Parse Map
+        for(let y=0; y<mapRows; y++){
+            for(let x=0; x<mapCols; x++){
+                const tile = mapData[y][x];
+                if(tile === 'P') {
+                    player.gridX = x;
+                    player.gridY = y;
+                    player.pixelX = x * TILE_SIZE;
+                    player.pixelY = y * TILE_SIZE;
+                } else if(tile === 'S') {
+                    entities.push({ type: 'sign', x, y, sprite: SPRITES.sign });
+                } else if(tile === 'M') {
+                    entities.push({ type: 'mailbox', x, y, sprite: SPRITES.mailbox });
+                } else if(tile === 'E') {
+                    entities.push({ type: 'enemy', x, y, sprite: SPRITES.enemy });
+                }
+            }
+        }
+
+        // Camera
+        const camera = { x: 0, y: 0, width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT };
+
+        function isWalkable(gx, gy) {
+            if(gx < 0 || gx >= mapCols || gy < 0 || gy >= mapRows) return false;
+            if(mapData[gy][gx] === 'W') return false;
+            
+            // Check entities
+            for(let e of entities) {
+                if(e.x === gx && e.y === gy) return false;
+            }
+            return true;
+        }
+
+        function drawSprite(sprite, px, py, scale) {
+            const pixelSize = scale / 8; // Since sprites are 8x8, one sprite pixel = tile_size/8
+            for(let r=0; r<8; r++){
+                for(let c=0; c<8; c++){
+                    const colCode = sprite[r][c];
+                    if(colCode !== 0) {
+                        ctx.fillStyle = PALETTE[colCode];
+                        ctx.fillRect(px + c * pixelSize, py + r * pixelSize, pixelSize, pixelSize);
+                    }
+                }
+            }
+        }
+
+        const dialogueBox = document.getElementById('dialogueBox');
+        const dialogueText = document.getElementById('dialogueText');
+
+        function startDialogue(texts) {
+            dialogueQueue = texts;
+            gameState = 'DIALOGUE';
+            dialogueBox.classList.remove('hidden');
+            advanceDialogue();
+        }
+
+        function advanceDialogue() {
+            if (dialogueQueue.length > 0) {
+                currentText = dialogueQueue.shift();
+                textIndex = 0;
+                displayedText = "";
+                dialogueText.innerHTML = "";
+            } else {
+                gameState = 'PLAY';
+                dialogueBox.classList.add('hidden');
+            }
+        }
+
+        function typeText() {
+            if (gameState !== 'DIALOGUE') return;
+            if (textIndex < currentText.length) {
+                // Handle basic HTML parsing in dialogue if needed, but text is fine
+                dialogueText.innerHTML = currentText.substring(0, textIndex + 1) + "<span class='animate-pulse'>_</span>";
+                textIndex++;
+            } else {
+                dialogueText.innerHTML = currentText;
+            }
+        }
+
+        function triggerInteraction() {
+            let tx = player.gridX;
+            let ty = player.gridY;
+            if(player.facing === 'up') ty--;
+            if(player.facing === 'down') ty++;
+            if(player.facing === 'left') tx--;
+            if(player.facing === 'right') tx++;
+
+            // Find entity
+            let targetEntity = entities.find(e => e.x === tx && e.y === ty);
+            if (targetEntity) {
+                if (targetEntity.type === 'sign') {
+                    startDialogue([
+                        "<span class='text-red-400 font-bold'>KAPITEL II: Das Vermächtnis</span><br><br>Eine Plakette am Wegesrand:",
+                        "Deine Vorfahren haben sich nachweislich gegen Faschismus eingesetzt.",
+                        "Seit 5 Jahren führst du diese Tradition fort, sammelst Beweise...",
+                        "Folge dem Faden. Zeig Zivilcourage."
+                    ]);
+                } else if (targetEntity.type === 'enemy') {
+                    // Screen shake effect setup via canvas context translation later
+                    startDialogue([
+                        "<span class='text-purple-400 font-bold'>ZEITEINNEHMER:</span><br>Wäääh! *Babygeschrei* Du hast keine Zeit! Das Netzwerk ist überlastet!",
+                        "Lass dich nicht ablenken. Ignoriere ihn."
+                    ]);
+                } else if (targetEntity.type === 'mailbox') {
+                    startDialogue([
+                        "<span class='text-red-400 font-bold'>&lt;[Schrödingers Briefkasten]&gt;</span>",
+                        "Liebe Omas gegen Rechts...",
+                        "Ich habe jahrelang investigiert, mit dutzenden Zeugen gesprochen. Sie sind in Gefahr.",
+                        "Bitte steht uns in diesem Kampf bei.",
+                        "Botschaft absenden? [AKTION]"
+                    ]);
+                    // Override the next dialogue to trigger end game
+                    const oldAdvance = advanceDialogue;
+                    advanceDialogue = () => {
+                        if (dialogueQueue.length > 0) {
+                            currentText = dialogueQueue.shift();
+                            textIndex = 0;
+                        } else {
+                            gameState = 'END';
+                            dialogueBox.classList.add('hidden');
+                            document.getElementById('successModal').classList.remove('hidden');
+                            advanceDialogue = oldAdvance; // reset
+                        }
+                    }
+                }
+            }
+        }
+
+        function update(dt) {
+            if (gameState === 'DIALOGUE') {
+                typingTimer += dt;
+                if(typingTimer > 30) { // Speed of typing (ms per char)
+                    typeText();
+                    typingTimer = 0;
+                }
+
+                if (actionJustPressed) {
+                    if (textIndex < currentText.length) {
+                        // Skip typing
+                        textIndex = currentText.length;
+                        dialogueText.innerHTML = currentText;
+                    } else {
+                        advanceDialogue();
+                    }
+                }
+                actionJustPressed = false;
+                return;
+            }
+
+            if (gameState !== 'PLAY') return;
+
+            // Handle interaction
+            if (actionJustPressed && !player.isMoving) {
+                triggerInteraction();
+            }
+            actionJustPressed = false;
+
+            // Handle Movement Logic
+            if (!player.isMoving) {
+                let dx = 0;
+                let dy = 0;
+                
+                if (keys.w || keys.arrowup) { dy = -1; player.facing = 'up'; }
+                else if (keys.s || keys.arrowdown) { dy = 1; player.facing = 'down'; }
+                else if (keys.a || keys.arrowleft) { dx = -1; player.facing = 'left'; }
+                else if (keys.d || keys.arrowright) { dx = 1; player.facing = 'right'; }
+
+                if (dx !== 0 || dy !== 0) {
+                    if (isWalkable(player.gridX + dx, player.gridY + dy)) {
+                        player.gridX += dx;
+                        player.gridY += dy;
+                        player.isMoving = true;
+                        player.dirX = dx;
+                        player.dirY = dy;
+                    }
+                }
+            }
+
+            // Smooth interpolation
+            if (player.isMoving) {
+                const targetPixelX = player.gridX * TILE_SIZE;
+                const targetPixelY = player.gridY * TILE_SIZE;
+                const speedPixels = TILE_SIZE * player.speed * (dt / 16.6); // adjust to framerate
+
+                let reachedX = false, reachedY = false;
+
+                if (player.dirX !== 0) {
+                    player.pixelX += player.dirX * speedPixels;
+                    if ((player.dirX > 0 && player.pixelX >= targetPixelX) || (player.dirX < 0 && player.pixelX <= targetPixelX)) {
+                        player.pixelX = targetPixelX;
+                        reachedX = true;
+                    }
+                } else { reachedX = true; }
+
+                if (player.dirY !== 0) {
+                    player.pixelY += player.dirY * speedPixels;
+                    if ((player.dirY > 0 && player.pixelY >= targetPixelY) || (player.dirY < 0 && player.pixelY <= targetPixelY)) {
+                        player.pixelY = targetPixelY;
+                        reachedY = true;
+                    }
+                } else { reachedY = true; }
+
+                if (reachedX && reachedY) {
+                    player.isMoving = false;
+                }
+            }
+
+            // Update Camera to follow player
+            camera.x = player.pixelX + TILE_SIZE/2 - camera.width/2;
+            camera.y = player.pixelY + TILE_SIZE/2 - camera.height/2;
+            
+            // Clamp camera to map bounds
+            if(camera.x < 0) camera.x = 0;
+            if(camera.y < 0) camera.y = 0;
+            if(camera.x > mapCols * TILE_SIZE - camera.width) camera.x = mapCols * TILE_SIZE - camera.width;
+            if(camera.y > mapRows * TILE_SIZE - camera.height) camera.y = mapRows * TILE_SIZE - camera.height;
+        }
+
+        function draw() {
+            // Background
+            ctx.fillStyle = '#020617'; // slate-950 floor
+            ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+
+            ctx.save();
+            // Apply camera offset
+            ctx.translate(-Math.floor(camera.x), -Math.floor(camera.y));
+
+            // Draw Map
+            for(let y=0; y<mapRows; y++){
+                for(let x=0; x<mapCols; x++){
+                    const tile = mapData[y][x];
+                    const px = x * TILE_SIZE;
+                    const py = y * TILE_SIZE;
+
+                    // Frustum culling simple
+                    if(px + TILE_SIZE < camera.x || px > camera.x + camera.width ||
+                       py + TILE_SIZE < camera.y || py > camera.y + camera.height) {
+                        continue;
+                    }
+
+                    if(tile === 'W') {
+                        // Draw Wall
+                        ctx.fillStyle = '#1e293b'; // Base
+                        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                        ctx.fillStyle = '#0f172a'; // Inner
+                        ctx.fillRect(px + 2, py + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                    }
+                    
+                    if(tile === 'R') {
+                        // Draw Red Thread
+                        const pulse = 0.4 + Math.abs(Math.sin(Date.now() / 300)) * 0.4;
+                        ctx.fillStyle = `rgba(239, 68, 68, ${pulse})`;
+                        
+                        // Just draw a block in center to simulate thread
+                        ctx.fillRect(px + TILE_SIZE/2 - 2, py + TILE_SIZE/2 - 2, 4, 4);
+                        
+                        // Add glow
+                        ctx.shadowColor = "red";
+                        ctx.shadowBlur = 10;
+                        ctx.fillRect(px + TILE_SIZE/2 - 1, py + TILE_SIZE/2 - 1, 2, 2);
+                        ctx.shadowBlur = 0;
+                    }
+
+                    // Floor grid (faint)
+                    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+                    ctx.strokeRect(px, py, TILE_SIZE, TILE_SIZE);
+                }
+            }
+
+            // Draw Entities
+            for(let e of entities) {
+                drawSprite(e.sprite, e.x * TILE_SIZE, e.y * TILE_SIZE, TILE_SIZE);
+                
+                // If enemy, draw small interference particles
+                if(e.type === 'enemy') {
+                    if(Math.random() > 0.8) {
+                        ctx.fillStyle = 'rgba(139, 92, 246, 0.8)'; // Purple glitch
+                        ctx.fillRect(
+                            e.x * TILE_SIZE + Math.random() * TILE_SIZE, 
+                            e.y * TILE_SIZE + Math.random() * TILE_SIZE, 
+                            2, 2
+                        );
+                    }
+                }
+            }
+
+            // Draw Player
+            drawSprite(SPRITES.player, player.pixelX, player.pixelY, TILE_SIZE);
+
+            ctx.restore();
+        }
+
+        function gameLoop(timestamp) {
+            let dt = timestamp - lastTime;
+            if (dt > 100) dt = 16; // Prevent huge jumps if tab is inactive
+            lastTime = timestamp;
+
+            update(dt);
+            draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start Button Event
+        document.getElementById('startBtn').addEventListener('click', () => {
+            document.getElementById('startScreen').classList.add('hidden');
+            gameState = 'PLAY';
+            lastTime = performance.now();
+            
+            // Initial Story Dialogue
+            startDialogue([
+                "<span class='text-red-400 font-bold'>KAPITEL I: Das Erwachen</span><br><br>Es ist der 24. August 2026, kurz vor Mitternacht.",
+                "Ein globaler EMP droht. Die Zeiteinnehmer des Netzwerks sind aktiv.",
+                "In der Nachbarschaft weint ein Baby und stört deinen Fokus...",
+                "Doch du bist das Kaninchen mit dem roten Umhang.",
+                "Folge dem roten Faden. Finde die Beweise. Rette das Netzwerk."
+            ]);
+            
+            requestAnimationFrame(gameLoop);
+        });
+
+    </script>
+</body>
+</html>

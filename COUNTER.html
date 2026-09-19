@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protocol: RESONANCE - The ApeX Catalyst</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #050505;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            overscroll-behavior: none;
+        }
+        h1, h2, h3, .scientific-font {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none; /* Let clicks pass through to scrollable content */
+        }
+
+        /* Smooth scrolling container */
+        #scroll-container {
+            position: relative;
+            z-index: 10;
+        }
+
+        .scroll-section {
+            min-height: 120vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 24px;
+            padding: 3rem;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+            transform: translateY(50px);
+            opacity: 0;
+            transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-panel.visible {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .hud-overlay {
+            position: fixed;
+            top: 2rem;
+            left: 2rem;
+            right: 2rem;
+            display: flex;
+            justify-content: space-between;
+            z-index: 50;
+            pointer-events: none;
+            mix-blend-mode: screen;
+        }
+
+        .progress-bar {
+            position: fixed;
+            right: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 200px;
+            width: 2px;
+            background: rgba(255,255,255,0.1);
+            z-index: 50;
+        }
+        .progress-fill {
+            width: 100%;
+            background: #fff;
+            height: 0%;
+            box-shadow: 0 0 10px #fff;
+            transition: height 0.1s ease-out;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #050505;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.4);
+        }
+
+        #entry-screen {
+            position: fixed;
+            inset: 0;
+            background: #050505;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 1.5s ease;
+        }
+
+        .btn-glow {
+            position: relative;
+            background: transparent;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 1rem 3rem;
+            border-radius: 30px;
+            font-family: 'Space Grotesk', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .btn-glow:hover {
+            border-color: #fff;
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+        }
+        .btn-glow::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: all 0.5s ease;
+        }
+        .btn-glow:hover::before {
+            left: 100%;
+        }
+
+        .text-gradient {
+            background: linear-gradient(to right, #fff, #888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .text-accent-red {
+            color: #ff3366;
+            text-shadow: 0 0 10px rgba(255, 51, 102, 0.5);
+        }
+        .text-accent-blue {
+            color: #33ccff;
+            text-shadow: 0 0 10px rgba(51, 204, 255, 0.5);
+        }
+        .text-accent-gold {
+            color: #ffcc00;
+            text-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="entry-screen">
+        <h1 class="text-4xl md:text-6xl font-bold mb-4 tracking-tighter text-center">PROTOCOL: <span class="text-gradient">EMPATHY</span></h1>
+        <p class="text-gray-400 max-w-xl text-center mb-12 leading-relaxed">
+            Warning: Engaging this sequence will subject your neural pathways to simulated despair. 
+            To understand the survivors and help them, you must experience a fraction of their pain.
+        </p>
+        <button class="btn-glow" id="start-btn">Initiate Sequence</button>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div class="hud-overlay">
+        <div class="scientific-font text-xs text-gray-500 tracking-widest uppercase flex flex-col gap-1">
+            <span>SYS.STATUS: <span id="hud-status" class="text-white">STABLE</span></span>
+            <span>NEURAL_LINK: <span class="text-white">ACTIVE</span></span>
+        </div>
+        <div class="scientific-font text-xs text-gray-500 tracking-widest uppercase text-right flex flex-col gap-1">
+            <span>DATA.STREAM: <span id="hud-data" class="text-white">0.00%</span></span>
+            <span>MORPHOLOGY: <span id="hud-morph" class="text-white">CELLULAR</span></span>
+        </div>
+    </div>
+
+    <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+    </div>
+
+    <div id="scroll-container">
+        
+        <!-- SECTION 1: The Cell / Innocence -->
+        <section class="scroll-section">
+            <div class="glass-panel" data-threshold="0">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-2 h-2 rounded-full bg-white animate-pulse"></div>
+                    <span class="scientific-font text-xs text-gray-400 uppercase tracking-widest">Phase 01: Baseline</span>
+                </div>
+                <h2 class="text-3xl font-bold mb-4">The Complete Matrix</h2>
+                <p class="text-gray-300 leading-relaxed text-sm md:text-base">
+                    Before the fracture, there is equilibrium. A perfect cellular structure, unaware of the structural cruelty of the systems surrounding it. To help them, you must understand what was lost. 
+                    <br><br>
+                    Scroll down to interface with the catalyst.
+                </p>
+            </div>
+        </section>
+
+        <!-- SECTION 2: The Pain / ApeX Infection -->
+        <section class="scroll-section">
+            <div class="glass-panel" data-threshold="0.25">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse" style="box-shadow: 0 0 10px #f00"></div>
+                    <span class="scientific-font text-xs text-red-400 uppercase tracking-widest">Phase 02: Despair</span>
+                </div>
+                <h2 class="text-3xl font-bold mb-4 text-accent-red">The Cruel Truth</h2>
+                <p class="text-gray-300 leading-relaxed text-sm md:text-base">
+                    This is the <span class="text-white font-semibold">Hate Infection</span>. Amygdala overload. Cortisol floods the system as the matrix breaks. 
+                    <br><br>
+                    If your character and support system cannot bear this, the trauma metastasizes. You risk becoming <span class="text-white font-semibold">ApeX</span>—consumed by the very pain inflicted upon you, turning structural despair into a localized weapon.
+                </p>
+            </div>
+        </section>
+
+        <!-- SECTION 3: The Organ / Resilience -->
+        <section class="scroll-section">
+            <div class="glass-panel" data-threshold="0.5">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse" style="box-shadow: 0 0 10px #33ccff"></div>
+                    <span class="scientific-font text-xs text-blue-400 uppercase tracking-widest">Phase 03: Adaptation</span>
+                </div>
+                <h2 class="text-3xl font-bold mb-4 text-accent-blue">Adaptive Immunology</h2>
+                <p class="text-gray-300 leading-relaxed text-sm md:text-base">
+                    But you did not break. The body, mind, and soul respond. New technologies of the self emerge. White cells fortify against the toxicity of the environment.
+                    <br><br>
+                    The pain is synthesized. You become stronger, resilient, and fiercely loving. You choose to be <i>consequent</i>. You refuse to let the cycle continue.
+                </p>
+            </div>
+        </section>
+
+        <!-- SECTION 4: The Swarm / Utopia -->
+        <section class="scroll-section">
+            <div class="glass-panel" data-threshold="0.75">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" style="box-shadow: 0 0 10px #ffcc00"></div>
+                    <span class="scientific-font text-xs text-yellow-400 uppercase tracking-widest">Phase 04: Symbiosis</span>
+                </div>
+                <h2 class="text-3xl font-bold mb-4 text-accent-gold">The Swarm Song</h2>
+                <p class="text-gray-300 leading-relaxed text-sm md:text-base">
+                    When I sing with my swarm of wasps, we dance together in hope. We monitor every tree, every environment, and the needs of all sentient beings. 
+                    <br><br>
+                    They tried to burn it down. But we use this crisis as a catalyst. We stop and re-educate those who caused the harm, changing the system for following generations.
+                </p>
+                <div class="mt-8 pt-6 border-t border-white/10">
+                    <p class="text-xs text-gray-400 uppercase tracking-widest text-center">To protect every being. The protocol is complete.</p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // Shader setup for morphing particles
+        const vertexShader = `
+            attribute vec3 pos0; // Sphere
+            attribute vec3 pos1; // Chaos / ApeX
+            attribute vec3 pos2; // Brain/Heart Organ
+            attribute vec3 pos3; // Swarm / Torus
+            
+            uniform float uState; // 0.0 to 3.0
+            uniform float uTime;
+            uniform float uScrollSpeed;
+            
+            varying vec3 vColor;
+            varying float vState;
+
+            // Simple noise function
+            vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+            vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+            float snoise(vec3 v) {
+                const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
+                const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+                vec3 i  = floor(v + dot(v, C.yyy) );
+                vec3 x0 = v - i + dot(i, C.xxx) ;
+                vec3 g = step(x0.yzx, x0.xyz);
+                vec3 l = 1.0 - g;
+                vec3 i1 = min( g.xyz, l.zxy );
+                vec3 i2 = max( g.xyz, l.zxy );
+                vec3 x1 = x0 - i1 + C.xxx;
+                vec3 x2 = x0 - i2 + C.yyy;
+                vec3 x3 = x0 - D.yyy;
+                i = mod289(i);
+                vec4 p = permute( permute( permute(
+                            i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+                        + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))
+                        + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+                float n_ = 0.142857142857;
+                vec3  ns = n_ * D.wyz - D.xzx;
+                vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+                vec4 x_ = floor(j * ns.z);
+                vec4 y_ = floor(j - 7.0 * x_ );
+                vec4 x = x_ *ns.x + ns.yyyy;
+                vec4 y = y_ *ns.x + ns.yyyy;
+                vec4 h = 1.0 - abs(x) - abs(y);
+                vec4 b0 = vec4( x.xy, y.xy );
+                vec4 b1 = vec4( x.zw, y.zw );
+                vec4 s0 = floor(b0)*2.0 + 1.0;
+                vec4 s1 = floor(b1)*2.0 + 1.0;
+                vec4 sh = -step(h, vec4(0.0));
+                vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+                vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+                vec3 p0 = vec3(a0.xy,h.x);
+                vec3 p1 = vec3(a0.zw,h.y);
+                vec3 p2 = vec3(a1.xy,h.z);
+                vec3 p3 = vec3(a1.zw,h.w);
+                vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+                p0 *= norm.x;
+                p1 *= norm.y;
+                p2 *= norm.z;
+                p3 *= norm.w;
+                vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+                m = m * m;
+                return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3) ) );
+            }
+
+            void main() {
+                vState = uState;
+                vec3 finalPos;
+                
+                // Colors for different states
+                vec3 c0 = vec3(0.8, 0.9, 1.0); // White/Blue cell
+                vec3 c1 = vec3(1.0, 0.1, 0.2); // Red/Dark ApeX
+                vec3 c2 = vec3(0.2, 0.8, 1.0); // Cyan Organ
+                vec3 c3 = vec3(1.0, 0.8, 0.2); // Gold Swarm
+
+                vec3 targetColor;
+
+                // Smooth morphing logic based on uState (0 -> 1 -> 2 -> 3)
+                if (uState < 1.0) {
+                    float t = smoothstep(0.0, 1.0, uState);
+                    finalPos = mix(pos0, pos1, t);
+                    targetColor = mix(c0, c1, t);
+                    
+                    // Add chaos noise in phase 1
+                    float noise = snoise(finalPos * 2.0 + uTime) * t * 0.5;
+                    finalPos += normal * noise;
+
+                } else if (uState < 2.0) {
+                    float t = smoothstep(0.0, 1.0, uState - 1.0);
+                    finalPos = mix(pos1, pos2, t);
+                    targetColor = mix(c1, c2, t);
+                    
+                    // Throbbing effect
+                    float throb = sin(uTime * 3.0) * 0.1 * t;
+                    finalPos *= (1.0 + throb);
+
+                } else {
+                    float t = smoothstep(0.0, 1.0, uState - 2.0);
+                    finalPos = mix(pos2, pos3, t);
+                    targetColor = mix(c2, c3, t);
+                    
+                    // Swirling effect
+                    float angle = uTime * 0.5 * t;
+                    mat2 rot = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+                    finalPos.xz = rot * finalPos.xz;
+                }
+
+                vColor = targetColor;
+
+                // Add slight continuous movement
+                finalPos.y += sin(uTime + finalPos.x * 2.0) * 0.05;
+
+                vec4 mvPosition = modelViewMatrix * vec4(finalPos, 1.0);
+                
+                // Point size depends on distance & state
+                float size = 4.0;
+                if(uState > 0.5 && uState < 1.5) size = 6.0; // bigger during chaos
+                if(uState > 2.5) size = 3.0; // smaller during swarm
+                
+                gl_PointSize = size * (10.0 / -mvPosition.z) * (1.0 + uScrollSpeed * 2.0);
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `;
+
+        const fragmentShader = `
+            varying vec3 vColor;
+            varying float vState;
+            
+            void main() {
+                // Circular particle with soft edge
+                vec2 center = gl_PointCoord - 0.5;
+                float dist = length(center);
+                if (dist > 0.5) discard;
+                
+                float alpha = (0.5 - dist) * 2.0;
+                
+                // Make ApeX phase look sharper/more dangerous
+                if (vState > 0.5 && vState < 1.5) {
+                    alpha = pow(alpha, 0.5); 
+                } else {
+                    alpha = pow(alpha, 1.5); // Softer for cell/swarm
+                }
+
+                gl_FragColor = vec4(vColor, alpha * 0.8);
+            }
+        `;
+
+        // 3D Scene Setup
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050505, 0.05);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.z = 8;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        // Particle System Geometry
+        const particleCount = 40000;
+        const geometry = new THREE.BufferGeometry();
+
+        // Arrays for 4 different states
+        const pos0 = new Float32Array(particleCount * 3); // Perfect Cell (Sphere)
+        const pos1 = new Float32Array(particleCount * 3); // ApeX (Chaotic spikes)
+        const pos2 = new Float32Array(particleCount * 3); // Resilience Organ (Brain-like)
+        const pos3 = new Float32Array(particleCount * 3); // Swarm (Torus Knot)
+
+        // Helper functions for shaping
+        function getPointOnSphere(radius) {
+            const u = Math.random();
+            const v = Math.random();
+            const theta = u * 2.0 * Math.PI;
+            const phi = Math.acos(2.0 * v - 1.0);
+            const r = Math.cbrt(Math.random()) * radius; // Volume distribution
+            return {
+                x: r * Math.sin(phi) * Math.cos(theta),
+                y: r * Math.sin(phi) * Math.sin(theta),
+                z: r * Math.cos(phi)
+            };
+        }
+
+        function getPointOnTorusKnot(p, q, radius, tube) {
+            const u = Math.random() * Math.PI * 2;
+            const v = Math.random() * Math.PI * 2;
+            const cu = Math.cos(u);
+            const su = Math.sin(u);
+            const quOverP = q/p * u;
+            const cs = Math.cos(quOverP);
+            const x = (radius + tube * cu) * Math.cos(p * u);
+            const y = (radius + tube * cu) * Math.sin(p * u);
+            const z = tube * Math.sin(u);
+            
+            // Add some noise around the knot to make it a "swarm"
+            const noise = (Math.random() - 0.5) * 0.5;
+            return { x: x+noise, y: y+noise, z: z+noise };
+        }
+
+        for (let i = 0; i < particleCount; i++) {
+            const i3 = i * 3;
+
+            // State 0: Cell (Perfect glowing sphere with dense core)
+            const p0 = getPointOnSphere(2.5);
+            pos0[i3] = p0.x;
+            pos0[i3 + 1] = p0.y;
+            pos0[i3 + 2] = p0.z;
+
+            // State 1: ApeX (Chaotic, spread out, sharp edges)
+            const spread = 6.0;
+            pos1[i3] = (Math.random() - 0.5) * spread * 2 + (Math.sin(i)*2);
+            pos1[i3 + 1] = (Math.random() - 0.5) * spread * 2 + (Math.cos(i)*2);
+            pos1[i3 + 2] = (Math.random() - 0.5) * spread * 2;
+
+            // State 2: Organ / Resilience (Two hemispheres like a brain/heart)
+            const isLeft = Math.random() > 0.5 ? 1 : -1;
+            const p2 = getPointOnSphere(1.8);
+            pos2[i3] = p2.x + (isLeft * 1.2) * (1 - Math.abs(p2.y/2)); // squish and separate
+            pos2[i3 + 1] = p2.y * 1.5; // elongate
+            pos2[i3 + 2] = p2.z * 0.8; // flatten
+
+            // State 3: Swarm / Utopia (Torus knot swirling)
+            const p3 = getPointOnTorusKnot(3, 4, 2.0, 0.8);
+            pos3[i3] = p3.x;
+            pos3[i3 + 1] = p3.y;
+            pos3[i3 + 2] = p3.z;
+        }
+
+        // Add attributes to geometry
+        geometry.setAttribute('position', new THREE.BufferAttribute(pos0, 3)); // Fallback
+        geometry.setAttribute('pos0', new THREE.BufferAttribute(pos0, 3));
+        geometry.setAttribute('pos1', new THREE.BufferAttribute(pos1, 3));
+        geometry.setAttribute('pos2', new THREE.BufferAttribute(pos2, 3));
+        geometry.setAttribute('pos3', new THREE.BufferAttribute(pos3, 3));
+        
+        // Normals for noise calc
+        geometry.computeVertexNormals();
+
+        // Material with Shaders
+        const material = new THREE.ShaderMaterial({
+            vertexShader,
+            fragmentShader,
+            uniforms: {
+                uTime: { value: 0 },
+                uState: { value: 0 },
+                uScrollSpeed: { value: 0 }
+            },
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        const particles = new THREE.Points(geometry, material);
+        scene.add(particles);
+
+        
+        // State variables
+        let scrollPercent = 0;
+        let targetScrollPercent = 0;
+        let lastScrollY = 0;
+        let scrollSpeed = 0;
+        let mouse = new THREE.Vector2();
+        let targetMouse = new THREE.Vector2();
+        let isStarted = false;
+
+        const statuses = ["STABLE", "COMPROMISED", "RESEQUENCING", "SYMBIOTIC"];
+        const morphs = ["CELLULAR", "APEX_PATHOGEN", "ORGAN_MATRIX", "SWARM_INTELLIGENCE"];
+
+        // Scroll Handling
+        window.addEventListener('scroll', () => {
+            const h = document.documentElement;
+            const b = document.body;
+            const st = 'scrollTop';
+            const sh = 'scrollHeight';
+            
+            // Calculate current scroll percentage
+            targetScrollPercent = (h[st] || b[st]) / ((h[sh] || b[sh]) - h.clientHeight);
+            targetScrollPercent = Math.max(0, Math.min(1, targetScrollPercent));
+
+            // Calculate scroll speed for shader effects
+            const currentScrollY = window.scrollY;
+            scrollSpeed = Math.abs(currentScrollY - lastScrollY) * 0.001;
+            lastScrollY = currentScrollY;
+
+            // UI Updates based on thresholds
+            const panels = document.querySelectorAll('.glass-panel');
+            panels.forEach((panel, index) => {
+                const threshold = parseFloat(panel.dataset.threshold);
+                // Reveal slightly before threshold
+                if (targetScrollPercent >= threshold - 0.1) {
+                    panel.classList.add('visible');
+                } else {
+                    panel.classList.remove('visible');
+                }
+            });
+        });
+
+        // Mouse Parallax
+        window.addEventListener('mousemove', (e) => {
+            targetMouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            targetMouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        });
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Entry Screen
+        document.getElementById('start-btn').addEventListener('click', () => {
+            document.getElementById('entry-screen').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('entry-screen').style.display = 'none';
+                isStarted = true;
+                
+                // Show first panel
+                document.querySelectorAll('.glass-panel')[0].classList.add('visible');
+            }, 1500);
+        });
+
+        // Main Animation Loop
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!isStarted) return;
+
+            const delta = clock.getDelta();
+            const time = clock.getElapsedTime();
+
+            // Smooth interpolation for scroll (lerp)
+            scrollPercent += (targetScrollPercent - scrollPercent) * 0.05;
+            
+            // Map scroll (0 to 1) to Shader State (0 to 3)
+            const shaderState = scrollPercent * 3.0;
+            material.uniforms.uState.value = shaderState;
+            material.uniforms.uTime.value = time;
+            
+            // Decay scroll speed effect
+            scrollSpeed = Math.max(0, scrollSpeed - delta * 2.0);
+            material.uniforms.uScrollSpeed.value = scrollSpeed;
+
+            // Smooth mouse follow (parallax)
+            mouse.x += (targetMouse.x - mouse.x) * 0.05;
+            mouse.y += (targetMouse.y - mouse.y) * 0.05;
+            
+            // Rotate particles based on state and mouse
+            particles.rotation.y = time * 0.1 + mouse.x * 0.5;
+            particles.rotation.x = mouse.y * 0.2;
+
+            // Adjust camera z slightly based on state (zoom in for ApeX, out for swarm)
+            let targetZ = 8;
+            if (shaderState > 0.5 && shaderState < 1.5) targetZ = 6; // Close in on pain
+            if (shaderState > 2.5) targetZ = 10; // Zoom out for swarm
+            camera.position.z += (targetZ - camera.position.z) * 0.05;
+
+            // UI HUD Updates
+            document.getElementById('progress-fill').style.height = `${scrollPercent * 100}%`;
+            document.getElementById('hud-data').innerText = `${(scrollPercent * 100).toFixed(2)}%`;
+            
+            const stateIndex = Math.min(3, Math.floor(shaderState));
+            const statusEl = document.getElementById('hud-status');
+            statusEl.innerText = statuses[stateIndex];
+            if(stateIndex === 1) statusEl.className = "text-accent-red font-bold animate-pulse";
+            else if(stateIndex === 2) statusEl.className = "text-accent-blue font-bold";
+            else if(stateIndex === 3) statusEl.className = "text-accent-gold font-bold";
+            else statusEl.className = "text-white";
+
+            document.getElementById('hud-morph').innerText = morphs[stateIndex];
+
+            renderer.render(scene, camera);
+        }
+
+        // Initialize empty state to prevent jump on start
+        renderer.render(scene, camera);
+        animate();
+
+    </script>
+</body>
+</html>

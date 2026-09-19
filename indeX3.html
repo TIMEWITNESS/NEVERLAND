@@ -77,7 +77,9 @@
         .quest-complete-animation {
             animation: questComplete 0.5s ease-in-out;
         }
-
+button {
+    touch-action: manipulation;
+}
         .fade-in-up {
             animation: fadeInUp 0.3s ease-out;
         }
@@ -255,6 +257,17 @@
             <button id="btn-down" class="bg-gray-900 hover:bg-gray-800 border border-cyan-400 rounded-lg flex items-center justify-center text-cyan-300 font-extrabold active:bg-cyan-600 text-sm transition">▼</button>
             <button id="btn-right" class="bg-gray-900 hover:bg-gray-800 border border-cyan-400 rounded-lg flex items-center justify-center text-cyan-300 font-extrabold active:bg-cyan-600 text-sm transition">▶</button>
         </div>
+        <!-- ACTION BUTTONS FOR TOUCH -->
+<div class="flex gap-2 items-center">
+    <button id="btn-continue" 
+            class="bg-yellow-950 hover:bg-yellow-900 border border-yellow-400 rounded-lg px-3 py-2 text-yellow-300 font-bold text-xs active:scale-95 shadow-md transition">
+        💬 CONTINUE
+    </button>
+    <button id="btn-interact" 
+            class="bg-green-950 hover:bg-green-900 border border-green-400 rounded-lg px-3 py-2 text-green-300 font-bold text-xs active:scale-95 shadow-md transition">
+        ✋ INTERACT
+    </button>
+</div>
     </footer>
 
     <script>
@@ -463,7 +476,7 @@
             debateCount: 0
         };
 
-        let camera = { x: 0, y: 0, zoom: 1.35 };
+        let camera = { x: 0, y: 0, zoom: 1.0 }; // reduced zoom for wider view
         let stats = { o2: 100, shield: 90, energy: 100, carrots: 2, water: 100, script: 0 };
         
         // Dialogue Trees
@@ -585,7 +598,7 @@
             const k = e.key.toLowerCase();
             keys[k] = true;
             if (e.code) keys[e.code.toLowerCase()] = true;
-            if (e.key === ' ' && isDialogueActive) {
+            if (e.key === ' ' && isDialogueActive && !choicesVisible) {
                 e.preventDefault();
                 advanceDialogue();
             }
@@ -619,10 +632,33 @@
         setupTouchButton('btn-left', 'a');
         setupTouchButton('btn-right', 'd');
 
+        // Action buttons (continue dialogue and interact)
+function setupActionButton(id, actionType) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const activate = (e) => {
+        e.preventDefault();
+        playSynthTone(500, 'triangle', 0.05);
+        if (actionType === 'continue') {
+            handleContinue();
+        } else if (actionType === 'interact') {
+            checkInteraction();
+        }
+    };
+    btn.addEventListener('touchstart', activate, {passive: false});
+    btn.addEventListener('mousedown', activate);
+    btn.addEventListener('mouseup', (e) => e.preventDefault());
+    btn.addEventListener('mouseleave', (e) => e.preventDefault());
+}
+
+setupActionButton('btn-continue', 'continue');
+setupActionButton('btn-interact', 'interact');
+
         // Dialogue System
         let dialogueQueue = [];
         let dialogueIndex = 0;
         let isDialogueActive = false;
+        let choicesVisible = false; // NEW: track if choices are currently shown
 
         function startDialogue(customQueue, choices = null) {
             dialogueQueue = customQueue;
@@ -630,11 +666,11 @@
             isDialogueActive = true;
             document.getElementById('novel-modal').classList.remove('hidden');
             document.getElementById('novel-modal').classList.add('flex');
-            renderCurrentDialogue(choices);
+            renderCurrentDialogue();
             playSynthTone(550, 'square', 0.1);
         }
 
-        function renderCurrentDialogue(choices = null) {
+        function renderCurrentDialogue() {
             if (dialogueIndex >= dialogueQueue.length) {
                 closeDialogue();
                 return;
@@ -648,14 +684,15 @@
             const currentChapter = storyChapters.find(ch => ch.activated && !ch.completed);
             document.getElementById('chapter-indicator').innerText = currentChapter ? `📖 ${currentChapter.title}` : '';
             
-            // Render choices
+            // Render choices if the node has any
             const choicesContainer = document.getElementById('dialogue-choices');
             choicesContainer.innerHTML = '';
             const continuePrompt = document.getElementById('continue-prompt');
             
-            if (choices && choices.length > 0) {
+            if (d.choices && d.choices.length > 0) {
+                choicesVisible = true;
                 continuePrompt.classList.add('hidden');
-                choices.forEach((choice, index) => {
+                d.choices.forEach((choice, index) => {
                     const button = document.createElement('button');
                     button.className = 'dialogue-choice p-2 bg-pink-950/50 hover:bg-pink-900 border border-pink-500/50 rounded-lg text-left text-xs text-pink-200 transition';
                     button.innerHTML = `[${index + 1}] ${choice.text}`;
@@ -667,18 +704,24 @@
                             return;
                         }
                         dialogueIndex = choice.nextNode;
-                        renderCurrentDialogue(null);
+                        renderCurrentDialogue();
                     };
                     choicesContainer.appendChild(button);
                 });
             } else {
+                choicesVisible = false;
                 continuePrompt.classList.remove('hidden');
             }
         }
-
+ function handleContinue() {
+    if (isDialogueActive && !choicesVisible) {
+        advanceDialogue();
+    }
+}
         function advanceDialogue() {
+            if (choicesVisible) return; // safety, shouldn't be called when choices visible
             dialogueIndex++;
-            renderCurrentDialogue(null);
+            renderCurrentDialogue();
             playSynthTone(650, 'sine', 0.08);
         }
 
@@ -686,6 +729,7 @@
             document.getElementById('novel-modal').classList.add('hidden');
             document.getElementById('novel-modal').classList.remove('flex');
             isDialogueActive = false;
+            choicesVisible = false;
         }
 
         // Quest System
@@ -735,7 +779,6 @@
                 quest.progress = quest.target;
                 playQuestCompleteSound();
                 
-                // Show completion notification
                 const notification = document.createElement('div');
                 notification.className = 'fixed top-20 right-4 glass-panel neon-glow p-4 rounded-lg z-50 quest-complete-animation';
                 notification.innerHTML = `
@@ -967,48 +1010,79 @@
             ctx.save();
             ctx.translate(x, y);
             ctx.shadowBlur = 18;
-            ctx.shadowColor = '#00f0ff';
+            ctx.shadowColor = '#ff00ff'; // rainbow glow effect
 
-            // Hacker Ears
-            ctx.fillStyle = '#e0f2fe';
+            // Hacker Ears - rainbow gradient
+            const earGradient1 = ctx.createLinearGradient(-8, -54, -8, -14);
+            earGradient1.addColorStop(0, '#ff0000');
+            earGradient1.addColorStop(0.5, '#00ff00');
+            earGradient1.addColorStop(1, '#0000ff');
+            ctx.fillStyle = earGradient1;
             ctx.beginPath();
             ctx.ellipse(-8, -34, 6, 20, -0.1, 0, Math.PI * 2);
+            ctx.fill();
+            const earGradient2 = ctx.createLinearGradient(8, -54, 8, -14);
+            earGradient2.addColorStop(0, '#ffff00');
+            earGradient2.addColorStop(0.5, '#ff00ff');
+            earGradient2.addColorStop(1, '#00ffff');
+            ctx.fillStyle = earGradient2;
+            ctx.beginPath();
             ctx.ellipse(8, -34, 6, 20, 0.1, 0, Math.PI * 2);
             ctx.fill();
 
-            ctx.fillStyle = '#f472b6';
+            // Inner ears - pink/purple shimmer
+            ctx.fillStyle = '#ff69b4';
             ctx.beginPath();
             ctx.ellipse(-8, -34, 2.5, 12, -0.1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#da70d6';
+            ctx.beginPath();
             ctx.ellipse(8, -34, 2.5, 12, 0.1, 0, Math.PI * 2);
             ctx.fill();
 
-            // Head / Helmet
-            ctx.fillStyle = '#0284c7';
+            // Head / Helmet - rainbow gradient
+            const headGradient = ctx.createRadialGradient(0, -14, 0, 0, -14, 15);
+            headGradient.addColorStop(0, '#ff0000');
+            headGradient.addColorStop(0.2, '#ff8c00');
+            headGradient.addColorStop(0.4, '#ffff00');
+            headGradient.addColorStop(0.6, '#00ff00');
+            headGradient.addColorStop(0.8, '#0000ff');
+            headGradient.addColorStop(1, '#8b00ff');
+            ctx.fillStyle = headGradient;
             ctx.beginPath();
             ctx.arc(0, -14, 15, 0, Math.PI * 2);
             ctx.fill();
 
-            // Neon Visor
-            ctx.fillStyle = '#00f0ff';
+            // Neon Visor - now rainbow glitch
+            ctx.fillStyle = '#ffffff';
             ctx.fillRect(-10, -18, 20, 7);
+            ctx.fillStyle = '#ff00ff';
+            ctx.fillRect(-10, -18, 20, 3);
+            ctx.fillStyle = '#00ffff';
+            ctx.fillRect(-10, -15, 20, 2);
 
-            // Jacket Body
-            ctx.fillStyle = '#0369a1';
-            ctx.fillRect(-13, 1, 26, 24);
-            ctx.fillStyle = '#38bdf8';
-            ctx.fillRect(-3, 1, 6, 24);
+            // Jacket Body - rainbow vertical stripes
+            for (let i = 0; i < 26; i++) {
+                const hue = (i / 26) * 360;
+                ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
+                ctx.fillRect(-13 + i, 1, 1, 24);
+            }
 
-            // Limbs
-            ctx.fillStyle = '#0284c7';
+            // Limbs - rainbow
+            ctx.fillStyle = '#ff0000';
             ctx.fillRect(-18, 4, 5, 16);
+            ctx.fillStyle = '#00ff00';
             ctx.fillRect(13, 4, 5, 16);
+            ctx.fillStyle = '#0000ff';
             ctx.fillRect(-10, 25, 8, 14);
+            ctx.fillStyle = '#ffff00';
             ctx.fillRect(2, 25, 8, 14);
 
             ctx.restore();
         }
 
         function drawBoredApe(x, y) {
+            // Ape drawing unchanged (not rainbow) but can be left as is
             ctx.save();
             ctx.translate(x, y);
             ctx.shadowBlur = 18;
@@ -1242,9 +1316,9 @@
             });
             
             const prompt = document.getElementById('interaction-prompt');
-            if (nearInteractive && !prompt.classList.contains('hidden') === false) {
+            if (nearInteractive && prompt.classList.contains('hidden')) {
                 prompt.classList.remove('hidden');
-            } else if (!nearInteractive) {
+            } else if (!nearInteractive && !prompt.classList.contains('hidden')) {
                 prompt.classList.add('hidden');
             }
         }
@@ -1343,10 +1417,10 @@
                 ]);
             }, 1000);
             
-            // Trigger first meeting dialogue after 3 seconds
+            // Trigger first meeting dialogue after 5 seconds (only if not already active)
             setTimeout(() => {
                 if (!isDialogueActive) {
-                    startDialogue(dialogueTrees.firstMeeting.nodes, dialogueTrees.firstMeeting.nodes[0].choices);
+                    startDialogue(dialogueTrees.firstMeeting.nodes);
                 }
             }, 5000);
         };

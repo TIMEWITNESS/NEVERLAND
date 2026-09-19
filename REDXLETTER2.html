@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Der Rote Faden - Extended RPG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Press+Start+2P&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            touch-action: none; 
+            overflow: hidden;
+        }
+        .fairytale-font { font-family: 'Cinzel', serif; }
+        .pixel-font { font-family: 'Press Start 2P', monospace; }
+        
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.8); }
+        }
+        .glow-red { animation: pulseGlow 3s infinite; }
+        
+        /* CRT Effect */
+        .scanlines::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(to bottom, rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        canvas {
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        /* Battle shake */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .shake { animation: shake 0.5s; }
+        
+        /* Custom scrollbar for editors */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 flex flex-col items-center justify-center">
+
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-green-950/20 via-slate-950 to-slate-950 -z-10 pointer-events-none"></div>
+
+    <header class="w-full border-b border-green-900/30 bg-slate-900/80 backdrop-blur-md absolute top-0 z-40 px-4 py-2 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-full bg-red-900/40 border border-red-600 flex items-center justify-center shadow-lg">
+                <span class="text-xs">🐇</span>
+            </div>
+            <div>
+                <h1 class="fairytale-font text-sm md:text-base font-bold text-red-400 tracking-wider">Der Rote Faden <span class="text-green-500 text-xs pixel-font ml-2">v2.0</span></h1>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button id="btnDevMode" class="px-3 py-1 rounded bg-slate-800 border border-slate-600 text-[10px] md:text-xs font-medium text-slate-300 hover:bg-slate-700 transition flex items-center gap-2">
+                🛠️ Dev El Oper
+            </button>
+            <div class="px-3 py-1 rounded-full bg-green-900/30 border border-green-700/50 text-[10px] md:text-xs font-medium text-green-300 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>
+                25./26.08.2026
+            </div>
+        </div>
+    </header>
+
+    <main class="relative w-full max-w-5xl aspect-[16/9] md:aspect-[21/9] bg-black border border-green-900/50 shadow-2xl rounded-lg overflow-hidden scanlines mt-12 md:mt-0">
+        <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+        <!-- Start Screen -->
+        <div id="startScreen" class="absolute inset-0 bg-slate-950/90 z-30 flex flex-col items-center justify-center backdrop-blur-sm">
+            <h1 class="fairytale-font text-3xl md:text-5xl text-red-500 font-bold mb-4 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] text-center">Der Rote Faden</h1>
+            <p class="text-slate-300 text-sm md:text-base mb-2 max-w-lg text-center px-4">Ein Spaziergang durch den grünen Stadtgarten.</p>
+            <p class="text-slate-400 text-xs md:text-sm mb-8 max-w-lg text-center px-4 italic">"APEX hat sie zum Weinen gebracht, die Zeit rennt davon. Doch die Mission muss zu den Omas gegen Rechts. Finde die Telefonzelle..."</p>
+            <button id="startBtn" class="px-8 py-3 bg-red-700 hover:bg-red-600 text-white pixel-font text-xs rounded shadow-lg border border-red-400 transition transform hover:scale-105">
+                MISSION STARTEN
+            </button>
+            <p class="text-slate-500 text-[10px] mt-8 pixel-font">WASD/Pfeile + E/Space | Mobile Controls</p>
+        </div>
+
+        <!-- Dialogue Box -->
+        <div id="dialogueBox" class="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-3xl bg-slate-900/95 border-2 border-red-700 p-4 rounded-lg shadow-2xl z-20 hidden backdrop-blur-md">
+            <p id="dialogueText" class="text-slate-200 text-sm md:text-base leading-relaxed font-mono min-h-[60px]"></p>
+            <div class="mt-3 flex justify-end">
+                <span class="text-red-400 text-xs pixel-font animate-pulse">[AKTION] weiter</span>
+            </div>
+        </div>
+
+        <div id="battleUI" class="absolute inset-0 bg-black/80 z-20 hidden flex-col justify-between p-6 backdrop-blur-md">
+            <div class="text-center">
+                <h2 class="fairytale-font text-3xl text-red-500 mb-2">KONFRONTATION!</h2>
+                <p class="text-slate-300 text-sm font-mono" id="battleLog">Ein Zeiteinnehmer blockiert den Weg!</p>
+            </div>
+            
+            <div class="flex justify-between items-center w-full max-w-2xl mx-auto mt-8">
+                <!-- Player Side -->
+                <div class="text-center w-1/3">
+                    <div class="text-5xl mb-2" id="battlePlayerSprite">🐇</div>
+                    <p class="text-white font-bold mb-1">Witness X</p>
+                    <div class="w-full bg-slate-700 h-4 rounded border border-slate-500">
+                        <div id="playerHP" class="bg-green-500 h-full rounded" style="width: 100%"></div>
+                    </div>
+                </div>
+                
+                <div class="text-2xl font-bold text-red-500 fairytale-font">VS</div>
+                
+                <!-- Enemy Side -->
+                <div class="text-center w-1/3">
+                    <div class="text-5xl mb-2" id="battleEnemySprite">👾</div>
+                    <p class="text-white font-bold mb-1" id="enemyName">Zeiteinnehmer</p>
+                    <div class="w-full bg-slate-700 h-4 rounded border border-slate-500">
+                        <div id="enemyHP" class="bg-red-500 h-full rounded" style="width: 100%"></div>
+                    </div>
+                    <p class="text-xs text-red-300 mt-1">Ignoranz-Schild</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-10 max-w-3xl mx-auto w-full">
+                <button onclick="executeBattleAction('debate')" class="py-4 bg-blue-900/80 border-2 border-blue-500 rounded-xl hover:bg-blue-700 text-white font-bold font-mono text-sm shadow-[0_0_10px_rgba(59,130,246,0.5)]">🗣️ Fakten-Debatte</button>
+                <button onclick="executeBattleAction('dance')" class="py-4 bg-purple-900/80 border-2 border-purple-500 rounded-xl hover:bg-purple-700 text-white font-bold font-mono text-sm shadow-[0_0_10px_rgba(168,85,247,0.5)]">🕺 Tanz-Battle</button>
+                <button onclick="executeBattleAction('card')" class="py-4 bg-amber-900/80 border-2 border-amber-500 rounded-xl hover:bg-amber-700 text-white font-bold font-mono text-sm shadow-[0_0_10px_rgba(245,158,11,0.5)]">🃏 UNO Reverse</button>
+            </div>
+        </div>
+
+        <div id="devModeUI" class="absolute inset-0 bg-slate-950/95 z-50 hidden flex-col p-4 md:p-8 overflow-y-auto backdrop-blur-lg">
+            <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+                <div>
+                    <h2 class="fairytale-font text-2xl md:text-3xl text-green-400 font-bold">Dev El Oper Mode</h2>
+                    <p class="text-slate-400 text-xs font-mono">Willkommen in der Matrix, Bunny. Speicher deine Welt oder bearbeite Sprites.</p>
+                </div>
+                <button id="btnCloseDev" class="w-10 h-10 bg-red-900/50 hover:bg-red-700 rounded text-white font-bold">X</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Save/Load Section -->
+                <div class="bg-slate-900 p-6 rounded-xl border border-slate-700">
+                    <h3 class="text-lg text-white font-bold mb-4 font-mono">💾 I/O Pipeline</h3>
+                    <p class="text-xs text-slate-400 mb-4">Exportiere deine modifizierte Spielwelt als JSON, um sie später weiterzubearbeiten, oder lade ein bestehendes Backup. "Webpipelines not secure yet, deadline was 25th/26th..."</p>
+                    
+                    <div class="flex gap-4">
+                        <button onclick="exportGameData()" class="flex-1 py-3 bg-green-700 hover:bg-green-600 text-white rounded font-bold text-sm pixel-font">Export JSON</button>
+                        <div class="flex-1 relative">
+                            <input type="file" id="fileUpload" accept=".json" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="importGameData(event)">
+                            <div class="w-full h-full py-3 bg-slate-700 hover:bg-slate-600 text-white rounded font-bold text-sm pixel-font flex items-center justify-center">Import JSON</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sprite Editor -->
+                <div class="bg-slate-900 p-6 rounded-xl border border-slate-700 flex flex-col items-center">
+                    <h3 class="text-lg text-white font-bold mb-2 font-mono">🎨 8x8 Pixel Editor</h3>
+                    <p class="text-xs text-slate-400 mb-4 text-center">Bearbeite das Sprite der ausgewählten Entität. Klicke auf die Map (während DevMode an ist), um NPCs auszuwählen.</p>
+                    
+                    <div class="flex gap-6 items-start">
+                        <!-- Color Picker -->
+                        <div class="grid grid-cols-2 gap-2" id="colorPalette">
+                            <!-- Populated by JS -->
+                        </div>
+                        
+                        <!-- 8x8 Grid -->
+                        <div class="bg-black p-1 border-2 border-slate-600 rounded">
+                            <div id="pixelGrid" class="grid grid-cols-8 gap-[1px] bg-slate-800">
+                                <!-- 64 cells populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 flex gap-4 w-full">
+                        <button onclick="applySpriteEdit()" class="flex-1 py-2 bg-blue-700 hover:bg-blue-600 text-white rounded font-bold text-xs">Auf Entity anwenden</button>
+                    </div>
+                    <p id="devEditorTarget" class="text-xs text-yellow-400 mt-2 font-mono">Aktuelles Ziel: Nichts ausgewählt (Klicke im Spiel)</p>
+                </div>
+
+                <!-- Dialogue Editor -->
+                <div class="bg-slate-900 p-6 rounded-xl border border-slate-700 md:col-span-2">
+                    <h3 class="text-lg text-white font-bold mb-2 font-mono">💬 Dialog Editor</h3>
+                    <p class="text-xs text-slate-400 mb-2">Passe den Text für das ausgewählte Objekt an. Trenne mehrere Dialog-Boxen mit einem Zeilenumbruch (ENTER).</p>
+                    <textarea id="dialogueInput" class="w-full h-32 bg-black border border-slate-600 rounded p-3 text-slate-300 font-mono text-sm focus:outline-none focus:border-green-500" placeholder="Klicke auf einen NPC im Spiel, um dessen Dialog hier zu bearbeiten..."></textarea>
+                    <button onclick="applyDialogueEdit()" class="mt-4 px-6 py-2 bg-blue-700 hover:bg-blue-600 text-white rounded font-bold text-xs">Dialog Speichern</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="absolute bottom-4 left-4 grid grid-cols-3 gap-1 z-10 md:hidden opacity-60">
+            <div></div>
+            <button id="btnUp" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-lg flex justify-center items-center text-white active:bg-slate-600">▲</button>
+            <div></div>
+            <button id="btnLeft" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-lg flex justify-center items-center text-white active:bg-slate-600">◀</button>
+            <button id="btnDown" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-lg flex justify-center items-center text-white active:bg-slate-600">▼</button>
+            <button id="btnRight" class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-lg flex justify-center items-center text-white active:bg-slate-600">▶</button>
+        </div>
+        <div class="absolute bottom-4 right-4 z-10 md:hidden opacity-80">
+            <button id="btnAction" class="w-16 h-16 bg-red-700/80 border-2 border-red-500 rounded-full flex justify-center items-center text-white font-bold text-xl active:bg-red-500 pixel-font shadow-[0_0_15px_rgba(239,68,68,0.5)]">A</button>
+        </div>
+
+    </main>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[60] flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-green-700 rounded-2xl max-w-md w-full p-8 text-center space-y-6 shadow-2xl relative glow-red">
+            <div class="w-20 h-20 bg-green-900/40 border border-green-500 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner">
+                👵🛡️
+            </div>
+            <div>
+                <h3 class="fairytale-font text-2xl font-bold text-slate-100 mb-2">Nachricht Übermittelt!</h3>
+                <p class="text-sm text-slate-300 leading-relaxed font-mono">
+                    Trotz ablaufender Zeit am 25. August und technischer Hürden wurde das Signal über die Bücherzelle gesichert. Die <span class="text-red-400 font-bold">Omas gegen Rechts</span> haben das Datenpaket erhalten.
+                </p>
+                <p class="text-xs text-yellow-400 mt-4 italic">"Danke für deine Zivilcourage, Witness X."</p>
+            </div>
+            <button onclick="location.reload()" class="w-full py-3 mt-4 bg-green-700 hover:bg-green-600 text-white rounded-xl font-medium text-sm transition duration-200 pixel-font">
+                NOCHMAL SPIELEN
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        
+        // Resolution for crisp pixel art
+        const LOGICAL_WIDTH = 480;
+        const LOGICAL_HEIGHT = 270;
+        const TILE_SIZE = 16;
+        
+        function resizeCanvas() {
+            canvas.width = LOGICAL_WIDTH;
+            canvas.height = LOGICAL_HEIGHT;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        let gameState = 'START'; // START, PLAY, DIALOGUE, BATTLE, DEV, END
+        let lastTime = performance.now();
+        
+        // Input state
+        const keys = { w:false, a:false, s:false, d:false, arrowup:false, arrowdown:false, arrowleft:false, arrowright:false, e:false, space:false, actionPressed: false };
+        let actionJustPressed = false;
+        let mouseX = 0; let mouseY = 0; let mouseClicked = false;
+
+        window.addEventListener('keydown', (e) => {
+            if(gameState === 'DEV') return; // Ignore movement in dev mode
+            const k = e.key.toLowerCase();
+            if (keys.hasOwnProperty(k) || k === ' ') {
+                if(k === ' ') keys['space'] = true;
+                else keys[k] = true;
+                e.preventDefault();
+            }
+            if ((k === 'e' || k === ' ') && !keys.actionPressed) {
+                keys.actionPressed = true;
+                actionJustPressed = true;
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            if(gameState === 'DEV') return;
+            const k = e.key.toLowerCase();
+            if (keys.hasOwnProperty(k) || k === ' ') {
+                if(k === ' ') keys['space'] = false;
+                else keys[k] = false;
+            }
+            if (k === 'e' || k === ' ') keys.actionPressed = false;
+        });
+
+        // Mouse for Dev Mode click selection
+        canvas.addEventListener('mousedown', (e) => {
+            if(gameState !== 'DEV' && gameState !== 'PLAY') return;
+            const rect = canvas.getBoundingClientRect();
+            // Scale mouse coords to logical resolution
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            mouseX = (e.clientX - rect.left) * scaleX;
+            mouseY = (e.clientY - rect.top) * scaleY;
+            mouseClicked = true;
+        });
+
+        function setupTouchButton(id, keyMapping) {
+            const btn = document.getElementById(id);
+            if(!btn) return;
+            const press = (e) => {
+                e.preventDefault();
+                keyMapping.forEach(k => keys[k] = true);
+                if (keyMapping.includes('space') && !keys.actionPressed) {
+                    keys.actionPressed = true; actionJustPressed = true;
+                }
+            };
+            const release = (e) => {
+                e.preventDefault();
+                keyMapping.forEach(k => keys[k] = false);
+                if (keyMapping.includes('space')) keys.actionPressed = false;
+            };
+            btn.addEventListener('touchstart', press, {passive: false});
+            btn.addEventListener('touchend', release, {passive: false});
+        }
+        setupTouchButton('btnUp', ['w', 'arrowup']);
+        setupTouchButton('btnDown', ['s', 'arrowdown']);
+        setupTouchButton('btnLeft', ['a', 'arrowleft']);
+        setupTouchButton('btnRight', ['d', 'arrowright']);
+        setupTouchButton('btnAction', ['space', 'e']);
+
+        // Expanded Palette for Garden & City
+        const PALETTE = {
+            0: null, // transparent
+            1: '#ffffff', // white
+            2: '#ef4444', // red (cloak/phone booth)
+            3: '#22c55e', // bright green grass
+            4: '#166534', // dark green bush/tree
+            5: '#a855f7', // purple (enemies)
+            6: '#fbbf24', // yellow (sign)
+            7: '#27272a', // dark metal
+            8: '#a1a1aa', // light metal
+            9: '#1e293b', // pavement dark
+            10: '#475569',// pavement light
+            11: '#991b1b', // dark red
+            12: '#fb923c', // orange/skin
+            13: '#3b82f6', // blue (books/water)
+        };
+        const PALETTE_COLORS = Object.keys(PALETTE);
+
+        // Pre-defined Sprites
+        let SPRITES = {
+            player: [
+                [0,0,1,0,0,1,0,0],
+                [0,0,1,0,0,1,0,0],
+                [0,0,1,1,1,1,0,0],
+                [0,1,1,1,1,1,1,0],
+                [0,1,1,11,1,11,1,0], // Eyes
+                [0,1,1,1,1,1,1,0],
+                [2,2,2,2,2,2,2,2], // Red Cape
+                [2,2,2,2,2,2,2,2]
+            ],
+            npc_diverse_1: [
+                [0,0,0,0,0,0,0,0],
+                [0,0,12,12,12,12,0,0],
+                [0,12,12,10,12,10,0,0],
+                [0,0,12,12,12,12,0,0],
+                [0,13,13,13,13,13,13,0],
+                [0,13,13,13,13,13,13,0],
+                [0,0,10,10,10,10,0,0],
+                [0,0,10,0,0,10,0,0]
+            ],
+            npc_diverse_2: [
+                [0,0,0,11,11,0,0,0], // Hat
+                [0,0,12,12,12,12,0,0],
+                [0,12,12,9,12,9,0,0],
+                [0,0,12,12,12,12,0,0],
+                [0,3,3,3,3,3,3,0], // Green shirt
+                [0,3,3,3,3,3,3,0],
+                [0,0,9,9,9,9,0,0],
+                [0,0,9,0,0,9,0,0]
+            ],
+            enemy: [ // Time Eater
+                [0,0,5,5,5,0,0,0],
+                [0,5,5,5,5,5,0,0],
+                [5,5,0,5,0,5,5,0],
+                [5,5,5,5,5,5,5,0],
+                [0,5,5,5,5,5,0,0],
+                [0,5,0,0,0,5,0,0],
+                [5,5,0,0,0,5,5,0],
+                [0,0,0,0,0,0,0,0]
+            ],
+            phone_booth: [ // Red phone booth full of books
+                [2,2,2,2,2,2,2,2],
+                [2,1,1,2,1,1,2,2],
+                [2,13,13,2,6,1,2,2], // Books
+                [2,1,1,2,2,2,2,2],
+                [2,6,3,2,13,1,2,2], // Books
+                [2,1,1,2,1,1,2,2],
+                [2,2,2,2,2,2,2,2],
+                [2,2,2,2,2,2,2,2]
+            ],
+            mailbox: [
+                [6,6,6,6,6,6,6,6], // Yellow mailbox (German post)
+                [6,11,11,11,11,11,11,6],
+                [6,11,0,0,0,0,11,6], // Slot
+                [6,6,6,6,6,6,6,6],
+                [6,6,6,6,6,6,6,6],
+                [6,6,6,6,6,6,6,6],
+                [0,0,7,7,7,7,0,0],
+                [0,0,7,7,7,7,0,0]
+            ]
+        };
+
+        // Map: G=Grass, T=Tree/Bush, P=Path, M=Mailbox, B=PhoneBooth, 1=NPC1, 2=NPC2, E=Enemy, A=Animal, R=Player, S=Sign
+        // Top right area is a paved "Multiplayer Room" for Test Bots
+        let mapData = [
+            "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+            "TGGGGGGGGGGGGGGGGGGGGGGGGPPPPPPPPPPPPPPPPPPPPPPT",
+            "TGGAAGGGGGGGGGGGGGGGGGGGGPPPPPPPPPPPPPPPPPPPPPPT",
+            "TGGGGGGGTTTTGGGGGGGGGGGGGPP..Test-Bots Room..PPT",
+            "TGGGGGGGTPPTGGGGGGGGGGGGGPP..Multiplayer Mock.PT",
+            "TGGGGGGGTPPTGGGGAAGGGGGGGPPPPPPPPPP2PPP1PPPPPPPT",
+            "TGGGGGGGTPPTGGGGGGGGGGGGGPPPPPPPPPPPPPPPPPPPPPPT",
+            "TGG1GGGGTPPTGGGGGGGGGTTTTPPPPPPP1PPPPPPP2PPPPPPT",
+            "TGGSGGGGT2PTGGGGGGGGGTPPTTTTTTTTTTTTTTTTTTTTTTTT",
+            "TGGRGGGGTBPTGGGGGGGGGTPPPPPPPPPPPPPPPPPPPPPPPPPT",
+            "TGGGGGGGTPMTEGGGGGGGGTGGGGGGGGGGGGGGGGGGGGGGGGPT",
+            "TGGGGGGGTGGGGGGGGGGGGGGGGGGGGAGGGGGGGGGGGGGGGEPT",
+            "TTTTTTTTTTTTTTGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGPT",
+            "TGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGPT",
+            "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT"
+        ];
+        
+        let mapCols = mapData[0].length;
+        let mapRows = mapData.length;
+
+        // Player & Entities
+        let player = {
+            gridX: 0, gridY: 0, pixelX: 0, pixelY: 0, 
+            isMoving: false, dirX: 0, dirY: 0, speed: 0.1, facing: 'down'
+        };
+        
+        let entities = []; // { id, type, x, y, sprite, dialogues, emoji, roaming, moveTimer }
+        let nextEntityId = 1;
+
+        const animalsEmojis = ['🦆', '🐿️', '🦋', '🐇', '🦔'];
+        const botNames = ['TestBot Alpha', 'TestBot Beta', 'TestBot Gamma', 'Bot_404', 'APEX_Tears_01'];
+
+        function initWorld() {
+            entities = [];
+            for(let y=0; y<mapRows; y++){
+                for(let x=0; x<mapCols; x++){
+                    let tile = mapData[y][x];
+                    let spawnEntity = (type, sprite, dialogues, emoji=null, roaming=false) => {
+                        entities.push({
+                            id: nextEntityId++, type, x, y, sprite, dialogues, emoji, roaming, moveTimer: Math.random()*100
+                        });
+                        // Clear character from map to allow walking over that tile
+                        let row = mapData[y].split('');
+                        row[x] = (tile === 'P' || x > 25 && y < 9) ? 'P' : 'G'; 
+                        mapData[y] = row.join('');
+                    };
+
+                    if(tile === 'R') {
+                        player.gridX = x; player.gridY = y;
+                        player.pixelX = x * TILE_SIZE; player.pixelY = y * TILE_SIZE;
+                        let row = mapData[y].split(''); row[x] = 'G'; mapData[y] = row.join('');
+                    } else if(tile === 'B') {
+                        spawnEntity('phone_booth', SPRITES.phone_booth, [
+                            "Eine rote englische Telefonzelle... aber sie ist voller Bücher!",
+                            "Ein öffentlicher Bücherschrank.",
+                            "Das perfekte Versteck für sensible Daten."
+                        ]);
+                    } else if(tile === 'M') {
+                        spawnEntity('mailbox', SPRITES.mailbox, [
+                            "<span class='text-red-400 font-bold'>&lt;[Schrödingers Briefkasten]&gt;</span>",
+                            "Sende die akkumulierten Beweise von Witness X an die Omas gegen Rechts.",
+                            "Möchtest du das Datenpaket jetzt übermitteln? [AKTION]"
+                        ]);
+                    } else if(tile === 'E') {
+                        spawnEntity('enemy', SPRITES.enemy, ["Halt! Zeiteinnehmer blockiert den Weg. (Kampf)"], null, true);
+                    } else if(tile === 'S') {
+                        spawnEntity('sign', null, ["Willkommen im Stadtgarten. Bitte Wege nicht verlassen."], '🪧');
+                    } else if(tile === 'A') {
+                        let randEmoji = animalsEmojis[Math.floor(Math.random() * animalsEmojis.length)];
+                        spawnEntity('animal', null, ["*Tierische Geräusche*"], randEmoji, true);
+                    } else if(tile === '1') {
+                        let isBotArea = x > 25 && y < 9;
+                        let name = isBotArea ? botNames[Math.floor(Math.random()*botNames.length)] : "Bürger";
+                        let text = isBotArea ? "Beep boop. Bunny hatte keine Zeit für echte Webpipelines." : "Ein schöner Tag im Park!";
+                        spawnEntity('npc', SPRITES.npc_diverse_1, [`<span class='text-blue-400'>[${name}]:</span><br>${text}`], null, true);
+                    } else if(tile === '2') {
+                        let isBotArea = x > 25 && y < 9;
+                        let name = isBotArea ? botNames[Math.floor(Math.random()*botNames.length)] : "Spaziergänger";
+                        let text = isBotArea ? "Die Deadline war der 25. oder 26. August. Ich bin nur ein Platzhalter-Bot." : "Hast du die Nachrichten über die AfD gesehen? Schrecklich.";
+                        spawnEntity('npc', SPRITES.npc_diverse_2, [`<span class='text-green-400'>[${name}]:</span><br>${text}`], null, true);
+                    }
+                }
+            }
+        }
+        initWorld();
+
+        let camera = { x: 0, y: 0, width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT };
+
+        function isWalkable(gx, gy) {
+            if(gx < 0 || gx >= mapCols || gy < 0 || gy >= mapRows) return false;
+            if(mapData[gy][gx] === 'T' || mapData[gy][gx] === '.') return false; // Tree or wall text
+            for(let e of entities) {
+                if(e.x === gx && e.y === gy && !e.roaming) return false; // Can't walk through static objects
+                // Note: allowing walking through roaming NPCs for less frustration, or block them? Let's block if exactly on tile.
+                if(e.x === gx && e.y === gy && (e.type === 'enemy' || e.type === 'phone_booth' || e.type === 'mailbox')) return false;
+            }
+            return true;
+        }
+
+        function drawSprite(spriteArray, px, py, scale) {
+            if(!spriteArray) return;
+            const pSize = scale / 8;
+            for(let r=0; r<8; r++){
+                for(let c=0; c<8; c++){
+                    const colCode = spriteArray[r][c];
+                    if(colCode !== 0) {
+                        ctx.fillStyle = PALETTE[colCode];
+                        ctx.fillRect(px + c * pSize, py + r * pSize, pSize, pSize);
+                    }
+                }
+            }
+        }
+
+        function drawWorld() {
+            ctx.fillStyle = '#0f172a'; // Background clear
+            ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+            
+            // Shake effect if battle
+            ctx.save();
+            if(gameState === 'BATTLE') {
+                ctx.translate((Math.random()-0.5)*4, (Math.random()-0.5)*4);
+            }
+            ctx.translate(-Math.floor(camera.x), -Math.floor(camera.y));
+
+            // Map
+            for(let y=0; y<mapRows; y++){
+                for(let x=0; x<mapCols; x++){
+                    let tile = mapData[y][x];
+                    let px = x * TILE_SIZE; let py = y * TILE_SIZE;
+
+                    if(px + TILE_SIZE < camera.x || px > camera.x + camera.width || py + TILE_SIZE < camera.y || py > camera.y + camera.height) continue;
+
+                    if(tile === 'T') {
+                        ctx.fillStyle = PALETTE[3]; // Grass base
+                        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                        ctx.fillStyle = PALETTE[4]; // Bush
+                        ctx.fillRect(px+2, py+2, TILE_SIZE-4, TILE_SIZE-4);
+                    } else if(tile === 'G') {
+                        ctx.fillStyle = PALETTE[3];
+                        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                        // Grass detail
+                        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                        if((x+y)%3===0) ctx.fillRect(px+4, py+4, 2, 4);
+                    } else if(tile === 'P') {
+                        ctx.fillStyle = PALETTE[10];
+                        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                        ctx.fillStyle = PALETTE[9];
+                        if((x+y)%2===0) ctx.fillRect(px+2, py+2, TILE_SIZE-4, TILE_SIZE-4);
+                    } else {
+                        // Floor text in mock room
+                        ctx.fillStyle = PALETTE[10];
+                        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
+
+            // Entities
+            // Sort by Y for simple depth
+            let renderList = [...entities, { type:'player', x: player.gridX, y: player.gridY, px: player.pixelX, py: player.pixelY }];
+            renderList.sort((a,b) => a.y - b.y);
+
+            for(let e of renderList) {
+                let px = e.px !== undefined ? e.px : e.x * TILE_SIZE;
+                let py = e.py !== undefined ? e.py : e.y * TILE_SIZE;
+                
+                if(e.type === 'player') {
+                    drawSprite(SPRITES.player, px, py, TILE_SIZE);
+                } else if(e.emoji) {
+                    ctx.font = `${TILE_SIZE - 2}px Inter`;
+                    ctx.fillText(e.emoji, px, py + TILE_SIZE - 2);
+                } else {
+                    drawSprite(e.sprite, px, py, TILE_SIZE);
+                    // Selection highlight in Dev Mode
+                    if(gameState === 'DEV' && selectedEntity && selectedEntity.id === e.id) {
+                        ctx.strokeStyle = '#facc15'; // Yellow box
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(px, py, TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
+            ctx.restore();
+        }
+
+        let dialogueQueue = [];
+        let currentText = ""; let textIndex = 0; let typingTimer = 0;
+        let interactingEntity = null;
+        
+        function startDialogue(texts, entity) {
+            dialogueQueue = [...texts];
+            interactingEntity = entity;
+            gameState = 'DIALOGUE';
+            document.getElementById('dialogueBox').classList.remove('hidden');
+            advanceDialogue();
+        }
+
+        function advanceDialogue() {
+            if (dialogueQueue.length > 0) {
+                currentText = dialogueQueue.shift();
+                textIndex = 0;
+                document.getElementById('dialogueText').innerHTML = "";
+            } else {
+                // Post-dialogue actions
+                if(interactingEntity && interactingEntity.type === 'mailbox') {
+                    gameState = 'END';
+                    document.getElementById('dialogueBox').classList.add('hidden');
+                    document.getElementById('successModal').classList.remove('hidden');
+                } else if(interactingEntity && interactingEntity.type === 'enemy') {
+                    startBattle(interactingEntity);
+                } else {
+                    gameState = 'PLAY';
+                    document.getElementById('dialogueBox').classList.add('hidden');
+                }
+            }
+        }
+
+        function typeText() {
+            if (gameState !== 'DIALOGUE') return;
+            if (textIndex < currentText.length) {
+                document.getElementById('dialogueText').innerHTML = currentText.substring(0, textIndex + 1) + "<span class='animate-pulse'>_</span>";
+                textIndex++;
+            } else {
+                document.getElementById('dialogueText').innerHTML = currentText;
+            }
+        }
+
+        // Battle System Variables
+        let bPlayerHP = 100; let bEnemyHP = 100;
+        let currentEnemy = null;
+
+        function startBattle(enemy) {
+            gameState = 'BATTLE';
+            document.getElementById('dialogueBox').classList.add('hidden');
+            document.getElementById('battleUI').classList.remove('hidden');
+            document.getElementById('battleUI').classList.add('flex');
+            
+            bPlayerHP = 100; bEnemyHP = 100;
+            currentEnemy = enemy;
+            updateBattleUI("Ein Zeiteinnehmer stört den Verlauf! Setze Zivilcourage ein.");
+        }
+
+        function updateBattleUI(logMsg) {
+            document.getElementById('playerHP').style.width = bPlayerHP + '%';
+            document.getElementById('enemyHP').style.width = bEnemyHP + '%';
+            document.getElementById('battleLog').innerHTML = logMsg;
+            
+            if(bPlayerHP <= 0) {
+                setTimeout(() => { alert("Der Zeiteinnehmer hat dich blockiert. Lade neu."); location.reload(); }, 1000);
+            } else if (bEnemyHP <= 0) {
+                document.getElementById('battleLog').innerHTML = "Sieg! Der Zeiteinnehmer weicht zurück.";
+                setTimeout(() => {
+                    // Remove enemy
+                    entities = entities.filter(e => e.id !== currentEnemy.id);
+                    document.getElementById('battleUI').classList.add('hidden');
+                    document.getElementById('battleUI').classList.remove('flex');
+                    gameState = 'PLAY';
+                }, 1500);
+            }
+        }
+
+        function executeBattleAction(type) {
+            if(bPlayerHP <= 0 || bEnemyHP <= 0) return;
+            
+            let dmg = 0; let msg = "";
+            if(type === 'debate') {
+                dmg = 30 + Math.random()*20;
+                msg = "Du nennst unumstößliche Fakten! Ignoranz des Gegners sinkt.";
+            } else if(type === 'dance') {
+                dmg = 15;
+                bPlayerHP = Math.min(100, bPlayerHP + 20);
+                msg = "Ein geschickter Move! Du regenerierst Energie und verwirrst den Gegner.";
+            } else if(type === 'card') {
+                dmg = Math.random() > 0.5 ? 60 : 10;
+                msg = dmg > 40 ? "Kritischer Treffer mit der UNO Reverse Karte!" : "Die Karte hatte wenig Effekt.";
+            }
+
+            bEnemyHP -= dmg;
+            updateBattleUI(msg);
+            
+            // Enemy Turn
+            if(bEnemyHP > 0) {
+                setTimeout(() => {
+                    let eDmg = 15 + Math.random()*15;
+                    bPlayerHP -= eDmg;
+                    updateBattleUI("Der Zeiteinnehmer schreit rum und stört deine Konzentration! (Schaden erlitten)");
+                    document.getElementById('battleUI').classList.add('shake');
+                    setTimeout(() => document.getElementById('battleUI').classList.remove('shake'), 500);
+                }, 1000);
+            }
+        }
+
+        function triggerInteraction() {
+            let tx = player.gridX; let ty = player.gridY;
+            if(player.facing === 'up') ty--;
+            if(player.facing === 'down') ty++;
+            if(player.facing === 'left') tx--;
+            if(player.facing === 'right') tx++;
+
+            let targetEntity = entities.find(e => e.x === tx && e.y === ty);
+            if (targetEntity && targetEntity.dialogues && targetEntity.dialogues.length > 0) {
+                startDialogue(targetEntity.dialogues, targetEntity);
+            }
+        }
+
+        function updatePlay(dt) {
+            if (actionJustPressed && !player.isMoving) triggerInteraction();
+            actionJustPressed = false;
+
+            if (!player.isMoving) {
+                let dx = 0; let dy = 0;
+                if (keys.w || keys.arrowup) { dy = -1; player.facing = 'up'; }
+                else if (keys.s || keys.arrowdown) { dy = 1; player.facing = 'down'; }
+                else if (keys.a || keys.arrowleft) { dx = -1; player.facing = 'left'; }
+                else if (keys.d || keys.arrowright) { dx = 1; player.facing = 'right'; }
+
+                if ((dx !== 0 || dy !== 0) && isWalkable(player.gridX + dx, player.gridY + dy)) {
+                    player.gridX += dx; player.gridY += dy;
+                    player.isMoving = true; player.dirX = dx; player.dirY = dy;
+                }
+            }
+
+            if (player.isMoving) {
+                const targetPixelX = player.gridX * TILE_SIZE;
+                const targetPixelY = player.gridY * TILE_SIZE;
+                const speedPixels = TILE_SIZE * player.speed * (dt / 16.6);
+
+                let reachedX = false, reachedY = false;
+                if (player.dirX !== 0) {
+                    player.pixelX += player.dirX * speedPixels;
+                    if ((player.dirX > 0 && player.pixelX >= targetPixelX) || (player.dirX < 0 && player.pixelX <= targetPixelX)) {
+                        player.pixelX = targetPixelX; reachedX = true;
+                    }
+                } else reachedX = true;
+
+                if (player.dirY !== 0) {
+                    player.pixelY += player.dirY * speedPixels;
+                    if ((player.dirY > 0 && player.pixelY >= targetPixelY) || (player.dirY < 0 && player.pixelY <= targetPixelY)) {
+                        player.pixelY = targetPixelY; reachedY = true;
+                    }
+                } else reachedY = true;
+
+                if (reachedX && reachedY) player.isMoving = false;
+            }
+
+            // NPC Roaming Logic
+            for(let e of entities) {
+                if(e.roaming) {
+                    e.moveTimer -= dt;
+                    if(e.moveTimer <= 0) {
+                        e.moveTimer = 1000 + Math.random() * 2000;
+                        let dirs = [[0,1],[0,-1],[1,0],[-1,0]];
+                        let rDir = dirs[Math.floor(Math.random()*dirs.length)];
+                        if(isWalkable(e.x + rDir[0], e.y + rDir[1])) {
+                            // Don't walk onto player
+                            if(e.x + rDir[0] !== player.gridX || e.y + rDir[1] !== player.gridY) {
+                                e.x += rDir[0]; e.y += rDir[1];
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Camera follow
+            camera.x = player.pixelX + TILE_SIZE/2 - camera.width/2;
+            camera.y = player.pixelY + TILE_SIZE/2 - camera.height/2;
+            if(camera.x < 0) camera.x = 0; if(camera.y < 0) camera.y = 0;
+            if(camera.x > mapCols * TILE_SIZE - camera.width) camera.x = mapCols * TILE_SIZE - camera.width;
+            if(camera.y > mapRows * TILE_SIZE - camera.height) camera.y = mapRows * TILE_SIZE - camera.height;
+        }
+
+        let selectedEntity = null;
+        let devActiveColor = 1; // Default white
+
+        document.getElementById('btnDevMode').addEventListener('click', () => {
+            gameState = gameState === 'DEV' ? 'PLAY' : 'DEV';
+            const ui = document.getElementById('devModeUI');
+            if(gameState === 'DEV') {
+                ui.classList.remove('hidden'); ui.classList.add('flex');
+                initDevTools();
+            } else {
+                ui.classList.add('hidden'); ui.classList.remove('flex');
+                selectedEntity = null;
+            }
+        });
+        document.getElementById('btnCloseDev').addEventListener('click', () => document.getElementById('btnDevMode').click());
+
+        function initDevTools() {
+            // Build Color Palette UI
+            const palDiv = document.getElementById('colorPalette');
+            palDiv.innerHTML = '';
+            for(let key in PALETTE) {
+                if(PALETTE[key] === null) continue;
+                let btn = document.createElement('div');
+                btn.className = `w-6 h-6 rounded cursor-pointer border-2 ${devActiveColor == key ? 'border-yellow-400' : 'border-slate-800'}`;
+                btn.style.backgroundColor = PALETTE[key];
+                btn.onclick = () => {
+                    devActiveColor = key;
+                    initDevTools(); // re-render borders
+                };
+                palDiv.appendChild(btn);
+            }
+            // Clear grid if nothing selected
+            if(!selectedEntity) drawPixelEditorGrid(null);
+        }
+
+        function drawPixelEditorGrid(spriteData) {
+            const grid = document.getElementById('pixelGrid');
+            grid.innerHTML = '';
+            for(let r=0; r<8; r++){
+                for(let c=0; c<8; c++){
+                    let cell = document.createElement('div');
+                    cell.className = 'w-6 h-6 md:w-8 md:h-8 bg-slate-900 border border-slate-700/50 cursor-pointer';
+                    let colCode = spriteData ? spriteData[r][c] : 0;
+                    if(colCode !== 0) cell.style.backgroundColor = PALETTE[colCode];
+                    
+                    // Allow drawing by clicking
+                    cell.onmousedown = (e) => {
+                        if(!spriteData) return;
+                        e.preventDefault();
+                        spriteData[r][c] = parseInt(devActiveColor);
+                        drawPixelEditorGrid(spriteData); // Refresh
+                    };
+                    // Drag to draw (simple)
+                    cell.onmouseenter = (e) => {
+                        if(e.buttons === 1 && spriteData) { // Left click held
+                            spriteData[r][c] = parseInt(devActiveColor);
+                            drawPixelEditorGrid(spriteData);
+                        }
+                    }
+                    grid.appendChild(cell);
+                }
+            }
+        }
+
+        // Handle clicks in Dev mode to select entities
+        function handleDevClick() {
+            if(!mouseClicked || gameState !== 'DEV') return;
+            mouseClicked = false;
+            
+            // Convert screen mouse to world grid
+            let worldX = mouseX + camera.x;
+            let worldY = mouseY + camera.y;
+            let gridX = Math.floor(worldX / TILE_SIZE);
+            let gridY = Math.floor(worldY / TILE_SIZE);
+
+            selectedEntity = entities.find(e => e.x === gridX && e.y === gridY);
+            if(selectedEntity) {
+                document.getElementById('devEditorTarget').innerText = `Ausgewählt: ${selectedEntity.type} (ID: ${selectedEntity.id})`;
+                document.getElementById('dialogueInput').value = selectedEntity.dialogues ? selectedEntity.dialogues.join('\n') : "";
+                
+                // Clone sprite for editing to not instantly mutate global constants if shared
+                if(selectedEntity.sprite) {
+                    selectedEntity.editingSprite = JSON.parse(JSON.stringify(selectedEntity.sprite));
+                    drawPixelEditorGrid(selectedEntity.editingSprite);
+                } else {
+                    drawPixelEditorGrid(null);
+                }
+            } else {
+                document.getElementById('devEditorTarget').innerText = `Ausgewählt: Nichts (Boden)`;
+                document.getElementById('dialogueInput').value = "";
+                drawPixelEditorGrid(null);
+            }
+        }
+
+        function applySpriteEdit() {
+            if(selectedEntity && selectedEntity.editingSprite) {
+                selectedEntity.sprite = JSON.parse(JSON.stringify(selectedEntity.editingSprite));
+                alert("Sprite aktualisiert!");
+            }
+        }
+
+        function applyDialogueEdit() {
+            if(selectedEntity) {
+                let text = document.getElementById('dialogueInput').value;
+                selectedEntity.dialogues = text.split('\n').filter(l => l.trim().length > 0);
+                alert("Dialog aktualisiert!");
+            }
+        }
+
+        // Export/Import System (File creation inside browser)
+        function exportGameData() {
+            let data = {
+                map: mapData,
+                entities: entities,
+                playerState: { x: player.gridX, y: player.gridY }
+            };
+            let blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = url;
+            a.download = 'DerRoteFaden_Save.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importGameData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let data = JSON.parse(e.target.result);
+                    if(data.map && data.entities) {
+                        mapData = data.map;
+                        entities = data.entities;
+                        player.gridX = data.playerState.x; player.gridY = data.playerState.y;
+                        player.pixelX = player.gridX * TILE_SIZE; player.pixelY = player.gridY * TILE_SIZE;
+                        alert("Spieldaten erfolgreich geladen!");
+                    } else {
+                        alert("Ungültiges Speicherformat.");
+                    }
+                } catch(err) {
+                    alert("Fehler beim Lesen der JSON Datei.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function gameLoop(timestamp) {
+            let dt = timestamp - lastTime;
+            if (dt > 100) dt = 16;
+            lastTime = timestamp;
+
+            if (gameState === 'PLAY') {
+                updatePlay(dt);
+            } else if (gameState === 'DIALOGUE') {
+                typingTimer += dt;
+                if(typingTimer > 30) { typeText(); typingTimer = 0; }
+                if (actionJustPressed) {
+                    if (textIndex < currentText.length) {
+                        textIndex = currentText.length;
+                        document.getElementById('dialogueText').innerHTML = currentText;
+                    } else advanceDialogue();
+                }
+                actionJustPressed = false;
+            } else if (gameState === 'DEV') {
+                handleDevClick();
+            }
+
+            drawWorld();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            document.getElementById('startScreen').classList.add('hidden');
+            gameState = 'PLAY';
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        });
+
+    </script>
+</body>
+</html>

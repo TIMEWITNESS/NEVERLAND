@@ -13,6 +13,7 @@
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
+            touch-action: manipulation;
         }
         
         body {
@@ -69,6 +70,14 @@
             100% { transform: translate(0); }
         }
 
+        @keyframes auraPulse {
+            0% { filter: drop-shadow(0 0 10px #ff0000); }
+            25% { filter: drop-shadow(0 0 15px #00ff00); }
+            50% { filter: drop-shadow(0 0 20px #0000ff); }
+            75% { filter: drop-shadow(0 0 15px #ffff00); }
+            100% { filter: drop-shadow(0 0 10px #ff00ff); }
+        }
+
         .glass-panel {
             background: rgba(6, 6, 18, 0.96);
             backdrop-filter: blur(16px);
@@ -84,6 +93,10 @@
 
         .glitch-hover:hover {
             animation: glitchEffect 0.3s infinite;
+        }
+
+        .rainbow-aura {
+            animation: auraPulse 2s infinite;
         }
 
         ::-webkit-scrollbar {
@@ -110,6 +123,7 @@
         .dialogue-choice {
             transition: all 0.3s ease;
             cursor: pointer;
+            touch-action: manipulation;
         }
         
         .dialogue-choice:hover {
@@ -134,6 +148,10 @@
             z-index: 60;
             animation: fadeInUp 0.5s ease-out;
         }
+
+        button {
+            touch-action: manipulation;
+        }
     </style>
 </head>
 <body class="flex flex-col h-screen w-screen select-none relative">
@@ -146,6 +164,11 @@
             <h2 id="chapter-title" class="text-2xl md:text-4xl font-extrabold text-pink-400 glitch-text mb-2"></h2>
             <p id="chapter-subtitle" class="text-sm text-gray-300"></p>
         </div>
+    </div>
+
+    <!-- MINIMAP -->
+    <div id="minimap-container" class="absolute top-2 right-2 z-30 hidden md:block">
+        <canvas id="minimap" width="150" height="110" class="glass-panel neon-glow rounded-lg opacity-80"></canvas>
     </div>
 
     <!-- HEADER -->
@@ -246,7 +269,7 @@
             <button onclick="openCardModal()" class="px-3 py-2.5 bg-pink-950 hover:bg-pink-900 border border-pink-400 rounded-lg font-bold text-pink-300 text-xs active:scale-95 shadow-md transition">🃏 DEBATE CARDS</button>
         </div>
 
-        <!-- ERGONOMIC ON-SCREEN VIRTUAL D-PAD -->
+        <!-- MOVEMENT D-PAD -->
         <div class="grid grid-cols-3 gap-1.5 w-36 h-24 shrink-0">
             <div></div>
             <button id="btn-up" class="bg-gray-900 hover:bg-gray-800 border border-cyan-400 rounded-lg flex items-center justify-center text-cyan-300 font-extrabold active:bg-cyan-600 text-sm transition">▲</button>
@@ -254,6 +277,16 @@
             <button id="btn-left" class="bg-gray-900 hover:bg-gray-800 border border-cyan-400 rounded-lg flex items-center justify-center text-cyan-300 font-extrabold active:bg-cyan-600 text-sm transition">◀</button>
             <button id="btn-down" class="bg-gray-900 hover:bg-gray-800 border border-cyan-400 rounded-lg flex items-center justify-center text-cyan-300 font-extrabold active:bg-cyan-600 text-sm transition">▼</button>
             <button id="btn-right" class="bg-gray-900 hover:bg-gray-800 border border-cyan-400 rounded-lg flex items-center justify-center text-cyan-300 font-extrabold active:bg-cyan-600 text-sm transition">▶</button>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="flex gap-2 items-center">
+            <button id="btn-continue" class="bg-yellow-950 hover:bg-yellow-900 border border-yellow-400 rounded-lg px-3 py-2 text-yellow-300 font-bold text-xs active:scale-95 shadow-md transition">
+                💬 CONTINUE
+            </button>
+            <button id="btn-interact" class="bg-green-950 hover:bg-green-900 border border-green-400 rounded-lg px-3 py-2 text-green-300 font-bold text-xs active:scale-95 shadow-md transition">
+                ✋ INTERACT
+            </button>
         </div>
     </footer>
 
@@ -303,6 +336,8 @@
         // Canvas Setup
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const minimapCanvas = document.getElementById('minimap');
+        const minimapCtx = minimapCanvas.getContext('2d');
 
         const WORLD_WIDTH = 1800;
         const WORLD_HEIGHT = 1300;
@@ -443,6 +478,8 @@
         let activeDialogueChoices = [];
         let currentDialogueTree = null;
         let dialogueNodeIndex = 0;
+        let gaslightStormActive = false;
+        let gaslightStormTimer = 60; // seconds until next storm
 
         // Memory Fragment Locations
         const memoryFragments = [
@@ -459,11 +496,11 @@
             x: 1300, y: 350, width: 46, height: 60, speed: 2.2, 
             mood: 'BURNING STORM', weather: '🔥', 
             targetX: 1300, targetY: 350,
-            trust: 0, // -100 to 100
+            trust: 0,
             debateCount: 0
         };
 
-        let camera = { x: 0, y: 0, zoom: 1.35 };
+        let camera = { x: 0, y: 0, zoom: 0.85 }; // reduced further for wider view
         let stats = { o2: 100, shield: 90, energy: 100, carrots: 2, water: 100, script: 0 };
         
         // Dialogue Trees
@@ -585,7 +622,7 @@
             const k = e.key.toLowerCase();
             keys[k] = true;
             if (e.code) keys[e.code.toLowerCase()] = true;
-            if (e.key === ' ' && isDialogueActive) {
+            if (e.key === ' ' && isDialogueActive && !choicesVisible) {
                 e.preventDefault();
                 advanceDialogue();
             }
@@ -599,16 +636,25 @@
             if (e.code) keys[e.code.toLowerCase()] = false;
         });
 
+        // Touch / Pointer controls
         function setupTouchButton(id, keyName) {
             const btn = document.getElementById(id);
             if (!btn) return;
-            const activate = (e) => { e.preventDefault(); keys[keyName] = true; playSynthTone(400, 'triangle', 0.05); };
-            const deactivate = (e) => { e.preventDefault(); keys[keyName] = false; };
+            const activate = (e) => { 
+                e.preventDefault(); 
+                keys[keyName] = true; 
+                playSynthTone(400, 'triangle', 0.05); 
+            };
+            const deactivate = (e) => { 
+                e.preventDefault(); 
+                keys[keyName] = false; 
+            };
+            btn.addEventListener('pointerdown', activate);
+            btn.addEventListener('pointerup', deactivate);
+            btn.addEventListener('pointerleave', deactivate);
             btn.addEventListener('touchstart', activate, {passive: false});
             btn.addEventListener('touchend', deactivate, {passive: false});
-            btn.addEventListener('mousedown', activate);
-            btn.addEventListener('mouseup', deactivate);
-            btn.addEventListener('mouseleave', deactivate);
+            btn.addEventListener('touchcancel', deactivate, {passive: false});
         }
         setupTouchButton('btn-up', 'arrowup');
         setupTouchButton('btn-down', 'arrowdown');
@@ -619,22 +665,43 @@
         setupTouchButton('btn-left', 'a');
         setupTouchButton('btn-right', 'd');
 
+        // Action buttons (continue dialogue and interact)
+        function setupActionButton(id, actionType) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            const activate = (e) => {
+                e.preventDefault();
+                playSynthTone(500, 'triangle', 0.05);
+                if (actionType === 'continue') {
+                    handleContinue();
+                } else if (actionType === 'interact') {
+                    checkInteraction();
+                }
+            };
+            btn.addEventListener('pointerdown', activate);
+            btn.addEventListener('touchstart', activate, {passive: false});
+        }
+        setupActionButton('btn-continue', 'continue');
+        setupActionButton('btn-interact', 'interact');
+
         // Dialogue System
         let dialogueQueue = [];
         let dialogueIndex = 0;
         let isDialogueActive = false;
+        let choicesVisible = false;
 
-        function startDialogue(customQueue, choices = null) {
+        function startDialogue(customQueue) {
             dialogueQueue = customQueue;
             dialogueIndex = 0;
             isDialogueActive = true;
+            choicesVisible = false;
             document.getElementById('novel-modal').classList.remove('hidden');
             document.getElementById('novel-modal').classList.add('flex');
-            renderCurrentDialogue(choices);
+            renderCurrentDialogue();
             playSynthTone(550, 'square', 0.1);
         }
 
-        function renderCurrentDialogue(choices = null) {
+        function renderCurrentDialogue() {
             if (dialogueIndex >= dialogueQueue.length) {
                 closeDialogue();
                 return;
@@ -648,18 +715,20 @@
             const currentChapter = storyChapters.find(ch => ch.activated && !ch.completed);
             document.getElementById('chapter-indicator').innerText = currentChapter ? `📖 ${currentChapter.title}` : '';
             
-            // Render choices
+            // Render choices if the node has any
             const choicesContainer = document.getElementById('dialogue-choices');
             choicesContainer.innerHTML = '';
             const continuePrompt = document.getElementById('continue-prompt');
             
-            if (choices && choices.length > 0) {
+            if (d.choices && d.choices.length > 0) {
+                choicesVisible = true;
                 continuePrompt.classList.add('hidden');
-                choices.forEach((choice, index) => {
+                d.choices.forEach((choice, index) => {
                     const button = document.createElement('button');
                     button.className = 'dialogue-choice p-2 bg-pink-950/50 hover:bg-pink-900 border border-pink-500/50 rounded-lg text-left text-xs text-pink-200 transition';
                     button.innerHTML = `[${index + 1}] ${choice.text}`;
-                    button.onclick = () => {
+                    button.addEventListener('pointerdown', (e) => {
+                        e.preventDefault();
                         if (choice.effect) choice.effect();
                         playSynthTone(600, 'sine', 0.1);
                         if (choice.nextNode === -1) {
@@ -667,25 +736,37 @@
                             return;
                         }
                         dialogueIndex = choice.nextNode;
-                        renderCurrentDialogue(null);
-                    };
+                        renderCurrentDialogue();
+                    });
+                    button.addEventListener('click', (e) => {
+                        e.preventDefault();
+                    });
                     choicesContainer.appendChild(button);
                 });
             } else {
+                choicesVisible = false;
                 continuePrompt.classList.remove('hidden');
             }
         }
 
         function advanceDialogue() {
+            if (choicesVisible) return;
             dialogueIndex++;
-            renderCurrentDialogue(null);
+            renderCurrentDialogue();
             playSynthTone(650, 'sine', 0.08);
+        }
+
+        function handleContinue() {
+            if (isDialogueActive && !choicesVisible) {
+                advanceDialogue();
+            }
         }
 
         function closeDialogue() {
             document.getElementById('novel-modal').classList.add('hidden');
             document.getElementById('novel-modal').classList.remove('flex');
             isDialogueActive = false;
+            choicesVisible = false;
         }
 
         // Quest System
@@ -735,7 +816,6 @@
                 quest.progress = quest.target;
                 playQuestCompleteSound();
                 
-                // Show completion notification
                 const notification = document.createElement('div');
                 notification.className = 'fixed top-20 right-4 glass-panel neon-glow p-4 rounded-lg z-50 quest-complete-animation';
                 notification.innerHTML = `
@@ -748,6 +828,7 @@
                 
                 updateQuestCount();
                 checkStoryProgression();
+                saveGame();
             }
         }
 
@@ -759,6 +840,7 @@
                     completeQuest(questId);
                 }
                 updateQuestLog();
+                saveGame();
             }
         }
 
@@ -846,6 +928,7 @@
             
             document.getElementById('apex-status-badge').innerText = `ApeX: ${apex.mood} ${apex.weather}`;
             checkStoryProgression();
+            saveGame();
         }
 
         // Actions
@@ -901,6 +984,7 @@
                     ]);
                 }
             }
+            saveGame();
         }
 
         function checkInteraction() {
@@ -966,43 +1050,74 @@
         function drawBunnyX(x, y) {
             ctx.save();
             ctx.translate(x, y);
-            ctx.shadowBlur = 18;
-            ctx.shadowColor = '#00f0ff';
+            // Rainbow glow aura
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = `hsl(${(Date.now() / 10) % 360}, 100%, 50%)`;
 
-            // Hacker Ears
-            ctx.fillStyle = '#e0f2fe';
+            // Hacker Ears - rainbow gradient
+            const earGradient1 = ctx.createLinearGradient(-8, -54, -8, -14);
+            earGradient1.addColorStop(0, '#ff0000');
+            earGradient1.addColorStop(0.5, '#00ff00');
+            earGradient1.addColorStop(1, '#0000ff');
+            ctx.fillStyle = earGradient1;
             ctx.beginPath();
             ctx.ellipse(-8, -34, 6, 20, -0.1, 0, Math.PI * 2);
+            ctx.fill();
+            const earGradient2 = ctx.createLinearGradient(8, -54, 8, -14);
+            earGradient2.addColorStop(0, '#ffff00');
+            earGradient2.addColorStop(0.5, '#ff00ff');
+            earGradient2.addColorStop(1, '#00ffff');
+            ctx.fillStyle = earGradient2;
+            ctx.beginPath();
             ctx.ellipse(8, -34, 6, 20, 0.1, 0, Math.PI * 2);
             ctx.fill();
 
-            ctx.fillStyle = '#f472b6';
+            // Inner ears
+            ctx.fillStyle = '#ff69b4';
             ctx.beginPath();
             ctx.ellipse(-8, -34, 2.5, 12, -0.1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#da70d6';
+            ctx.beginPath();
             ctx.ellipse(8, -34, 2.5, 12, 0.1, 0, Math.PI * 2);
             ctx.fill();
 
-            // Head / Helmet
-            ctx.fillStyle = '#0284c7';
+            // Head / Helmet - rainbow gradient
+            const headGradient = ctx.createRadialGradient(0, -14, 0, 0, -14, 15);
+            headGradient.addColorStop(0, '#ff0000');
+            headGradient.addColorStop(0.2, '#ff8c00');
+            headGradient.addColorStop(0.4, '#ffff00');
+            headGradient.addColorStop(0.6, '#00ff00');
+            headGradient.addColorStop(0.8, '#0000ff');
+            headGradient.addColorStop(1, '#8b00ff');
+            ctx.fillStyle = headGradient;
             ctx.beginPath();
             ctx.arc(0, -14, 15, 0, Math.PI * 2);
             ctx.fill();
 
             // Neon Visor
-            ctx.fillStyle = '#00f0ff';
+            ctx.fillStyle = '#ffffff';
             ctx.fillRect(-10, -18, 20, 7);
+            ctx.fillStyle = '#ff00ff';
+            ctx.fillRect(-10, -18, 20, 3);
+            ctx.fillStyle = '#00ffff';
+            ctx.fillRect(-10, -15, 20, 2);
 
-            // Jacket Body
-            ctx.fillStyle = '#0369a1';
-            ctx.fillRect(-13, 1, 26, 24);
-            ctx.fillStyle = '#38bdf8';
-            ctx.fillRect(-3, 1, 6, 24);
+            // Jacket Body - rainbow vertical stripes
+            for (let i = 0; i < 26; i++) {
+                const hue = (i / 26) * 360;
+                ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
+                ctx.fillRect(-13 + i, 1, 1, 24);
+            }
 
             // Limbs
-            ctx.fillStyle = '#0284c7';
+            ctx.fillStyle = '#ff0000';
             ctx.fillRect(-18, 4, 5, 16);
+            ctx.fillStyle = '#00ff00';
             ctx.fillRect(13, 4, 5, 16);
+            ctx.fillStyle = '#0000ff';
             ctx.fillRect(-10, 25, 8, 14);
+            ctx.fillStyle = '#ffff00';
             ctx.fillRect(2, 25, 8, 14);
 
             ctx.restore();
@@ -1146,6 +1261,57 @@
             ctx.restore();
         }
 
+        // Minimap Drawing
+        function drawMinimap() {
+            minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+            
+            // Scale factor
+            const scaleX = minimapCanvas.width / WORLD_WIDTH;
+            const scaleY = minimapCanvas.height / WORLD_HEIGHT;
+            
+            // Draw rooms
+            rooms.forEach(room => {
+                minimapCtx.fillStyle = room.bgColor;
+                minimapCtx.fillRect(room.x * scaleX, room.y * scaleY, room.w * scaleX, room.h * scaleY);
+                minimapCtx.strokeStyle = '#ff4500';
+                minimapCtx.lineWidth = 1;
+                minimapCtx.strokeRect(room.x * scaleX, room.y * scaleY, room.w * scaleX, room.h * scaleY);
+            });
+            
+            // Draw furniture (as small dots)
+            minimapCtx.fillStyle = '#ffffff';
+            furniture.forEach(f => {
+                minimapCtx.fillRect((f.x + f.w/2) * scaleX - 1, (f.y + f.h/2) * scaleY - 1, 2, 2);
+            });
+            
+            // Draw memory fragments
+            memoryFragments.forEach(fragment => {
+                if (!fragment.found) {
+                    minimapCtx.fillStyle = '#ff00ff';
+                    minimapCtx.beginPath();
+                    minimapCtx.arc(fragment.x * scaleX, fragment.y * scaleY, 3, 0, Math.PI * 2);
+                    minimapCtx.fill();
+                }
+            });
+            
+            // Draw ApeX
+            minimapCtx.fillStyle = '#ff4500';
+            minimapCtx.beginPath();
+            minimapCtx.arc(apex.x * scaleX, apex.y * scaleY, 4, 0, Math.PI * 2);
+            minimapCtx.fill();
+            
+            // Draw BunnyX
+            minimapCtx.fillStyle = '#00f0ff';
+            minimapCtx.beginPath();
+            minimapCtx.arc(bunny.x * scaleX, bunny.y * scaleY, 4, 0, Math.PI * 2);
+            minimapCtx.fill();
+            
+            // Draw viewport rectangle
+            minimapCtx.strokeStyle = '#ffffff';
+            minimapCtx.lineWidth = 1;
+            minimapCtx.strokeRect(camera.x * scaleX, camera.y * scaleY, (canvas.width / camera.zoom) * scaleX, (canvas.height / camera.zoom) * scaleY);
+        }
+
         // Game Update & Render
         function updateGame() {
             if (isDialogueActive) return;
@@ -1222,6 +1388,33 @@
 
             if (stats.o2 > 0) stats.o2 -= 0.006;
 
+            // Gaslight storm timer
+            if (!gaslightStormActive) {
+                gaslightStormTimer -= 0.016; // roughly per frame
+                if (gaslightStormTimer <= 0) {
+                    gaslightStormActive = true;
+                    gaslightStormTimer = 60;
+                    // Visual effect: more particles, maybe screen shake
+                    for (let i = 0; i < 30; i++) {
+                        particles.push({
+                            x: Math.random() * WORLD_WIDTH,
+                            y: Math.random() * WORLD_HEIGHT,
+                            size: Math.random() * 4 + 2,
+                            speedY: Math.random() * -2 - 1,
+                            speedX: (Math.random() - 0.5) * 2,
+                            color: Math.random() > 0.5 ? '#ff007f' : '#ff4500'
+                        });
+                    }
+                    // Force card combat if ApeX is near
+                    if (Math.hypot(bunny.x - apex.x, bunny.y - apex.y) < 300) {
+                        openCardModal();
+                    }
+                    setTimeout(() => {
+                        gaslightStormActive = false;
+                    }, 5000);
+                }
+            }
+
             // Update HUD
             document.getElementById('o2-val').innerText = Math.max(0, Math.floor(stats.o2));
             document.getElementById('shield-val').innerText = Math.max(0, Math.floor(stats.shield));
@@ -1242,9 +1435,9 @@
             });
             
             const prompt = document.getElementById('interaction-prompt');
-            if (nearInteractive && !prompt.classList.contains('hidden') === false) {
+            if (nearInteractive && prompt.classList.contains('hidden')) {
                 prompt.classList.remove('hidden');
-            } else if (!nearInteractive) {
+            } else if (!nearInteractive && !prompt.classList.contains('hidden')) {
                 prompt.classList.add('hidden');
             }
         }
@@ -1320,18 +1513,54 @@
             drawBoredApe(apex.x, apex.y);
 
             ctx.restore();
+
+            // Draw Minimap
+            if (!document.getElementById('minimap-container').classList.contains('hidden')) {
+                drawMinimap();
+            }
         }
 
-        function gameLoop() {
-            updateGame();
-            drawGame();
-            requestAnimationFrame(gameLoop);
+        // Save/Load System
+        function saveGame() {
+            const gameState = {
+                bunny: bunny,
+                apex: apex,
+                stats: stats,
+                quests: quests,
+                memoryFragmentsCollected: memoryFragmentsCollected,
+                memoryFragments: memoryFragments,
+                storyChapters: storyChapters,
+                gaslightStormTimer: gaslightStormTimer
+            };
+            try {
+                localStorage.setItem('gaiaRabbitholeSave', JSON.stringify(gameState));
+            } catch (e) {}
+        }
+
+        function loadGame() {
+            try {
+                const saved = localStorage.getItem('gaiaRabbitholeSave');
+                if (saved) {
+                    const state = JSON.parse(saved);
+                    bunny = state.bunny || bunny;
+                    apex = state.apex || apex;
+                    stats = state.stats || stats;
+                    quests = state.quests || quests;
+                    memoryFragmentsCollected = state.memoryFragmentsCollected || 0;
+                    memoryFragments = state.memoryFragments || memoryFragments;
+                    storyChapters = state.storyChapters || storyChapters;
+                    gaslightStormTimer = state.gaslightStormTimer || 60;
+                    updateQuestCount();
+                    updateQuestLog();
+                }
+            } catch (e) {}
         }
 
         // Initialize Game
         window.onload = function() {
             resizeCanvas();
             updateQuestCount();
+            loadGame();
             gameLoop();
             
             // Start with intro dialogue
@@ -1343,13 +1572,19 @@
                 ]);
             }, 1000);
             
-            // Trigger first meeting dialogue after 3 seconds
+            // Trigger first meeting dialogue after 5 seconds (only if not already active)
             setTimeout(() => {
                 if (!isDialogueActive) {
-                    startDialogue(dialogueTrees.firstMeeting.nodes, dialogueTrees.firstMeeting.nodes[0].choices);
+                    startDialogue(dialogueTrees.firstMeeting.nodes);
                 }
             }, 5000);
         };
+
+        function gameLoop() {
+            updateGame();
+            drawGame();
+            requestAnimationFrame(gameLoop);
+        }
     </script>
 </body>
 </html>

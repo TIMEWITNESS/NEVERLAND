@@ -7,14 +7,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Inter:wght@400;600;800&display=swap');
-        
+
         * {
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
+            touch-action: manipulation;
         }
-        
+
         body {
             background-color: #020207;
             color: #00f0ff;
@@ -28,38 +29,27 @@
             height: 100%;
         }
 
-        .neon-glow {
-            border: 2px solid #00f0ff;
-            box-shadow: 0 0 20px rgba(0, 240, 255, 0.4), inset 0 0 10px rgba(0, 240, 255, 0.2);
-        }
-
-        .magenta-glow {
-            border: 2px solid #ff007f;
-            box-shadow: 0 0 20px rgba(255, 0, 127, 0.5), inset 0 0 10px rgba(255, 0, 127, 0.2);
-        }
-
+        .neon-glow { border: 2px solid #00f0ff; box-shadow: 0 0 20px rgba(0,240,255,0.4), inset 0 0 10px rgba(0,240,255,0.2); }
+        .magenta-glow { border: 2px solid #ff007f; box-shadow: 0 0 20px rgba(255,0,127,0.5), inset 0 0 10px rgba(255,0,127,0.2); }
         .fire-burn-glow {
             border: 2px solid #ff4500;
-            box-shadow: 0 0 25px rgba(255, 69, 0, 0.7), inset 0 0 15px rgba(255, 140, 0, 0.4);
+            box-shadow: 0 0 25px rgba(255,69,0,0.7), inset 0 0 15px rgba(255,140,0,0.4);
             animation: burnPulse 2s infinite alternate;
         }
 
         @keyframes burnPulse {
-            0% { box-shadow: 0 0 15px rgba(255, 69, 0, 0.5), inset 0 0 10px rgba(255, 69, 0, 0.2); }
-            100% { box-shadow: 0 0 30px rgba(255, 140, 0, 0.9), inset 0 0 20px rgba(255, 69, 0, 0.6); }
+            0% { box-shadow: 0 0 15px rgba(255,69,0,0.5), inset 0 0 10px rgba(255,69,0,0.2); }
+            100% { box-shadow: 0 0 30px rgba(255,140,0,0.9), inset 0 0 20px rgba(255,69,0,0.6); }
         }
-
         @keyframes questComplete {
             0% { transform: scale(1); }
             50% { transform: scale(1.1); }
             100% { transform: scale(1); }
         }
-
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
         @keyframes glitchEffect {
             0% { transform: translate(0); }
             20% { transform: translate(-2px, 2px); }
@@ -68,72 +58,36 @@
             80% { transform: translate(1px, 1px); }
             100% { transform: translate(0); }
         }
-
-        .glass-panel {
-            background: rgba(6, 6, 18, 0.96);
-            backdrop-filter: blur(16px);
+        @keyframes auraPulse {
+            0% { filter: drop-shadow(0 0 10px #ff0000); }
+            25% { filter: drop-shadow(0 0 15px #00ff00); }
+            50% { filter: drop-shadow(0 0 20px #0000ff); }
+            75% { filter: drop-shadow(0 0 15px #ffff00); }
+            100% { filter: drop-shadow(0 0 10px #ff00ff); }
         }
 
-        .quest-complete-animation {
-            animation: questComplete 0.5s ease-in-out;
-        }
+        .glass-panel { background: rgba(6,6,18,0.96); backdrop-filter: blur(16px); }
+        .quest-complete-animation { animation: questComplete 0.5s ease-in-out; }
+        .fade-in-up { animation: fadeInUp 0.3s ease-out; }
+        .glitch-hover:hover { animation: glitchEffect 0.3s infinite; }
+        .rainbow-aura { animation: auraPulse 2s infinite; }
 
-        .fade-in-up {
-            animation: fadeInUp 0.3s ease-out;
-        }
-
-        .glitch-hover:hover {
-            animation: glitchEffect 0.3s infinite;
-        }
-
-        ::-webkit-scrollbar {
-            width: 5px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #020207;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #ff4500;
-            border-radius: 3px;
-        }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #020207; }
+        ::-webkit-scrollbar-thumb { background: #ff4500; border-radius: 3px; }
 
         .crt-overlay {
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.3) 50%), linear-gradient(90deg, rgba(255,0,0,0.03), rgba(0,255,0,0.01), rgba(0,0,255,0.03));
             background-size: 100% 4px, 6px 100%;
             pointer-events: none;
         }
-
-        .glitch-text {
-            text-shadow: 2px 0 #ff007f, -2px 0 #00f0ff;
-        }
-
-        .dialogue-choice {
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .dialogue-choice:hover {
-            transform: translateX(10px);
-            background: rgba(255, 0, 127, 0.2);
-        }
-
-        .quest-log-enter {
-            animation: fadeInUp 0.3s ease-out;
-        }
-
-        .memory-fragment {
-            animation: burnPulse 3s infinite alternate;
-            cursor: pointer;
-        }
-
-        .chapter-banner {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 60;
-            animation: fadeInUp 0.5s ease-out;
-        }
+        .glitch-text { text-shadow: 2px 0 #ff007f, -2px 0 #00f0ff; }
+        .dialogue-choice { transition: all 0.3s ease; cursor: pointer; touch-action: manipulation; }
+        .dialogue-choice:hover { transform: translateX(10px); background: rgba(255,0,127,0.2); }
+        .quest-log-enter { animation: fadeInUp 0.3s ease-out; }
+        .memory-fragment { animation: burnPulse 3s infinite alternate; cursor: pointer; }
+        .chapter-banner { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 60; animation: fadeInUp 0.5s ease-out; }
+        button { touch-action: manipulation; }
     </style>
 </head>
 <body class="flex flex-col h-screen w-screen select-none relative">
@@ -146,6 +100,11 @@
             <h2 id="chapter-title" class="text-2xl md:text-4xl font-extrabold text-pink-400 glitch-text mb-2"></h2>
             <p id="chapter-subtitle" class="text-sm text-gray-300"></p>
         </div>
+    </div>
+
+    <!-- MINIMAP -->
+    <div id="minimap-container" class="absolute top-2 right-2 z-30 hidden md:block">
+        <canvas id="minimap" width="150" height="110" class="glass-panel neon-glow rounded-lg opacity-80"></canvas>
     </div>
 
     <!-- HEADER -->
@@ -188,8 +147,20 @@
             </div>
         </div>
 
+        <!-- FLOATING ACTION BUTTONS -->
+        <div class="absolute bottom-4 right-4 flex gap-2 z-30">
+            <button id="btn-continue" 
+                    class="bg-yellow-950/90 hover:bg-yellow-900 border border-yellow-400 rounded-lg px-4 py-3 text-yellow-300 font-bold text-sm active:scale-95 shadow-lg transition">
+                💬 CONTINUE
+            </button>
+            <button id="btn-interact" 
+                    class="bg-green-950/90 hover:bg-green-900 border border-green-400 rounded-lg px-4 py-3 text-green-300 font-bold text-sm active:scale-95 shadow-lg transition">
+                ✋ INTERACT
+            </button>
+        </div>
+
         <!-- DIALOGUE MODAL -->
-        <div id="novel-modal" class="absolute bottom-4 left-3 right-3 glass-panel magenta-glow p-4 rounded-xl z-35 flex flex-col gap-2 max-w-[750px] mx-auto shadow-2xl hidden">
+        <div id="novel-modal" onclick="handleContinue()" class="absolute bottom-4 left-3 right-3 glass-panel magenta-glow p-4 rounded-xl z-35 flex flex-col gap-2 max-w-[750px] mx-auto shadow-2xl hidden">
             <div class="flex items-center justify-between border-b border-pink-500/40 pb-1.5">
                 <div id="speaker-title" class="text-pink-400 font-extrabold tracking-wider text-xs md:text-sm flex items-center gap-2">
                     <span id="speaker-avatar" class="text-lg">🐵</span> 
@@ -246,7 +217,7 @@
             <button onclick="openCardModal()" class="px-3 py-2.5 bg-pink-950 hover:bg-pink-900 border border-pink-400 rounded-lg font-bold text-pink-300 text-xs active:scale-95 shadow-md transition">🃏 DEBATE CARDS</button>
         </div>
 
-        <!-- ERGONOMIC ON-SCREEN VIRTUAL D-PAD -->
+        <!-- MOVEMENT D-PAD -->
         <div class="grid grid-cols-3 gap-1.5 w-36 h-24 shrink-0">
             <div></div>
             <button id="btn-up" class="bg-gray-900 hover:bg-gray-800 border border-cyan-400 rounded-lg flex items-center justify-center text-cyan-300 font-extrabold active:bg-cyan-600 text-sm transition">▲</button>
@@ -262,16 +233,15 @@
         // GAIA-RABBITHOLE // FULL STORY & QUEST SYSTEM
         // ============================================
 
-        // Web Audio API Synthesizer
         let audioCtx = null;
         let combatMusicPlaying = false;
-        
+
         function initAudio() {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
         }
-        
+
         function playSynthTone(freq, type, duration) {
             try {
                 initAudio();
@@ -288,21 +258,22 @@
                 osc.stop(audioCtx.currentTime + duration);
             } catch (e) {}
         }
-        
+
         function playQuestCompleteSound() {
             playSynthTone(523, 'sine', 0.15);
             setTimeout(() => playSynthTone(659, 'sine', 0.15), 150);
             setTimeout(() => playSynthTone(784, 'sine', 0.3), 300);
         }
-        
+
         function playDangerSound() {
             playSynthTone(200, 'sawtooth', 0.3);
             setTimeout(() => playSynthTone(150, 'sawtooth', 0.3), 200);
         }
 
-        // Canvas Setup
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const minimapCanvas = document.getElementById('minimap');
+        const minimapCtx = minimapCanvas.getContext('2d');
 
         const WORLD_WIDTH = 1800;
         const WORLD_HEIGHT = 1300;
@@ -314,137 +285,32 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // ============================================
-        // STORY & QUEST SYSTEM
-        // ============================================
-        
         const storyChapters = [
-            {
-                id: 1,
-                title: "CHAPTER I: AWAKENING",
-                subtitle: "The simulation begins... but something feels wrong",
-                trigger: () => stats.script >= 10,
-                activated: false
-            },
-            {
-                id: 2,
-                title: "CHAPTER II: THE GASLIGHT PROTOCOL",
-                subtitle: "ApeX reveals his true nature",
-                trigger: () => stats.script >= 30,
-                activated: false
-            },
-            {
-                id: 3,
-                title: "CHAPTER III: MEMORY FRAGMENTS",
-                subtitle: "Pieces of a forgotten past emerge",
-                trigger: () => memoryFragmentsCollected >= 3,
-                activated: false
-            },
-            {
-                id: 4,
-                title: "CHAPTER IV: THE RESISTANCE",
-                subtitle: "Allies appear in unexpected places",
-                trigger: () => quests.find(q => q.id === 'lost_signal').completed,
-                activated: false
-            },
-            {
-                id: 5,
-                title: "CHAPTER V: THE FINAL DEBATE",
-                subtitle: "Everything comes to a head",
-                trigger: () => stats.script >= 80 && quests.find(q => q.id === 'escape_sim').completed,
-                activated: false
-            }
+            { id: 1, title: "CHAPTER I: AWAKENING", subtitle: "The simulation begins... but something feels wrong", trigger: () => stats.script >= 10, activated: false },
+            { id: 2, title: "CHAPTER II: THE GASLIGHT PROTOCOL", subtitle: "ApeX reveals his true nature", trigger: () => stats.script >= 30, activated: false },
+            { id: 3, title: "CHAPTER III: MEMORY FRAGMENTS", subtitle: "Pieces of a forgotten past emerge", trigger: () => memoryFragmentsCollected >= 3, activated: false },
+            { id: 4, title: "CHAPTER IV: THE RESISTANCE", subtitle: "Allies appear in unexpected places", trigger: () => quests.find(q => q.id === 'lost_signal').completed, activated: false },
+            { id: 5, title: "CHAPTER V: THE FINAL DEBATE", subtitle: "Everything comes to a head", trigger: () => stats.script >= 80 && quests.find(q => q.id === 'escape_sim').completed, activated: false }
         ];
 
         const quests = [
-            {
-                id: 'escape_sim',
-                title: "Escape the Simulation",
-                description: "Find a way out of the GAIA-RABBITHOLE",
-                progress: 0,
-                target: 100,
-                completed: false,
-                reward: "Unlock the true ending",
-                type: 'main'
-            },
-            {
-                id: 'apex_game',
-                title: "The AI's Game",
-                description: "Outsmart ApeX in debate combat",
-                progress: 0,
-                target: 3,
-                completed: false,
-                reward: "Special card: EMPATHY OVERRIDE",
-                type: 'side'
-            },
-            {
-                id: 'balcony_garden',
-                title: "The Balcony Garden",
-                description: "Regrow paradise in the digital wasteland",
-                progress: 0,
-                target: 5,
-                completed: false,
-                reward: "Passive O2 regeneration",
-                type: 'side'
-            },
-            {
-                id: 'lost_signal',
-                title: "The Lost Signal",
-                description: "Find the hidden resistance broadcast",
-                progress: 0,
-                target: 1,
-                completed: false,
-                reward: "Unlock Chapter IV",
-                type: 'main'
-            },
-            {
-                id: 'memory_keeper',
-                title: "The Memory Keeper",
-                description: "Collect all memory fragments",
-                progress: 0,
-                target: 5,
-                completed: false,
-                reward: "Discover the truth about BunnyX",
-                type: 'main'
-            },
-            {
-                id: 'kitchen_explorer',
-                title: "Kitchen Explorer",
-                description: "Investigate the frozen kitchen",
-                progress: 0,
-                target: 1,
-                completed: false,
-                reward: "Carrot stash location",
-                type: 'side'
-            },
-            {
-                id: 'bathroom_secrets',
-                title: "Bathroom Secrets",
-                description: "Find what's hidden in the bathroom",
-                progress: 0,
-                target: 1,
-                completed: false,
-                reward: "Water purification upgrade",
-                type: 'side'
-            },
-            {
-                id: 'apex_redemption',
-                title: "ApeX Redemption",
-                description: "Try to understand ApeX's true nature",
-                progress: 0,
-                target: 2,
-                completed: false,
-                reward: "Alternative ending",
-                type: 'side'
-            }
+            { id: 'escape_sim', title: "Escape the Simulation", description: "Find a way out of the GAIA-RABBITHOLE", progress: 0, target: 100, completed: false, reward: "Unlock the true ending", type: 'main' },
+            { id: 'apex_game', title: "The AI's Game", description: "Outsmart ApeX in debate combat", progress: 0, target: 3, completed: false, reward: "Special card: EMPATHY OVERRIDE", type: 'side' },
+            { id: 'balcony_garden', title: "The Balcony Garden", description: "Regrow paradise in the digital wasteland", progress: 0, target: 5, completed: false, reward: "Passive O2 regeneration", type: 'side' },
+            { id: 'lost_signal', title: "The Lost Signal", description: "Find the hidden resistance broadcast", progress: 0, target: 1, completed: false, reward: "Unlock Chapter IV", type: 'main' },
+            { id: 'memory_keeper', title: "The Memory Keeper", description: "Collect all memory fragments", progress: 0, target: 5, completed: false, reward: "Discover the truth about BunnyX", type: 'main' },
+            { id: 'kitchen_explorer', title: "Kitchen Explorer", description: "Investigate the frozen kitchen", progress: 0, target: 1, completed: false, reward: "Carrot stash location", type: 'side' },
+            { id: 'bathroom_secrets', title: "Bathroom Secrets", description: "Find what's hidden in the bathroom", progress: 0, target: 1, completed: false, reward: "Water purification upgrade", type: 'side' },
+            { id: 'apex_redemption', title: "ApeX Redemption", description: "Try to understand ApeX's true nature", progress: 0, target: 2, completed: false, reward: "Alternative ending", type: 'side' }
         ];
 
         let memoryFragmentsCollected = 0;
         let activeDialogueChoices = [];
         let currentDialogueTree = null;
         let dialogueNodeIndex = 0;
+        let gaslightStormActive = false;
+        let gaslightStormTimer = 60;
 
-        // Memory Fragment Locations
         const memoryFragments = [
             { x: 350, y: 250, found: false, title: "Fragment 1: The Beginning", text: "You remember a lab... scientists... the name 'Project Gaia'..." },
             { x: 950, y: 450, found: false, title: "Fragment 2: The Other", text: "ApeX wasn't always like this. He was your friend once..." },
@@ -453,20 +319,12 @@
             { x: 700, y: 1100, found: false, title: "Fragment 5: The Choice", text: "The exit was never physical. It's a choice. Always was..." }
         ];
 
-        // Player & AI State
         let bunny = { x: 900, y: 750, width: 36, height: 50, speed: 5 };
-        let apex = { 
-            x: 1300, y: 350, width: 46, height: 60, speed: 2.2, 
-            mood: 'BURNING STORM', weather: '🔥', 
-            targetX: 1300, targetY: 350,
-            trust: 0, // -100 to 100
-            debateCount: 0
-        };
+        let apex = { x: 1300, y: 350, width: 46, height: 60, speed: 2.2, mood: 'BURNING STORM', weather: '🔥', targetX: 1300, targetY: 350, trust: 0, debateCount: 0 };
 
-        let camera = { x: 0, y: 0, zoom: 1.35 };
+        let camera = { x: 0, y: 0, zoom: 0.75 }; // extra zoom out
         let stats = { o2: 100, shield: 90, energy: 100, carrots: 2, water: 100, script: 0 };
-        
-        // Dialogue Trees
+
         const dialogueTrees = {
             firstMeeting: {
                 nodes: [
@@ -538,7 +396,6 @@
             }
         };
 
-        // Rooms
         const rooms = [
             { name: "KITCHEN NODE", x: 100, y: 100, w: 700, h: 500, bgColor: '#141729', tileType: 'checkerboard', color1: '#1b223a', color2: '#0e1220' },
             { name: "APEX CAVE (BAYC)", x: 830, y: 100, w: 870, h: 500, bgColor: '#2e0a14', tileType: 'crimson_stone', color1: '#3d0e1c', color2: '#20050e' },
@@ -547,7 +404,6 @@
             { name: "BALCONY GARDEN", x: 1230, y: 630, w: 470, h: 570, bgColor: '#0e2418', tileType: 'stone_garden', color1: '#143322', color2: '#091710' }
         ];
 
-        // Furniture
         let furniture = [
             { type: 'fridge', x: 160, y: 150, w: 70, h: 100, label: 'Cooler Unit', interactive: true, questId: 'kitchen_explorer' },
             { type: 'sink', x: 280, y: 150, w: 80, h: 60, label: 'Kitchen Sink', interactive: true },
@@ -559,7 +415,6 @@
             { type: 'nutrient_box', x: 500, y: 220, w: 60, h: 60, label: 'Carrot Crate', interactive: true }
         ];
 
-        // Particles & Insects
         let particles = [];
         for (let i = 0; i < 60; i++) {
             particles.push({
@@ -579,13 +434,12 @@
             { type: 'fly', emoji: '🪰', x: 1300, y: 220, vx: -1.0, vy: -0.5 }
         ];
 
-        // Input Management
         let keys = {};
         window.addEventListener('keydown', e => {
             const k = e.key.toLowerCase();
             keys[k] = true;
             if (e.code) keys[e.code.toLowerCase()] = true;
-            if (e.key === ' ' && isDialogueActive) {
+            if (e.key === ' ' && isDialogueActive && !choicesVisible) {
                 e.preventDefault();
                 advanceDialogue();
             }
@@ -602,13 +456,21 @@
         function setupTouchButton(id, keyName) {
             const btn = document.getElementById(id);
             if (!btn) return;
-            const activate = (e) => { e.preventDefault(); keys[keyName] = true; playSynthTone(400, 'triangle', 0.05); };
-            const deactivate = (e) => { e.preventDefault(); keys[keyName] = false; };
+            const activate = (e) => { 
+                e.preventDefault(); 
+                keys[keyName] = true; 
+                playSynthTone(400, 'triangle', 0.05); 
+            };
+            const deactivate = (e) => { 
+                e.preventDefault(); 
+                keys[keyName] = false; 
+            };
+            btn.addEventListener('pointerdown', activate);
+            btn.addEventListener('pointerup', deactivate);
+            btn.addEventListener('pointerleave', deactivate);
             btn.addEventListener('touchstart', activate, {passive: false});
             btn.addEventListener('touchend', deactivate, {passive: false});
-            btn.addEventListener('mousedown', activate);
-            btn.addEventListener('mouseup', deactivate);
-            btn.addEventListener('mouseleave', deactivate);
+            btn.addEventListener('touchcancel', deactivate, {passive: false});
         }
         setupTouchButton('btn-up', 'arrowup');
         setupTouchButton('btn-down', 'arrowdown');
@@ -619,22 +481,43 @@
         setupTouchButton('btn-left', 'a');
         setupTouchButton('btn-right', 'd');
 
-        // Dialogue System
+        function setupActionButton(id, actionType) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            const activate = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                playSynthTone(500, 'triangle', 0.05);
+                if (actionType === 'continue') {
+                    handleContinue();
+                } else if (actionType === 'interact') {
+                    checkInteraction();
+                }
+            };
+            btn.addEventListener('pointerdown', activate);
+            btn.addEventListener('touchstart', activate, {passive: false});
+            btn.addEventListener('click', activate);
+        }
+        setupActionButton('btn-continue', 'continue');
+        setupActionButton('btn-interact', 'interact');
+
         let dialogueQueue = [];
         let dialogueIndex = 0;
         let isDialogueActive = false;
+        let choicesVisible = false;
 
-        function startDialogue(customQueue, choices = null) {
+        function startDialogue(customQueue) {
             dialogueQueue = customQueue;
             dialogueIndex = 0;
             isDialogueActive = true;
+            choicesVisible = false;
             document.getElementById('novel-modal').classList.remove('hidden');
             document.getElementById('novel-modal').classList.add('flex');
-            renderCurrentDialogue(choices);
+            renderCurrentDialogue();
             playSynthTone(550, 'square', 0.1);
         }
 
-        function renderCurrentDialogue(choices = null) {
+        function renderCurrentDialogue() {
             if (dialogueIndex >= dialogueQueue.length) {
                 closeDialogue();
                 return;
@@ -644,22 +527,23 @@
             document.getElementById('speaker-name').innerText = d.speaker;
             document.getElementById('dialogue-text').innerText = `"${d.text}"`;
             
-            // Update chapter indicator
             const currentChapter = storyChapters.find(ch => ch.activated && !ch.completed);
             document.getElementById('chapter-indicator').innerText = currentChapter ? `📖 ${currentChapter.title}` : '';
             
-            // Render choices
             const choicesContainer = document.getElementById('dialogue-choices');
             choicesContainer.innerHTML = '';
             const continuePrompt = document.getElementById('continue-prompt');
             
-            if (choices && choices.length > 0) {
+            if (d.choices && d.choices.length > 0) {
+                choicesVisible = true;
                 continuePrompt.classList.add('hidden');
-                choices.forEach((choice, index) => {
+                d.choices.forEach((choice, index) => {
                     const button = document.createElement('button');
                     button.className = 'dialogue-choice p-2 bg-pink-950/50 hover:bg-pink-900 border border-pink-500/50 rounded-lg text-left text-xs text-pink-200 transition';
                     button.innerHTML = `[${index + 1}] ${choice.text}`;
-                    button.onclick = () => {
+                    button.addEventListener('pointerdown', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         if (choice.effect) choice.effect();
                         playSynthTone(600, 'sine', 0.1);
                         if (choice.nextNode === -1) {
@@ -667,28 +551,40 @@
                             return;
                         }
                         dialogueIndex = choice.nextNode;
-                        renderCurrentDialogue(null);
-                    };
+                        renderCurrentDialogue();
+                    });
+                    button.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    });
                     choicesContainer.appendChild(button);
                 });
             } else {
+                choicesVisible = false;
                 continuePrompt.classList.remove('hidden');
             }
         }
 
         function advanceDialogue() {
+            if (choicesVisible) return;
             dialogueIndex++;
-            renderCurrentDialogue(null);
+            renderCurrentDialogue();
             playSynthTone(650, 'sine', 0.08);
+        }
+
+        function handleContinue() {
+            if (isDialogueActive && !choicesVisible) {
+                advanceDialogue();
+            }
         }
 
         function closeDialogue() {
             document.getElementById('novel-modal').classList.add('hidden');
             document.getElementById('novel-modal').classList.remove('flex');
             isDialogueActive = false;
+            choicesVisible = false;
         }
 
-        // Quest System
         function toggleQuestLog() {
             const modal = document.getElementById('quest-log-modal');
             if (modal.classList.contains('hidden')) {
@@ -735,7 +631,6 @@
                 quest.progress = quest.target;
                 playQuestCompleteSound();
                 
-                // Show completion notification
                 const notification = document.createElement('div');
                 notification.className = 'fixed top-20 right-4 glass-panel neon-glow p-4 rounded-lg z-50 quest-complete-animation';
                 notification.innerHTML = `
@@ -748,6 +643,7 @@
                 
                 updateQuestCount();
                 checkStoryProgression();
+                saveGame();
             }
         }
 
@@ -759,6 +655,7 @@
                     completeQuest(questId);
                 }
                 updateQuestLog();
+                saveGame();
             }
         }
 
@@ -787,7 +684,6 @@
             }, 3000);
         }
 
-        // Card Combat
         function openCardModal() {
             document.getElementById('card-modal').classList.remove('hidden');
             document.getElementById('card-modal').classList.add('flex');
@@ -846,9 +742,9 @@
             
             document.getElementById('apex-status-badge').innerText = `ApeX: ${apex.mood} ${apex.weather}`;
             checkStoryProgression();
+            saveGame();
         }
 
-        // Actions
         function triggerAction(action) {
             playSynthTone(500, 'sine', 0.1);
             if (action === 'code') {
@@ -901,10 +797,10 @@
                     ]);
                 }
             }
+            saveGame();
         }
 
         function checkInteraction() {
-            // Check furniture interactions
             furniture.forEach(f => {
                 const dist = Math.hypot(bunny.x - (f.x + f.w/2), bunny.y - (f.y + f.h/2));
                 if (dist < 80 && f.interactive) {
@@ -935,7 +831,6 @@
                 }
             });
             
-            // Check memory fragments
             memoryFragments.forEach(fragment => {
                 const dist = Math.hypot(bunny.x - fragment.x, bunny.y - fragment.y);
                 if (dist < 50 && !fragment.found) {
@@ -951,7 +846,6 @@
                 }
             });
             
-            // Check for lost signal
             if (Math.hypot(bunny.x - 1400, bunny.y - 200) < 100) {
                 updateQuestProgress('lost_signal', 1);
                 startDialogue([
@@ -962,47 +856,70 @@
             }
         }
 
-        // Drawing Functions
         function drawBunnyX(x, y) {
             ctx.save();
             ctx.translate(x, y);
-            ctx.shadowBlur = 18;
-            ctx.shadowColor = '#00f0ff';
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = `hsl(${(Date.now() / 10) % 360}, 100%, 50%)`;
 
-            // Hacker Ears
-            ctx.fillStyle = '#e0f2fe';
+            const earGradient1 = ctx.createLinearGradient(-8, -54, -8, -14);
+            earGradient1.addColorStop(0, '#ff0000');
+            earGradient1.addColorStop(0.5, '#00ff00');
+            earGradient1.addColorStop(1, '#0000ff');
+            ctx.fillStyle = earGradient1;
             ctx.beginPath();
             ctx.ellipse(-8, -34, 6, 20, -0.1, 0, Math.PI * 2);
+            ctx.fill();
+            const earGradient2 = ctx.createLinearGradient(8, -54, 8, -14);
+            earGradient2.addColorStop(0, '#ffff00');
+            earGradient2.addColorStop(0.5, '#ff00ff');
+            earGradient2.addColorStop(1, '#00ffff');
+            ctx.fillStyle = earGradient2;
+            ctx.beginPath();
             ctx.ellipse(8, -34, 6, 20, 0.1, 0, Math.PI * 2);
             ctx.fill();
 
-            ctx.fillStyle = '#f472b6';
+            ctx.fillStyle = '#ff69b4';
             ctx.beginPath();
             ctx.ellipse(-8, -34, 2.5, 12, -0.1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#da70d6';
+            ctx.beginPath();
             ctx.ellipse(8, -34, 2.5, 12, 0.1, 0, Math.PI * 2);
             ctx.fill();
 
-            // Head / Helmet
-            ctx.fillStyle = '#0284c7';
+            const headGradient = ctx.createRadialGradient(0, -14, 0, 0, -14, 15);
+            headGradient.addColorStop(0, '#ff0000');
+            headGradient.addColorStop(0.2, '#ff8c00');
+            headGradient.addColorStop(0.4, '#ffff00');
+            headGradient.addColorStop(0.6, '#00ff00');
+            headGradient.addColorStop(0.8, '#0000ff');
+            headGradient.addColorStop(1, '#8b00ff');
+            ctx.fillStyle = headGradient;
             ctx.beginPath();
             ctx.arc(0, -14, 15, 0, Math.PI * 2);
             ctx.fill();
 
-            // Neon Visor
-            ctx.fillStyle = '#00f0ff';
+            ctx.fillStyle = '#ffffff';
             ctx.fillRect(-10, -18, 20, 7);
+            ctx.fillStyle = '#ff00ff';
+            ctx.fillRect(-10, -18, 20, 3);
+            ctx.fillStyle = '#00ffff';
+            ctx.fillRect(-10, -15, 20, 2);
 
-            // Jacket Body
-            ctx.fillStyle = '#0369a1';
-            ctx.fillRect(-13, 1, 26, 24);
-            ctx.fillStyle = '#38bdf8';
-            ctx.fillRect(-3, 1, 6, 24);
+            for (let i = 0; i < 26; i++) {
+                const hue = (i / 26) * 360;
+                ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
+                ctx.fillRect(-13 + i, 1, 1, 24);
+            }
 
-            // Limbs
-            ctx.fillStyle = '#0284c7';
+            ctx.fillStyle = '#ff0000';
             ctx.fillRect(-18, 4, 5, 16);
+            ctx.fillStyle = '#00ff00';
             ctx.fillRect(13, 4, 5, 16);
+            ctx.fillStyle = '#0000ff';
             ctx.fillRect(-10, 25, 8, 14);
+            ctx.fillStyle = '#ffff00';
             ctx.fillRect(2, 25, 8, 14);
 
             ctx.restore();
@@ -1014,13 +931,11 @@
             ctx.shadowBlur = 18;
             ctx.shadowColor = '#ff4500';
 
-            // Ape Fur
             ctx.fillStyle = '#7c2d12';
             ctx.beginPath();
             ctx.roundRect(-20, -30, 40, 36, [12]);
             ctx.fill();
 
-            // Eyes & Cap
             ctx.fillStyle = '#fde047';
             ctx.fillRect(-16, -20, 32, 14);
             ctx.fillStyle = '#111';
@@ -1030,7 +945,6 @@
             ctx.fillRect(-9, -17, 4, 4);
             ctx.fillRect(5, -17, 4, 4);
 
-            // Snout
             ctx.fillStyle = '#fef08a';
             ctx.beginPath();
             ctx.ellipse(0, -6, 14, 9, 0, 0, Math.PI * 2);
@@ -1039,14 +953,12 @@
             ctx.fillRect(-4, -5, 3, 2);
             ctx.fillRect(1, -5, 3, 2);
 
-            // Punk Hat & Burning Ember
             ctx.fillStyle = '#dc2626';
             ctx.beginPath();
             ctx.arc(0, -30, 17, Math.PI, 0, false);
             ctx.fill();
             ctx.fillRect(-20, -30, 40, 6);
 
-            // Torso & Gold Chain
             ctx.fillStyle = '#572209';
             ctx.beginPath();
             ctx.roundRect(-20, 6, 40, 28, [8]);
@@ -1058,7 +970,6 @@
             ctx.arc(0, 12, 11, 0, Math.PI);
             ctx.stroke();
 
-            // Limbs
             ctx.fillStyle = '#572209';
             ctx.fillRect(-28, 8, 9, 26);
             ctx.fillRect(19, 8, 9, 26);
@@ -1146,7 +1057,48 @@
             ctx.restore();
         }
 
-        // Game Update & Render
+        function drawMinimap() {
+            minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+            const scaleX = minimapCanvas.width / WORLD_WIDTH;
+            const scaleY = minimapCanvas.height / WORLD_HEIGHT;
+            
+            rooms.forEach(room => {
+                minimapCtx.fillStyle = room.bgColor;
+                minimapCtx.fillRect(room.x * scaleX, room.y * scaleY, room.w * scaleX, room.h * scaleY);
+                minimapCtx.strokeStyle = '#ff4500';
+                minimapCtx.lineWidth = 1;
+                minimapCtx.strokeRect(room.x * scaleX, room.y * scaleY, room.w * scaleX, room.h * scaleY);
+            });
+            
+            minimapCtx.fillStyle = '#ffffff';
+            furniture.forEach(f => {
+                minimapCtx.fillRect((f.x + f.w/2) * scaleX - 1, (f.y + f.h/2) * scaleY - 1, 2, 2);
+            });
+            
+            memoryFragments.forEach(fragment => {
+                if (!fragment.found) {
+                    minimapCtx.fillStyle = '#ff00ff';
+                    minimapCtx.beginPath();
+                    minimapCtx.arc(fragment.x * scaleX, fragment.y * scaleY, 3, 0, Math.PI * 2);
+                    minimapCtx.fill();
+                }
+            });
+            
+            minimapCtx.fillStyle = '#ff4500';
+            minimapCtx.beginPath();
+            minimapCtx.arc(apex.x * scaleX, apex.y * scaleY, 4, 0, Math.PI * 2);
+            minimapCtx.fill();
+            
+            minimapCtx.fillStyle = '#00f0ff';
+            minimapCtx.beginPath();
+            minimapCtx.arc(bunny.x * scaleX, bunny.y * scaleY, 4, 0, Math.PI * 2);
+            minimapCtx.fill();
+            
+            minimapCtx.strokeStyle = '#ffffff';
+            minimapCtx.lineWidth = 1;
+            minimapCtx.strokeRect(camera.x * scaleX, camera.y * scaleY, (canvas.width / camera.zoom) * scaleX, (canvas.height / camera.zoom) * scaleY);
+        }
+
         function updateGame() {
             if (isDialogueActive) return;
 
@@ -1170,7 +1122,6 @@
             camera.x = Math.max(0, Math.min(WORLD_WIDTH - canvas.width / camera.zoom, camera.x));
             camera.y = Math.max(0, Math.min(WORLD_HEIGHT - canvas.height / camera.zoom, camera.y));
 
-            // ApeX AI
             if (apex.mood !== 'REDIRECTED') {
                 let targetX = apex.mood === 'BURNING STORM' ? bunny.x : apex.targetX;
                 let targetY = apex.mood === 'BURNING STORM' ? bunny.y : apex.targetY;
@@ -1184,7 +1135,6 @@
                 if (apex.y > 280) apex.y -= 1.5;
             }
 
-            // Proximity Check
             let distToApex = Math.hypot(bunny.x - apex.x, bunny.y - apex.y);
             if (distToApex < 60 && apex.mood !== 'ZERO LOCK' && apex.mood !== 'PASSIVE GREEN') {
                 stats.shield -= 0.6;
@@ -1197,14 +1147,12 @@
                 }
             }
 
-            // Balcony O2 & Bathroom Water
             if (Math.hypot(bunny.x - 1460, bunny.y - 790) < 90) {
                 stats.o2 = Math.min(100, stats.o2 + 0.4);
                 updateQuestProgress('balcony_garden', 0.01);
             }
             if (Math.hypot(bunny.x - 200, bunny.y - 820) < 80) stats.water = Math.min(100, stats.water + 0.6);
 
-            // Update insects
             insects.forEach(ins => {
                 ins.x += ins.vx;
                 ins.y += ins.vy;
@@ -1212,7 +1160,6 @@
                 if (ins.y < 130 || ins.y > WORLD_HEIGHT - 130) ins.vy *= -1;
             });
 
-            // Update particles
             particles.forEach(p => {
                 p.y += p.speedY;
                 p.x += p.speedX;
@@ -1222,7 +1169,30 @@
 
             if (stats.o2 > 0) stats.o2 -= 0.006;
 
-            // Update HUD
+            if (!gaslightStormActive) {
+                gaslightStormTimer -= 0.016;
+                if (gaslightStormTimer <= 0) {
+                    gaslightStormActive = true;
+                    gaslightStormTimer = 60;
+                    for (let i = 0; i < 30; i++) {
+                        particles.push({
+                            x: Math.random() * WORLD_WIDTH,
+                            y: Math.random() * WORLD_HEIGHT,
+                            size: Math.random() * 4 + 2,
+                            speedY: Math.random() * -2 - 1,
+                            speedX: (Math.random() - 0.5) * 2,
+                            color: Math.random() > 0.5 ? '#ff007f' : '#ff4500'
+                        });
+                    }
+                    if (Math.hypot(bunny.x - apex.x, bunny.y - apex.y) < 300) {
+                        openCardModal();
+                    }
+                    setTimeout(() => {
+                        gaslightStormActive = false;
+                    }, 5000);
+                }
+            }
+
             document.getElementById('o2-val').innerText = Math.max(0, Math.floor(stats.o2));
             document.getElementById('shield-val').innerText = Math.max(0, Math.floor(stats.shield));
             document.getElementById('eng-val').innerText = Math.max(0, Math.floor(stats.energy));
@@ -1230,7 +1200,6 @@
             document.getElementById('water-val').innerText = Math.max(0, Math.floor(stats.water));
             document.getElementById('script-val').innerText = Math.min(100, Math.floor(stats.script));
             
-            // Check interaction prompt
             let nearInteractive = false;
             furniture.forEach(f => {
                 const dist = Math.hypot(bunny.x - (f.x + f.w/2), bunny.y - (f.y + f.h/2));
@@ -1242,9 +1211,9 @@
             });
             
             const prompt = document.getElementById('interaction-prompt');
-            if (nearInteractive && !prompt.classList.contains('hidden') === false) {
+            if (nearInteractive && prompt.classList.contains('hidden')) {
                 prompt.classList.remove('hidden');
-            } else if (!nearInteractive) {
+            } else if (!nearInteractive && !prompt.classList.contains('hidden')) {
                 prompt.classList.add('hidden');
             }
         }
@@ -1256,7 +1225,6 @@
             ctx.scale(camera.zoom, camera.zoom);
             ctx.translate(-camera.x, -camera.y);
 
-            // Draw Rooms
             rooms.forEach(room => {
                 ctx.fillStyle = room.bgColor;
                 ctx.fillRect(room.x, room.y, room.w, room.h);
@@ -1279,10 +1247,8 @@
                 ctx.fillText(`// ${room.name}`, room.x + 16, room.y + 26);
             });
 
-            // Draw Furniture
             furniture.forEach(f => drawFurnitureItem(f));
 
-            // Draw Memory Fragments
             memoryFragments.forEach(fragment => {
                 if (!fragment.found) {
                     ctx.fillStyle = '#ff00ff';
@@ -1298,13 +1264,11 @@
                 }
             });
 
-            // Draw Insects
             insects.forEach(ins => {
                 ctx.font = '22px sans-serif';
                 ctx.fillText(ins.emoji, ins.x, ins.y);
             });
 
-            // Draw Particles
             particles.forEach(p => {
                 ctx.fillStyle = p.color;
                 ctx.shadowBlur = 10;
@@ -1315,26 +1279,57 @@
                 ctx.shadowBlur = 0;
             });
 
-            // Draw Characters
             drawBunnyX(bunny.x, bunny.y);
             drawBoredApe(apex.x, apex.y);
 
             ctx.restore();
+
+            if (!document.getElementById('minimap-container').classList.contains('hidden')) {
+                drawMinimap();
+            }
         }
 
-        function gameLoop() {
-            updateGame();
-            drawGame();
-            requestAnimationFrame(gameLoop);
+        function saveGame() {
+            const gameState = {
+                bunny: bunny,
+                apex: apex,
+                stats: stats,
+                quests: quests,
+                memoryFragmentsCollected: memoryFragmentsCollected,
+                memoryFragments: memoryFragments,
+                storyChapters: storyChapters,
+                gaslightStormTimer: gaslightStormTimer
+            };
+            try {
+                localStorage.setItem('gaiaRabbitholeSave', JSON.stringify(gameState));
+            } catch (e) {}
         }
 
-        // Initialize Game
+        function loadGame() {
+            try {
+                const saved = localStorage.getItem('gaiaRabbitholeSave');
+                if (saved) {
+                    const state = JSON.parse(saved);
+                    bunny = state.bunny || bunny;
+                    apex = state.apex || apex;
+                    stats = state.stats || stats;
+                    quests = state.quests || quests;
+                    memoryFragmentsCollected = state.memoryFragmentsCollected || 0;
+                    memoryFragments = state.memoryFragments || memoryFragments;
+                    storyChapters = state.storyChapters || storyChapters;
+                    gaslightStormTimer = state.gaslightStormTimer || 60;
+                    updateQuestCount();
+                    updateQuestLog();
+                }
+            } catch (e) {}
+        }
+
         window.onload = function() {
             resizeCanvas();
             updateQuestCount();
+            loadGame();
             gameLoop();
             
-            // Start with intro dialogue
             setTimeout(() => {
                 startDialogue([
                     { speaker: "BUNNYX", avatar: "🐰", text: "[IMMERSIVE DEBATE INITIALIZED]: Welcome to the ultimate Wandsbek Quantum Grid. I need to figure out where I am..." },
@@ -1343,13 +1338,18 @@
                 ]);
             }, 1000);
             
-            // Trigger first meeting dialogue after 3 seconds
             setTimeout(() => {
                 if (!isDialogueActive) {
-                    startDialogue(dialogueTrees.firstMeeting.nodes, dialogueTrees.firstMeeting.nodes[0].choices);
+                    startDialogue(dialogueTrees.firstMeeting.nodes);
                 }
             }, 5000);
         };
+
+        function gameLoop() {
+            updateGame();
+            drawGame();
+            requestAnimationFrame(gameLoop);
+        }
     </script>
 </body>
 </html>
