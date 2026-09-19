@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>X42 Twilight Nexus & Media Suite</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        twilight: {
+                            base: '#070913',
+                            panel: '#15111d',
+                            cyan: '#00f3ff',
+                            pink: '#ff00ff',
+                            violet: '#a855f7',
+                            gold: '#ffd700',
+                            x42: '#00d2ff'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #05050a;
+            color: #f3f4f6;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 243, 255, 0.05), transparent 30%),
+                radial-gradient(circle at 90% 80%, rgba(255, 0, 255, 0.05), transparent 30%);
+            touch-action: none; /* Prevent scroll/zoom for canvas interaction */
+            overflow: hidden;
+        }
+
+        /* Glassmorphism panels with gold/violet hints based on reference image */
+        .glass-panel {
+            background: linear-gradient(145deg, rgba(21, 17, 29, 0.7), rgba(10, 10, 15, 0.9));
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 215, 0, 0.15); /* Gold tinted border */
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 10px rgba(168, 85, 247, 0.05);
+        }
+
+        /* Glowing text & borders */
+        .glow-cyan { text-shadow: 0 0 10px rgba(0, 243, 255, 0.6), 0 0 20px rgba(0, 243, 255, 0.4); }
+        .glow-pink { text-shadow: 0 0 10px rgba(255, 0, 255, 0.6), 0 0 20px rgba(255, 0, 255, 0.4); }
+        .glow-gold { text-shadow: 0 0 10px rgba(255, 215, 0, 0.6); }
+        .border-glow-gold { box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); border-color: rgba(255, 215, 0, 0.6); }
+
+        /* The massive theatre canvas */
+        .canvas-container {
+            height: 55vh;
+            position: relative;
+            background: #000;
+            border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+
+        /* Compact HUD (Bottom 45%) */
+        .hud-container {
+            height: 45vh;
+            overflow-y: auto;
+            padding-bottom: 20px;
+        }
+
+        /* Custom Scrollbar for HUD */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 215, 0, 0.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 243, 255, 0.5); }
+
+        /* Sliders */
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 12px; width: 12px;
+            border-radius: 50%;
+            background: #ffd700;
+            box-shadow: 0 0 10px #ffd700;
+        }
+
+        /* Camera Modal */
+        #webcam-video {
+            transform: scaleX(-1); /* Mirror */
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen w-screen relative font-sans select-none">
+
+    <div id="audio-unlock" class="fixed inset-0 bg-twilight-base/95 z-50 flex flex-col items-center justify-center p-6 text-center backdrop-blur-2xl">
+        <div class="w-32 h-32 rounded-full bg-twilight-panel border border-twilight-gold flex items-center justify-center mb-8 cursor-pointer hover:scale-105 transition-all border-glow-gold shadow-[0_0_50px_rgba(255,215,0,0.2)] animate-pulse" onclick="initSystem()">
+            <i class="fa-solid fa-infinity text-5xl text-twilight-gold glow-gold"></i>
+        </div>
+        <h1 class="text-3xl font-bold text-white mb-2 tracking-widest glow-pink">X42 NEXUS</h1>
+        <p class="text-sm text-gray-400 max-w-xs mb-8">Tap the core to ignite the enchanted circuit.</p>
+    </div>
+
+    <main class="canvas-container w-full flex-shrink-0 relative overflow-hidden" id="theatre-main">
+        <canvas id="starmap-canvas" class="absolute inset-0 w-full h-full z-0 cursor-crosshair"></canvas>
+
+        <!-- UI Overlays inside Canvas Area -->
+        <div class="absolute top-0 inset-x-0 p-3 flex justify-between items-start z-10 pointer-events-none">
+            
+            <!-- Left: Sector / Scene Switcher -->
+            <div class="flex flex-col gap-2 pointer-events-auto">
+                <div class="flex items-center gap-2 bg-black/40 backdrop-blur-md rounded-lg p-1.5 border border-white/10 shadow-lg">
+                    <button onclick="switchScene('space')" class="scene-btn space-btn w-8 h-8 rounded-md bg-white/20 border border-twilight-cyan text-twilight-cyan flex items-center justify-center text-xs hover:bg-white/30 transition-all"><i class="fa-solid fa-user-astronaut"></i></button>
+                    <button onclick="switchScene('mystic')" class="scene-btn mystic-btn w-8 h-8 rounded-md bg-black/50 border border-transparent text-gray-400 flex items-center justify-center text-xs hover:bg-white/10 transition-all"><i class="fa-solid fa-water"></i></button>
+                    <button onclick="switchScene('cyber')" class="scene-btn cyber-btn w-8 h-8 rounded-md bg-black/50 border border-transparent text-gray-400 flex items-center justify-center text-xs hover:bg-white/10 transition-all"><i class="fa-solid fa-microchip"></i></button>
+                </div>
+            </div>
+            
+            <!-- Right: The Sliding Bird Minimap -->
+            <div class="flex flex-col items-end gap-1">
+                <div class="bg-black/60 backdrop-blur-md border border-twilight-gold/30 p-2 rounded-xl flex flex-col items-center shadow-lg w-32">
+                    <span class="text-[8px] text-twilight-gold font-bold uppercase tracking-widest mb-1 glow-gold">Timeline Sector</span>
+                    <div class="w-full h-1 bg-white/10 rounded-full relative mt-1">
+                        <!-- The sliding bird icon -->
+                        <div id="minimap-bird" class="absolute top-1/2 -translate-y-1/2 -ml-2 text-[10px] text-twilight-cyan drop-shadow-[0_0_5px_#00f3ff] transition-all duration-100" style="left: 0%;">🕊️</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Layer Menu Holo Glassy (Stamps & Uploads overlaying the canvas bottom) -->
+        <div class="absolute bottom-12 right-2 z-10 flex flex-col gap-2 items-end pointer-events-none">
+            <div class="glass-panel p-2 rounded-xl flex flex-col gap-2 pointer-events-auto shadow-2xl border-twilight-pink/30">
+                <span class="text-[9px] text-twilight-pink text-center uppercase font-bold tracking-widest">Holo-Stamps</span>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="spawnSticker('✨')" class="w-10 h-10 rounded-lg bg-white/5 border border-white/10 hover:bg-white/20 text-lg flex items-center justify-center transition-all shadow-inner">✨</button>
+                    <button onclick="spawnSticker('🦋')" class="w-10 h-10 rounded-lg bg-white/5 border border-white/10 hover:bg-white/20 text-lg flex items-center justify-center transition-all shadow-inner">🦋</button>
+                    <button onclick="spawnSticker('👁️')" class="w-10 h-10 rounded-lg bg-white/5 border border-white/10 hover:bg-white/20 text-lg flex items-center justify-center transition-all shadow-inner">👁️</button>
+                    <button onclick="spawnSticker('🔥')" class="w-10 h-10 rounded-lg bg-white/5 border border-white/10 hover:bg-white/20 text-lg flex items-center justify-center transition-all shadow-inner">🔥</button>
+                </div>
+                <div class="w-full h-[1px] bg-white/10 my-1"></div>
+                <!-- Open Webcam button -->
+                <button onclick="toggleWebcamModal()" class="w-full py-1.5 rounded-lg bg-gradient-to-r from-twilight-cyan/20 to-twilight-pink/20 border border-white/20 hover:brightness-125 text-[10px] flex items-center justify-center gap-1 text-white">
+                    <i class="fa-solid fa-camera"></i> Snap Sticker
+                </button>
+            </div>
+        </div>
+
+        <!-- Playback / Timeline floating bottom -->
+        <div class="absolute bottom-0 inset-x-0 z-10 glass-panel rounded-none border-t border-white/10 p-2 flex flex-col gap-2 rounded-t-xl mx-2">
+            <div class="flex items-center gap-2">
+                <button onclick="togglePlay()" id="play-btn" class="w-8 h-8 flex-shrink-0 rounded-full bg-gradient-to-r from-twilight-cyan to-twilight-pink text-black flex items-center justify-center text-xs hover:scale-105 active:scale-95 transition-transform shadow-[0_0_15px_rgba(0,243,255,0.4)]">
+                    <i class="fa-solid fa-play" id="play-icon"></i>
+                </button>
+                <input type="range" id="audio-timeline" min="0" max="100" value="0" step="0.1" class="w-full h-1 cursor-pointer">
+                <span id="time-curr" class="text-[9px] font-mono text-twilight-cyan w-8 text-right">0:00</span>
+            </div>
+        </div>
+    </main>
+
+    <section class="hud-container w-full flex-grow bg-twilight-base p-3 flex flex-col gap-3">
+        
+        <!-- Top HUD Row: File Processing & Media -->
+        <div class="glass-panel rounded-xl p-3 flex flex-col gap-2">
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest"><i class="fa-solid fa-folder-tree mr-1"></i> X42 File Processing</span>
+                <!-- Mock Mini File Browser -->
+                <div class="flex gap-2">
+                    <div onclick="loadMockMedia('audio')" class="cursor-pointer group flex items-center justify-center w-6 h-6 rounded bg-twilight-base border border-twilight-cyan/30 text-twilight-cyan hover:bg-twilight-cyan/20 transition-all text-xs" title="Load Audio">
+                        <i class="fa-solid fa-music"></i>
+                    </div>
+                    <div class="relative cursor-pointer group flex items-center justify-center w-6 h-6 rounded bg-twilight-base border border-twilight-pink/30 text-twilight-pink hover:bg-twilight-pink/20 transition-all text-xs" title="Upload Audio">
+                        <input type="file" id="file-upload" class="absolute inset-0 opacity-0 cursor-pointer z-10" onchange="handleFileUpload(event)" accept="audio/*, video/*">
+                        <i class="fa-solid fa-upload"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <!-- Color Theme Selection (from image) -->
+                <div class="flex flex-col gap-1 w-1/3">
+                    <div class="flex items-center gap-1 cursor-pointer" onclick="updateThemeColor('#00f3ff')">
+                        <div class="w-4 h-4 rounded-sm bg-[#00f3ff] shadow-[0_0_5px_#00f3ff]"></div>
+                        <span class="text-[9px] text-gray-300">Deep Night Cyan</span>
+                    </div>
+                    <div class="flex items-center gap-1 cursor-pointer" onclick="updateThemeColor('#ff00ff')">
+                        <div class="w-4 h-4 rounded-sm bg-[#ff00ff] opacity-50 hover:opacity-100 transition-opacity"></div>
+                        <span class="text-[9px] text-gray-300">Velvet Pink</span>
+                    </div>
+                    <div class="flex items-center gap-1 cursor-pointer" onclick="updateThemeColor('#a855f7')">
+                        <div class="w-4 h-4 rounded-sm bg-[#a855f7] opacity-50 hover:opacity-100 transition-opacity"></div>
+                        <span class="text-[9px] text-gray-300">Pearl Violet</span>
+                    </div>
+                </div>
+                
+                <!-- Circuit/Audio Controls -->
+                <div class="flex-grow flex flex-col gap-2 border-l border-white/10 pl-3">
+                    <div class="flex items-center justify-between text-[9px] text-gray-400">
+                        <span>Grid Intensity</span>
+                        <input type="range" id="grid-intensity" min="0" max="100" value="50" class="w-24 h-1">
+                    </div>
+                    <div class="flex items-center justify-between text-[9px] text-gray-400">
+                        <span>Bloom Strength</span>
+                        <input type="range" id="bloom-strength" min="0" max="100" value="80" class="w-24 h-1" oninput="updateGain(this.value)">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enchanted Vocal Ciphers (Expanded) -->
+        <div class="glass-panel rounded-xl p-3 flex flex-col gap-2 overflow-x-auto scrollbar-hide">
+            <span class="text-[10px] uppercase tracking-widest text-twilight-gold font-bold glow-gold whitespace-nowrap"><i class="fa-solid fa-microphone-lines mr-1"></i> Enchanted Vocal Ciphers</span>
+            
+            <div class="flex gap-2 min-w-max pb-1">
+                <!-- Norbinny -->
+                <button onclick="applyCipher('norbinny', this)" class="cipher-btn w-16 flex flex-col items-center p-2 rounded-xl border border-transparent hover:bg-white/5 transition-all bg-white/10 border-white/20">
+                    <i class="fa-solid fa-transgender text-lg text-cyan-300 mb-1"></i>
+                    <span class="text-[8px] text-gray-300 text-center uppercase">Norbinny</span>
+                </button>
+                
+                <!-- Forest (Wolf) -->
+                <button onclick="applyCipher('forest', this)" class="cipher-btn w-16 flex flex-col items-center p-2 rounded-xl border border-transparent hover:bg-white/5 transition-all">
+                    <i class="fa-brands fa-wolf-pack-battalion text-lg text-emerald-400 mb-1"></i>
+                    <span class="text-[8px] text-gray-300 text-center uppercase">Deep Forest</span>
+                </button>
+
+                <!-- Celestial (Bird) -->
+                <button onclick="applyCipher('celestial', this)" class="cipher-btn w-16 flex flex-col items-center p-2 rounded-xl border border-transparent hover:bg-white/5 transition-all">
+                    <i class="fa-solid fa-dove text-lg text-pink-300 mb-1"></i>
+                    <span class="text-[8px] text-gray-300 text-center uppercase">Celestial</span>
+                </button>
+
+                <!-- Majesties -->
+                <button onclick="applyCipher('majesties', this)" class="cipher-btn w-16 flex flex-col items-center p-2 rounded-xl border border-transparent hover:bg-white/5 transition-all">
+                    <i class="fa-solid fa-chess-king text-lg text-yellow-300 mb-1"></i>
+                    <span class="text-[8px] text-gray-300 text-center uppercase">Majesties</span>
+                </button>
+
+                <!-- Ape Growl -->
+                <button onclick="applyCipher('ape', this)" class="cipher-btn w-16 flex flex-col items-center p-2 rounded-xl border border-transparent hover:bg-white/5 transition-all">
+                    <i class="fa-solid fa-skull text-lg text-red-400 mb-1"></i>
+                    <span class="text-[8px] text-gray-300 text-center uppercase">Ape Growl</span>
+                </button>
+
+                <!-- Deep Dragon (New) -->
+                <button onclick="applyCipher('dragon', this)" class="cipher-btn w-16 flex flex-col items-center p-2 rounded-xl border border-transparent hover:bg-white/5 transition-all">
+                    <i class="fa-solid fa-dragon text-lg text-orange-400 mb-1"></i>
+                    <span class="text-[8px] text-gray-300 text-center uppercase">Dragon</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Export Section -->
+        <button onclick="exportTikTokSticker()" class="w-full h-14 rounded-xl bg-gradient-to-r from-twilight-gold/80 via-twilight-pink/80 to-twilight-cyan/80 border border-white/30 flex items-center justify-center gap-3 hover:brightness-125 active:scale-[0.98] transition-all group shadow-[0_0_20px_rgba(255,215,0,0.3)] shrink-0">
+            <i class="fa-brands fa-tiktok text-black text-xl drop-shadow-md"></i>
+            <div class="flex flex-col items-start leading-tight">
+                <span class="text-sm font-bold text-black tracking-widest drop-shadow-md uppercase">Compile to X42 Sticker</span>
+                <span class="text-[9px] text-black/80 font-mono">EXPORT CANVAS COMPOSITION</span>
+            </div>
+        </button>
+    </section>
+
+    <!-- System Msg Modal -->
+    <div id="sys-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity pointer-events-none">
+        <div class="bg-twilight-panel border border-twilight-cyan rounded-2xl p-6 max-w-xs w-full text-center shadow-[0_0_40px_rgba(0,243,255,0.3)]">
+            <div id="modal-icon" class="text-4xl mb-3 text-twilight-cyan glow-cyan">
+                <i class="fa-solid fa-cube"></i>
+            </div>
+            <h3 id="modal-title" class="text-sm font-bold text-white mb-1 uppercase tracking-widest">Notice</h3>
+            <p id="modal-msg" class="text-xs text-gray-400">Processing...</p>
+        </div>
+    </div>
+
+    <!-- Webcam Modal -->
+    <div id="webcam-modal" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-[60] flex flex-col items-center justify-center p-4 hidden opacity-0 transition-opacity">
+        <div class="glass-panel border-twilight-pink p-3 rounded-2xl w-full max-w-sm flex flex-col gap-3 relative">
+            <button onclick="toggleWebcamModal()" class="absolute -top-3 -right-3 w-8 h-8 bg-red-500 rounded-full text-white flex items-center justify-center shadow-lg border border-white/20 hover:scale-110 transition-transform"><i class="fa-solid fa-xmark"></i></button>
+            <div class="w-full aspect-square bg-black rounded-xl overflow-hidden border border-white/10 relative">
+                <video id="webcam-video" class="w-full h-full object-cover" autoplay playsinline></video>
+                <!-- Scanning overlay effect -->
+                <div class="absolute inset-0 bg-gradient-to-b from-transparent via-twilight-cyan/20 to-transparent w-full h-[10%] animate-[scan_2s_linear_infinite]"></div>
+            </div>
+            <button onclick="captureWebcamSticker()" class="w-full py-3 bg-gradient-to-r from-twilight-cyan to-twilight-violet rounded-xl text-black font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(0,243,255,0.5)] hover:brightness-125 transition-all">
+                <i class="fa-solid fa-camera-retro mr-2"></i> Snap & Add to Canvas
+            </button>
+        </div>
+    </div>
+    
+    <style>
+        @keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
+    </style>
+
+    <script>
+        // -- STATE & AUDIO VARIABLES --
+        let audioCtx, audioElement, sourceNode, gainNode, filterNode, analyser;
+        let delayNode, feedbackNode;
+        let isSystemReady = false;
+        let isPlaying = false;
+        
+        let currentThemeColor = '#00f3ff'; 
+        let activeScene = 'space'; // 'space', 'mystic', 'cyber'
+        let currentCipher = 'norbinny';
+        
+        // -- CANVAS & VISUALS --
+        const canvas = document.getElementById('starmap-canvas');
+        const ctx = canvas.getContext('2d');
+        let cw, ch;
+        let audioData = new Uint8Array(64);
+        let particles = [];
+        
+        // -- DRAGGABLE STICKERS ARRAY --
+        // Stores custom stamps and webcam photos placed on canvas
+        let canvasStickers = [];
+        let isDragging = false;
+        let draggedSticker = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        // -- WEBCAM VARIABLES --
+        let videoStream = null;
+        const videoEl = document.getElementById('webcam-video');
+
+        // -- INITIALIZATION --
+        function initSystem() {
+            document.getElementById('audio-unlock').classList.add('hidden');
+            
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            audioCtx.resume();
+
+            audioElement = new Audio();
+            audioElement.crossOrigin = "anonymous";
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 128;
+            
+            gainNode = audioCtx.createGain();
+            filterNode = audioCtx.createBiquadFilter();
+            delayNode = audioCtx.createDelay(5.0);
+            feedbackNode = audioCtx.createGain();
+
+            resizeCanvas();
+            initParticles();
+            
+            // Set up pointer events for dragging stickers
+            setupCanvasInteraction();
+
+            isSystemReady = true;
+            requestAnimationFrame(renderTheatre);
+        }
+
+        // -- MEDIA LOADING --
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            loadMediaUrl(URL.createObjectURL(file), file.name);
+        }
+
+        function loadMockMedia(type) {
+            // Creative Commons drum beat for visual testing
+            let url = "https://upload.wikimedia.org/wikipedia/commons/a/a9/120_bpm_drum_beat.ogg";
+            loadMediaUrl(url, 'cyber_rhythm.wav');
+        }
+
+        function loadMediaUrl(url, name) {
+            if(!isSystemReady) return;
+            audioElement.src = url;
+            
+            if(!sourceNode) {
+                sourceNode = audioCtx.createMediaElementSource(audioElement);
+                sourceNode.connect(filterNode);
+                filterNode.connect(gainNode); // Dry
+                
+                // Echo Loop
+                filterNode.connect(delayNode);
+                delayNode.connect(feedbackNode);
+                feedbackNode.connect(delayNode);
+                delayNode.connect(gainNode);
+                
+                gainNode.connect(analyser);
+                analyser.connect(audioCtx.destination);
+                
+                // Set initial cipher
+                applyCipher(currentCipher, document.querySelector('.cipher-btn'));
+            }
+            
+            showModal('Media Linked', `Encrypted: ${name}`, 'fa-link');
+            audioElement.ontimeupdate = updateTimeline;
+        }
+
+        // -- PLAYBACK & UI --
+        function togglePlay() {
+            if(!audioElement || !audioElement.src) {
+                showModal('No Signal', 'Upload or load media via the X42 processor.', 'fa-triangle-exclamation');
+                return;
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            if (audioElement.paused) {
+                audioElement.play().then(() => {
+                    document.getElementById('play-icon').className = 'fa-solid fa-pause';
+                    isPlaying = true;
+                }).catch(e => console.error(e));
+            } else {
+                audioElement.pause();
+                document.getElementById('play-icon').className = 'fa-solid fa-play';
+                isPlaying = false;
+            }
+        }
+
+        function updateTimeline() {
+            if(!audioElement.duration) return;
+            const pct = (audioElement.currentTime / audioElement.duration) * 100;
+            document.getElementById('audio-timeline').value = pct;
+            
+            let mins = Math.floor(audioElement.currentTime / 60);
+            let secs = Math.floor(audioElement.currentTime % 60).toString().padStart(2, '0');
+            document.getElementById('time-curr').innerText = `${mins}:${secs}`;
+
+            // Move the minimap bird
+            document.getElementById('minimap-bird').style.left = `${pct}%`;
+        }
+
+        document.getElementById('audio-timeline').addEventListener('input', (e) => {
+            if(audioElement && audioElement.duration) {
+                audioElement.currentTime = (e.target.value / 100) * audioElement.duration;
+            }
+        });
+
+        // -- CIPHERS & FILTERS --
+        function updateGain(val) {
+            if(gainNode) gainNode.gain.value = val / 100; // Acts as bloom/volume
+        }
+
+        function updateThemeColor(color) {
+            currentThemeColor = color;
+            // Update UI selectors visually (simplistic approach for demo)
+            const swatches = document.querySelectorAll('.bg-\\[\\#00f3ff\\], .bg-\\[\\#ff00ff\\], .bg-\\[\\#a855f7\\]');
+            swatches.forEach(s => {
+                s.classList.remove('shadow-[0_0_5px_#00f3ff]', 'opacity-100');
+                s.classList.add('opacity-50');
+                if(s.className.includes(color.replace('#',''))) {
+                    s.classList.remove('opacity-50');
+                    s.classList.add(`shadow-[0_0_5px_${color}]`, 'opacity-100');
+                }
+            });
+        }
+
+        function applyCipher(type, btnElement) {
+            currentCipher = type;
+            document.querySelectorAll('.cipher-btn').forEach(b => {
+                b.classList.remove('bg-white/10', 'border-white/20');
+                b.classList.add('border-transparent');
+            });
+            if(btnElement) {
+                btnElement.classList.remove('border-transparent');
+                btnElement.classList.add('bg-white/10', 'border-white/20');
+            }
+
+            if(!filterNode) return;
+            const t = audioCtx.currentTime;
+            
+            // Map ciphers to magical audio behaviors & auto-switch theme slightly
+            switch(type) {
+                case 'norbinny': // Balanced/Neutral
+                    filterNode.type = 'peaking'; filterNode.frequency.value = 1500; filterNode.Q.value = 1.0;
+                    delayNode.delayTime.setTargetAtTime(0.3, t, 0.1); feedbackNode.gain.setTargetAtTime(0.3, t, 0.1);
+                    break;
+                case 'forest': // Wolf - Deep Bass
+                    filterNode.type = 'lowpass'; filterNode.frequency.value = 400; filterNode.Q.value = 5;
+                    delayNode.delayTime.setTargetAtTime(0.6, t, 0.1); feedbackNode.gain.setTargetAtTime(0.5, t, 0.1);
+                    break;
+                case 'celestial': // Bird - High Shimmer
+                    filterNode.type = 'highpass'; filterNode.frequency.value = 3000; filterNode.Q.value = 2;
+                    delayNode.delayTime.setTargetAtTime(0.15, t, 0.1); feedbackNode.gain.setTargetAtTime(0.7, t, 0.1);
+                    break;
+                case 'majesties': // Echo/Royal
+                    filterNode.type = 'peaking'; filterNode.frequency.value = 1000; filterNode.Q.value = 2;
+                    delayNode.delayTime.setTargetAtTime(0.75, t, 0.1); feedbackNode.gain.setTargetAtTime(0.6, t, 0.1);
+                    break;
+                case 'ape': // Distortion/Growl
+                    filterNode.type = 'bandpass'; filterNode.frequency.value = 800; filterNode.Q.value = 4.0;
+                    delayNode.delayTime.setTargetAtTime(0.05, t, 0.1); feedbackNode.gain.setTargetAtTime(0.8, t, 0.1);
+                    break;
+                case 'dragon': // Deep Sub-Bass Slow Echo
+                    filterNode.type = 'lowshelf'; filterNode.frequency.value = 200; filterNode.gain.value = 15;
+                    delayNode.delayTime.setTargetAtTime(1.0, t, 0.1); feedbackNode.gain.setTargetAtTime(0.4, t, 0.1);
+                    break;
+            }
+        }
+
+        // -- SCENE MANAGEMENT --
+        function switchScene(scene) {
+            activeScene = scene;
+            document.querySelectorAll('.scene-btn').forEach(b => {
+                b.classList.remove('bg-white/20', 'border-twilight-cyan', 'text-twilight-cyan');
+                b.classList.add('bg-black/50', 'border-transparent', 'text-gray-400');
+            });
+            const activeBtn = document.querySelector(`.${scene}-btn`);
+            activeBtn.classList.remove('bg-black/50', 'border-transparent', 'text-gray-400');
+            activeBtn.classList.add('bg-white/20', 'border-twilight-cyan', 'text-twilight-cyan');
+            
+            initParticles(); // Reset particles based on new scene
+        }
+
+        // -- WEBCAM STICKER SYSTEM --
+        async function toggleWebcamModal() {
+            const modal = document.getElementById('webcam-modal');
+            if(modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                setTimeout(() => modal.classList.remove('opacity-0'), 10);
+                try {
+                    videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                    videoEl.srcObject = videoStream;
+                } catch (err) {
+                    console.error("Webcam error:", err);
+                    alert("Unable to access webcam. Check permissions.");
+                    toggleWebcamModal();
+                }
+            } else {
+                modal.classList.add('opacity-0');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+                if(videoStream) {
+                    videoStream.getTracks().forEach(track => track.stop());
+                    videoStream = null;
+                }
+            }
+        }
+
+        function captureWebcamSticker() {
+            if(!videoEl.videoWidth) return;
+            
+            // Create offscreen canvas to snap square image
+            const snapC = document.createElement('canvas');
+            const size = Math.min(videoEl.videoWidth, videoEl.videoHeight);
+            snapC.width = size; snapC.height = size;
+            const sCtx = snapC.getContext('2d');
+            
+            // Mirror drawing
+            sCtx.translate(size, 0);
+            sCtx.scale(-1, 1);
+            
+            // Draw center crop
+            const startX = (videoEl.videoWidth - size) / 2;
+            const startY = (videoEl.videoHeight - size) / 2;
+            sCtx.drawImage(videoEl, startX, startY, size, size, 0, 0, size, size);
+            
+            // Create an image element to use in the main canvas
+            const img = new Image();
+            img.onload = () => {
+                // Add to stickers array right in the middle of canvas
+                canvasStickers.push({
+                    type: 'image',
+                    img: img,
+                    x: cw / 2,
+                    y: ch / 2,
+                    w: 80,
+                    h: 80
+                });
+            };
+            img.src = snapC.toDataURL('image/png');
+            
+            toggleWebcamModal();
+            showModal('Sticker Snapped', 'Hologram added to canvas.', 'fa-camera');
+        }
+
+        function spawnSticker(emoji) {
+            canvasStickers.push({
+                type: 'text',
+                text: emoji,
+                x: cw / 2 + (Math.random() * 40 - 20),
+                y: ch / 2 + (Math.random() * 40 - 20),
+                size: 40
+            });
+        }
+
+        // -- CANVAS INTERACTION (DRAG & DROP) --
+        function setupCanvasInteraction() {
+            const getMousePos = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return {
+                    x: (clientX - rect.left) * (canvas.width / rect.width),
+                    y: (clientY - rect.top) * (canvas.height / rect.height)
+                };
+            };
+
+            const startDrag = (e) => {
+                e.preventDefault();
+                const pos = getMousePos(e);
+                // Search backwards to click top-most sticker
+                for(let i = canvasStickers.length - 1; i >= 0; i--) {
+                    const s = canvasStickers[i];
+                    let hit = false;
+                    if(s.type === 'text') {
+                        // Rough bounding box for emoji text
+                        hit = (pos.x > s.x - s.size && pos.x < s.x + s.size && pos.y > s.y - s.size && pos.y < s.y + s.size);
+                    } else if (s.type === 'image') {
+                        hit = (pos.x > s.x - s.w/2 && pos.x < s.x + s.w/2 && pos.y > s.y - s.h/2 && pos.y < s.y + s.h/2);
+                    }
+                    if(hit) {
+                        isDragging = true;
+                        draggedSticker = s;
+                        dragOffsetX = pos.x - s.x;
+                        dragOffsetY = pos.y - s.y;
+                        
+                        // Move to top of array (z-index)
+                        canvasStickers.splice(i, 1);
+                        canvasStickers.push(s);
+                        break;
+                    }
+                }
+            };
+
+            const doDrag = (e) => {
+                if(!isDragging || !draggedSticker) return;
+                e.preventDefault();
+                const pos = getMousePos(e);
+                draggedSticker.x = pos.x - dragOffsetX;
+                draggedSticker.y = pos.y - dragOffsetY;
+            };
+
+            const endDrag = (e) => {
+                isDragging = false;
+                draggedSticker = null;
+            };
+
+            canvas.addEventListener('mousedown', startDrag);
+            canvas.addEventListener('mousemove', doDrag);
+            canvas.addEventListener('mouseup', endDrag);
+            canvas.addEventListener('mouseleave', endDrag);
+            
+            canvas.addEventListener('touchstart', startDrag, {passive: false});
+            canvas.addEventListener('touchmove', doDrag, {passive: false});
+            canvas.addEventListener('touchend', endDrag);
+        }
+
+
+        // -- CANVAS RENDERING LOOP --
+        window.addEventListener('resize', resizeCanvas);
+        function resizeCanvas() {
+            if(!canvas.parentElement) return;
+            cw = canvas.width = canvas.parentElement.clientWidth;
+            ch = canvas.height = canvas.parentElement.clientHeight;
+        }
+
+        function initParticles() {
+            particles = [];
+            let count = activeScene === 'cyber' ? 100 : 50; // Grid nodes vs Stars
+            for(let i=0; i<count; i++) {
+                particles.push({
+                    x: Math.random() * cw,
+                    y: Math.random() * ch,
+                    size: Math.random() * 2 + 0.5,
+                    speedX: (Math.random() - 0.5) * 0.5,
+                    speedY: Math.random() * 0.5 + 0.2,
+                    alpha: Math.random()
+                });
+            }
+        }
+
+        function drawAnimalSilhouette(x, y, scale, color, type, glow) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+            
+            ctx.shadowColor = color;
+            ctx.shadowBlur = glow;
+            ctx.fillStyle = '#05050a'; // Silhouette core
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+            if(type === 'cat') {
+                ctx.moveTo(0, 0); ctx.quadraticCurveTo(-15, 0, -20, -15);
+                ctx.quadraticCurveTo(-25, -40, -10, -50); ctx.lineTo(-15, -70);
+                ctx.lineTo(-5, -60); ctx.lineTo(5, -60); ctx.lineTo(15, -70);
+                ctx.lineTo(10, -50); ctx.quadraticCurveTo(25, -40, 20, -15);
+                ctx.quadraticCurveTo(15, 0, 0, 0);
+            } else if (type === 'wolf') {
+                ctx.moveTo(0,0); ctx.lineTo(-20, -20); ctx.lineTo(-10, -50);
+                ctx.lineTo(-30, -70); ctx.lineTo(0, -60); ctx.lineTo(20, -80);
+                ctx.lineTo(10, -50); ctx.lineTo(20, -20); ctx.closePath();
+            } else if (type === 'bird') {
+                ctx.moveTo(0,-20); ctx.quadraticCurveTo(-40, -40, -60, 0);
+                ctx.quadraticCurveTo(-20, -20, 0, -10); ctx.quadraticCurveTo(20, -20, 60, 0);
+                ctx.quadraticCurveTo(40, -40, 0, -20);
+            } else if (type === 'dragon') {
+                ctx.moveTo(0,0); ctx.quadraticCurveTo(-50, -20, -30, -80);
+                ctx.lineTo(-10, -60); ctx.lineTo(10, -90); ctx.lineTo(30, -60);
+                ctx.quadraticCurveTo(50, -20, 0, 0);
+            } else if (type === 'ape') {
+                ctx.moveTo(0,0); ctx.quadraticCurveTo(-30, 0, -20, -40);
+                ctx.quadraticCurveTo(-10, -80, 5, -80); ctx.quadraticCurveTo(20, -80, 30, -50);
+                ctx.quadraticCurveTo(40, -10, 20, 0);
+            }
+            
+            ctx.fill(); ctx.stroke();
+            ctx.restore();
+        }
+
+        function renderTheatre() {
+            requestAnimationFrame(renderTheatre);
+            
+            let avgFreq = 0;
+            if (analyser && isPlaying) {
+                analyser.getByteFrequencyData(audioData);
+                let sum = 0;
+                for(let i=0; i<audioData.length; i++) sum += audioData[i];
+                avgFreq = sum / audioData.length;
+            }
+
+            const gridInt = document.getElementById('grid-intensity').value / 100;
+            
+            // Draw Background based on Scene
+            ctx.fillStyle = '#05050a';
+            ctx.fillRect(0, 0, cw, ch);
+
+            if(activeScene === 'space') {
+                // Space Scene: Moving Stars
+                ctx.fillStyle = currentThemeColor; 
+                particles.forEach(p => {
+                    p.y += p.speedY + (avgFreq * 0.01);
+                    if(p.y > ch) { p.y = 0; p.x = Math.random() * cw; }
+                    ctx.globalAlpha = p.alpha;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+                });
+            } else if (activeScene === 'mystic') {
+                // Mystic River: Wavy lines
+                ctx.strokeStyle = currentThemeColor;
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = 0.3;
+                for(let i=0; i<5; i++) {
+                    ctx.beginPath();
+                    for(let x=0; x<cw; x+=20) {
+                        let y = ch/2 + Math.sin(x*0.01 + Date.now()*0.001 + i) * 50 + (avgFreq * 0.2);
+                        if(x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+                    }
+                    ctx.stroke();
+                }
+            } else if (activeScene === 'cyber') {
+                // Cyber Grid: Perspective Grid (like IMG_8902)
+                ctx.strokeStyle = currentThemeColor;
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = gridInt;
+                
+                // Vertical vanishing
+                const centerX = cw/2;
+                for(let x=-cw; x<cw*2; x+=40) {
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, ch*0.3);
+                    ctx.lineTo(x, ch);
+                    ctx.stroke();
+                }
+                // Horizontals
+                for(let y=ch*0.3; y<ch; y+=Math.pow((y-ch*0.3)*0.1, 1.5)) {
+                    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke();
+                }
+            }
+            ctx.globalAlpha = 1.0;
+
+            // Audio Waveform overlay on background
+            if(isPlaying) {
+                ctx.beginPath();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = currentThemeColor;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = currentThemeColor;
+                const sliceWidth = cw / audioData.length;
+                let x = 0;
+                for(let i = 0; i < audioData.length; i++) {
+                    const v = audioData[i] / 128.0;
+                    const y = (v * ch/4) + ch/2;
+                    if(i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                    x += sliceWidth;
+                }
+                ctx.stroke();
+                ctx.shadowBlur = 0; // reset
+            }
+
+            // Draw Animals / Avatars based on scene
+            const groundY = ch * 0.85;
+            const glow = 10 + avgFreq;
+
+            if(activeScene === 'space') {
+                // Classic cats & ape
+                drawAnimalSilhouette(cw*0.3, groundY, 0.8, currentThemeColor, 'cat', glow);
+                drawAnimalSilhouette(cw*0.5, groundY, 1.0, '#fff', 'cat', glow * 1.5);
+                drawAnimalSilhouette(cw*0.7, groundY, 0.8, '#ff00ff', 'cat', glow);
+                drawAnimalSilhouette(cw*0.9, groundY, 0.9, '#ef4444', 'ape', glow);
+            } else if (activeScene === 'mystic') {
+                // Dragon and Wolf
+                drawAnimalSilhouette(cw*0.3, groundY, 1.2, '#10b981', 'wolf', glow);
+                drawAnimalSilhouette(cw*0.7, groundY - 50, 1.5, '#f59e0b', 'dragon', glow);
+            } else if (activeScene === 'cyber') {
+                // Bird in sky, Ape on ground
+                drawAnimalSilhouette(cw*0.5, ch*0.3, 1.5, '#00f3ff', 'bird', glow);
+                drawAnimalSilhouette(cw*0.2, groundY, 1.0, '#a855f7', 'ape', glow);
+                drawAnimalSilhouette(cw*0.8, groundY, 1.0, '#a855f7', 'cat', glow);
+            }
+
+            // Render Hologram Stickers
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            canvasStickers.forEach(s => {
+                if(s.type === 'text') {
+                    ctx.font = `${s.size}px Arial`;
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = currentThemeColor;
+                    ctx.fillText(s.text, s.x, s.y);
+                    ctx.shadowBlur = 0;
+                } else if (s.type === 'image') {
+                    ctx.save();
+                    // Draw a magical border around the webcam sticker
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = currentThemeColor;
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    // Octagon shape for cyber feel
+                    const r = s.w/2;
+                    ctx.arc(s.x, s.y, r, 0, Math.PI*2);
+                    ctx.clip();
+                    ctx.drawImage(s.img, s.x - r, s.y - r, s.w, s.h);
+                    ctx.restore();
+                    // Draw border over it
+                    ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, Math.PI*2); ctx.stroke();
+                }
+            });
+        }
+
+        // -- TIKTOK EXPORT (CANVAS TO IMAGE) --
+        function exportTikTokSticker() {
+            showModal('Compiling X42', 'Encoding visualizer, animals, and stickers to flat matrix...', 'fa-microchip');
+            const m = document.getElementById('sys-modal');
+            m.classList.remove('pointer-events-none'); // block clicks
+            
+            setTimeout(() => {
+                // Get Canvas Data URL
+                const dataURL = canvas.toDataURL('image/png');
+                
+                // Create a temporary link to trigger download
+                const link = document.createElement('a');
+                link.download = `X42-Sticker-${Date.now()}.png`;
+                link.href = dataURL;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                document.getElementById('modal-title').innerText = 'Download Complete';
+                document.getElementById('modal-msg').innerText = 'X42 Format Ready for TikTok/Web.';
+                document.getElementById('modal-icon').innerHTML = '<i class="fa-solid fa-check text-green-400 glow-cyan"></i>';
+                
+                setTimeout(() => {
+                    m.classList.add('opacity-0');
+                    setTimeout(() => {
+                        m.classList.add('hidden');
+                        m.classList.add('pointer-events-none');
+                        // Reset modal for next use
+                        document.getElementById('modal-title').innerText = 'Notice';
+                        document.getElementById('modal-icon').innerHTML = '<i class="fa-solid fa-cube"></i>';
+                    }, 300);
+                }, 2000);
+            }, 1500); // Simulate processing time
+        }
+
+        // Modal Helpers
+        function showModal(title, msg, iconClass) {
+            const m = document.getElementById('sys-modal');
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-msg').innerText = msg;
+            document.getElementById('modal-icon').innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+            m.classList.remove('hidden');
+            setTimeout(() => m.classList.remove('opacity-0'), 10);
+            setTimeout(() => {
+                m.classList.add('opacity-0');
+                setTimeout(() => m.classList.add('hidden'), 300);
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
