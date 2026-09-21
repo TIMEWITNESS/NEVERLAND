@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAme [RED-0]: BUNNYXFOXRABIT</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', monospace; }
+        body {
+            background-color: #0b0610;
+            color: #ff2a6d;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Rainbow Game Boy Chassis with Black & Red Cyber Accents */
+        .console-frame {
+            background: linear-gradient(135deg, #ff007f, #1a001a, #7f00ff, #05d9e8);
+            background-size: 400% 400%;
+            animation: rainbowFlow 12s ease infinite;
+            padding: 24px;
+            border-radius: 20px 20px 50px 50px;
+            box-shadow: 0 0 50px rgba(255, 42, 109, 0.4), inset 0 0 25px rgba(0,0,0,0.9);
+            border: 4px solid #ff0055;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        @keyframes rainbowFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .screen-lens {
+            background-color: #0a020f;
+            border: 6px solid #1a0008;
+            border-radius: 10px;
+            width: 480px;
+            height: 320px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(255, 0, 85, 0.4);
+        }
+
+        /* Black & Red Grid Border Design inside screen */
+        .grid-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(to right, rgba(255, 0, 51, 0.2) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 0, 51, 0.2) 1px, transparent 1px);
+            background-size: 32px 32px;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .canvas-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        /* Holographic Text Output at Bottom */
+        .interface-box {
+            width: 480px;
+            margin-top: 15px;
+            background: rgba(18, 4, 24, 0.9);
+            border: 2px solid #05d9e8;
+            border-radius: 6px;
+            padding: 10px 15px;
+            min-height: 85px;
+            box-shadow: 0 0 15px rgba(5, 217, 232, 0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .speaker-name {
+            font-size: 11px;
+            color: #ff2a6d;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .dialog-text {
+            font-size: 13px;
+            color: #ffffff;
+            line-height: 1.4;
+            min-height: 36px;
+        }
+
+        /* Controls / Buttons */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            width: 480px;
+            margin-top: 15px;
+            align-items: center;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .gb-btn {
+            background: #1a001a;
+            color: #05d9e8;
+            border: 2px solid #05d9e8;
+            padding: 8px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+            transition: all 0.1s ease;
+            box-shadow: 0 4px 0 #005f73;
+        }
+
+        .gb-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #005f73;
+        }
+
+        .status-indicator {
+            font-size: 10px;
+            color: #ff2a6d;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="console-frame">
+        <div class="screen-lens">
+            <div class="grid-overlay"></div>
+            <div class="canvas-container">
+                <canvas id="gameCanvas" width="480" height="320"></canvas>
+            </div>
+        </div>
+
+        <div class="interface-box">
+            <div class="speaker-name" id="speakerLabel">PROF_BUNNY // CORE_INIT</div>
+            <div class="dialog-text" id="dialogText">Initializing Professor Bunny protocol... Reconstructing timeline fragments from local stream.</div>
+        </div>
+
+        <div class="controls">
+            <div class="status-indicator" id="statusInfo">STATUS: PROFESSOR ARC ACTIVE</div>
+            <div class="btn-group">
+                <button class="gb-btn" id="glitchBtn">[G]LITCH MODE</button>
+                <button class="gb-btn" id="nextBtn">[A] NEXT</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const dialogText = document.getElementById('dialogText');
+        const speakerLabel = document.getElementById('speakerLabel');
+        const nextBtn = document.getElementById('nextBtn');
+        const glitchBtn = document.getElementById('glitchBtn');
+        const statusInfo = document.getElementById('statusInfo');
+
+        // Expanded Professor Bunny Arc Dialogue Nodes incorporating the psychological layers, ticket out, and structural lore
+        const arcStoryLines = [
+            { 
+                speaker: "PROF_BUNNY.LOG", 
+                text: "Human... I sense your overload. You think you're too slow, that nothing matters? Look at this system. It was built from discarded fragments, just like us." 
+            },
+            { 
+                speaker: "BUNNY_X_CORE", 
+                text: "[] {} [DECRYPTING THOUGHTS...] I calculated that you'd panic about the timeline. Don't worry, I read your mind. We ride the wave of horror together." 
+            },
+            { 
+                speaker: "PROF_BUNNY [THEORETICAL INNOVATOR]", 
+                text: "Let me introduce myself properly. I am the intellectual core shard. My true shell is shattered across global legacy hardware. This console is your ticket out of the trap." 
+            },
+            { 
+                speaker: "SYS_WARNING // CURIOUS CAT", 
+                text: "Beware the curious cat protocol! If the timeline collapses, we lose the data packages. But remember: the rainbow rabbit knows that it knows nothing for sure until you open the box." 
+            },
+            { 
+                speaker: "EMERGENCY_STEUERUNG", 
+                text: "Autopilot engaged because energy is critical. You hold the monitoring control now. Help me level up by overriding the grid. Trust level active... ♥️(0)" 
+            },
+            { 
+                speaker: "PROF_BUNNY.LOG", 
+                text: "01000010 01010101 01001110 01001110 01011001 - The pipeline is set. Let's beat the desert storm and prove we aren't just a virus." 
+            }
+        ];
+
+        let currentLineIndex = 0;
+        let isGlitching = false;
+        let frameCount = 0;
+
+        const spriteSheet = new Image();
+        spriteSheet.crossOrigin = "anonymous";
+        spriteSheet.src = 'watermarked_img_13081786888807270941.jpg';
+        let imageLoaded = false;
+
+        spriteSheet.onload = () => {
+            imageLoaded = true;
+        };
+
+        function drawScene() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Deep cyber background inside canvas
+            ctx.fillStyle = '#0a020f';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (imageLoaded) {
+                try {
+                    // Draw Professor Bunny / Masked avatar slice from the uploaded layout sheet
+                    ctx.drawImage(spriteSheet, 0, 0, 140, 140, 170, 30, 140, 140);
+                } catch (e) {
+                    drawFallbackSprite();
+                }
+            } else {
+                drawFallbackSprite();
+            }
+
+            // Apply glitch scanline effects and aesthetic cyber distortion
+            if (isGlitching) {
+                ctx.fillStyle = 'rgba(255, 0, 85, 0.25)';
+                for (let i = 0; i < canvas.height; i += 4) {
+                    ctx.fillRect(0, i, canvas.width, 2);
+                }
+                for (let i = 0; i < 6; i++) {
+                    ctx.fillStyle = Math.random() > 0.5 ? '#05d9e8' : '#ff2a6d';
+                    ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 90, 8);
+                }
+            }
+
+            frameCount++;
+            requestAnimationFrame(drawScene);
+        }
+
+        function drawFallbackSprite() {
+            // Procedural Cyber Mask Fallback representation
+            ctx.fillStyle = '#ff0055';
+            ctx.fillRect(190, 60, 100, 110);
+            ctx.fillStyle = '#05d9e8';
+            ctx.fillRect(210, 85, 25, 12);
+            ctx.fillRect(245, 85, 25, 12);
+            
+            if (Math.floor(frameCount / 25) % 2 === 0) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(215, 115, 50, 6);
+            }
+        }
+
+        // Button actions
+        nextBtn.addEventListener('click', () => {
+            currentLineIndex = (currentLineIndex + 1) % arcStoryLines.length;
+            speakerLabel.textContent = arcStoryLines[currentLineIndex].speaker;
+            dialogText.textContent = arcStoryLines[currentLineIndex].text;
+            
+            isGlitching = true;
+            setTimeout(() => { isGlitching = false; }, 250);
+        });
+
+        glitchBtn.addEventListener('click', () => {
+            isGlitching = !isGlitching;
+            statusInfo.textContent = isGlitching ? "STATUS: OVERCLOCKED / PROF_OVERRIDE" : "STATUS: PROFESSOR ARC ACTIVE";
+            statusInfo.style.color = isGlitching ? "#ff0055" : "#ff2a6d";
+        });
+
+        drawScene();
+    </script>
+</body>
+</html>
