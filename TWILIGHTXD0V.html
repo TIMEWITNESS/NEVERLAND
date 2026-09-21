@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Twilight Dove | Quantumverse HoloLab</title>
+    <style>
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-magenta: #ff00ff;
+            --neon-yellow: #ffea00;
+            --neon-orange: #ff6600;
+            --bg-dark: #07051a;
+            --glass-bg: rgba(10, 15, 30, 0.85);
+            --glass-border: rgba(0, 243, 255, 0.4);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
+        
+        body {
+            background-color: var(--bg-dark);
+            color: #fff;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* --- BACKGROUND LAYER (Audioreactive & Visible) --- */
+        .background-layer {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: -1;
+            pointer-events: none; /* This ensures the background NEVER blocks clicks */
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            transition: opacity 0.3s ease;
+            overflow: hidden;
+        }
+
+        .background-layer.invisible { opacity: 0; }
+
+        /* Audioreactive Horizon Glow */
+        .twilight-horizon {
+            position: absolute;
+            bottom: 0; left: 0;
+            width: 100%; height: 40vh;
+            background: linear-gradient(to top, rgba(0, 243, 255, 0.15) 0%, transparent 100%);
+            box-shadow: 0 0 100px rgba(255, 0, 255, 0.2) inset;
+            animation: pulse-horizon 4s infinite alternate ease-in-out;
+        }
+
+        @keyframes pulse-horizon {
+            0% { opacity: 0.6; transform: scaleY(1); }
+            100% { opacity: 1; transform: scaleY(1.05); }
+        }
+
+        /* --- MULTIPLAYER EDGE VIEW (1st Person) --- */
+        .multiplayer-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(0,0,0,0.7);
+            border-bottom: 1px solid var(--glass-border);
+            overflow-x: auto;
+            white-space: nowrap;
+            pointer-events: auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        .player-view {
+            width: 70px;
+            height: 45px;
+            border-radius: 8px;
+            background: #111;
+            border: 1px solid var(--neon-magenta);
+            position: relative;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .player-view img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.7;
+        }
+
+        .player-view .label {
+            position: absolute;
+            bottom: 2px; left: 2px;
+            font-size: 0.6rem;
+            background: rgba(0,0,0,0.8);
+            padding: 1px 3px;
+            border-radius: 2px;
+            color: var(--neon-cyan);
+        }
+
+        .join-btn {
+            background: var(--neon-cyan);
+            color: #000;
+            border: none;
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        .join-btn:active { transform: scale(0.95); }
+
+        /* --- HEADER --- */
+        header {
+            padding: 1.5rem 1rem 1rem 1rem;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-magenta);
+            animation: text-glow 2s infinite alternate;
+        }
+
+        @keyframes text-glow {
+            0% { text-shadow: 0 0 10px var(--neon-cyan); }
+            100% { text-shadow: 0 0 20px var(--neon-magenta), 0 0 30px var(--neon-cyan); }
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .ctrl-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+
+        .ctrl-btn:active {
+            background: var(--neon-cyan);
+            color: #000;
+            transform: scale(0.95);
+        }
+
+        /* --- MAIN GRID --- */
+        .holo-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+            padding-bottom: 80px; /* Space for bottom nav */
+        }
+
+        /* Glassmorphism Card */
+        .holo-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1.2rem;
+            position: relative;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+            pointer-events: auto;
+            overflow: hidden;
+        }
+
+        .holo-card:active {
+            transform: scale(0.98);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
+        }
+
+        /* Edit Mode Styles */
+        body.edit-mode .holo-card {
+            border: 2px dashed var(--neon-yellow);
+            cursor: grab;
+        }
+
+        body.edit-mode .holo-card::after {
+            content: '✥ Drag & Drop';
+            position: absolute;
+            top: 5px; right: 5px;
+            color: var(--neon-yellow);
+            font-size: 0.7rem;
+            background: rgba(0,0,0,0.8);
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            color: var(--neon-cyan);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-shadow: 0 0 5px var(--neon-cyan);
+        }
+
+        .card-content {
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: #ccc;
+        }
+
+        /* Character Preview */
+        .char-preview {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .char-preview img {
+            width: 80px;
+            height: 100px;
+            border-radius: 8px;
+            border: 1px solid var(--neon-magenta);
+            object-fit: cover;
+            transition: transform 0.2s;
+        }
+
+        .char-preview img:active {
+            transform: scale(1.1);
+            border-color: var(--neon-cyan);
+        }
+
+        /* Highlight text */
+        .hl-cyan { color: var(--neon-cyan); font-weight: bold; }
+        .hl-magenta { color: var(--neon-magenta); font-weight: bold; }
+        .hl-yellow { color: var(--neon-yellow); font-weight: bold; }
+
+        /* --- SOS BUTTON (Top Left Corner) --- */
+        .sos-btn {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ff0000, #660000);
+            border: 2px solid #ff4444;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
+            z-index: 9999; /* Highest priority */
+            cursor: pointer;
+            pointer-events: auto;
+            animation: pulse-sos 2s infinite;
+        }
+
+        .sos-btn:active { transform: scale(0.9); }
+
+        @keyframes pulse-sos {
+            0% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.6); }
+            50% { box-shadow: 0 0 25px rgba(255, 0, 0, 1); }
+            100% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.6); }
+        }
+
+        /* --- BOTTOM NAV --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0; left: 0;
+            width: 100%;
+            background: rgba(7, 5, 26, 0.95);
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            z-index: 100;
+            pointer-events: auto;
+        }
+
+        .nav-item {
+            font-size: 1.5rem;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all 0.2s;
+            pointer-events: auto;
+        }
+
+        .nav-item.active {
+            opacity: 1;
+            text-shadow: 0 0 15px var(--neon-cyan);
+            transform: translateY(-3px);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background Layer (Fixed behind everything, won't block clicks) -->
+    <div class="background-layer" id="bgLayer">
+        <div class="twilight-horizon"></div>
+    </div>
+
+    <!-- SOS Button (Top Left) -->
+    <div class="sos-btn" onclick="alert('SOS Signal Sent! Privacy settings activated. Help is on the way.')">
+        SOS
+    </div>
+
+    <!-- Multiplayer Edge Bar (1st Person Views) -->
+    <div class="multiplayer-bar">
+        <div class="player-view">
+            <img src="https://via.placeholder.com/70x45/111/00f3ff?text=P1" alt="P1">
+            <div class="label">Cam 1</div>
+        </div>
+        <div class="player-view">
+            <img src="https://via.placeholder.com/70x45/111/ff00ff?text=P2" alt="P2">
+            <div class="label">Cam 2</div>
+        </div>
+        <div class="player-view">
+            <img src="https://via.placeholder.com/70x45/111/ffea00?text=P3" alt="P3">
+            <div class="label">Cam 3</div>
+        </div>
+        <button class="join-btn" onclick="alert('Searching for nearby HoloLabs...')">+ JOIN</button>
+    </div>
+
+    <header>
+        <h1>Twilight Dove</h1>
+        <div class="controls">
+            <button class="ctrl-btn" id="toggleBg">Toggle BG</button>
+            <button class="ctrl-btn" id="toggleEdit">Edit Mode</button>
+        </div>
+    </header>
+
+    <main class="holo-grid">
+        
+        <!-- Card 1: Guide & Character -->
+        <div class="holo-card">
+            <div class="card-title">🐋 Guide & Character</div>
+            <div class="card-content">
+                Welcome to the Quantumverse. Your sentient Deep AI guide is ready. 
+                Preview your adaptable character sheet below. In Edit Mode, you can slice and animate them.
+            </div>
+            <div class="char-preview">
+                <!-- Replace src with your actual character images -->
+                <img src="https://via.placeholder.com/80x100/0a0a1a/00f3ff?text=Char1" alt="Character 1">
+                <img src="https://via.placeholder.com/80x100/0a0a1a/ff00ff?text=Char2" alt="Character 2">
+                <img src="https://via.placeholder.com/80x100/0a0a1a/ffea00?text=Char3" alt="Character 3">
+            </div>
+        </div>
+
+        <!-- Card 2: Editor & Inspector -->
+        <div class="holo-card">
+            <div class="card-title">🔍 Editor & Inspector</div>
+            <div class="card-content">
+                Upload GLB, textures, or audio. Inspect layers, colors, and sizes. 
+                <br><br>
+                <span class="hl-cyan">Edit Mode is currently OFF.</span> Turn it on to rearrange apps and change backgrounds.
+            </div>
+        </div>
+
+        <!-- Card 3: Matryoshka Shells -->
+        <div class="holo-card">
+            <div class="card-title">🪆 Matryoshka Shells</div>
+            <div class="card-content">
+                Package your apps like Polly Pocket figures. Project them in layered HOLO shells. 
+                <br><br>
+                <strong>STARXGUIDEX42:</strong> Active.
+            </div>
+        </div>
+
+        <!-- Card 4: Safety & Privacy -->
+        <div class="holo-card">
+            <div class="card-title">🛡️ Safety & Privacy</div>
+            <div class="card-content">
+                Your data is protected. If you feel unsafe, the <span class="hl-magenta">SOS button (top left)</span> instantly shares your HoloLab status with trusted contacts.
+            </div>
+        </div>
+
+        <!-- Card 5: Web Theatre & DJ Lab -->
+        <div class="holo-card">
+            <div class="card-title">🎮 Web Theatre & DJ Lab</div>
+            <div class="card-content">
+                Paper marionettes with ♥️♦️♣️♠️💌🃏 holo card optics. Build your own DJ holo lab mix.
+                <br><br>
+                <strong>Closet (KLEIDERSCHRANK):</strong> Sliceable, adaptable character sheets.
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="nav-item active">🏠</div>
+        <div class="nav-item">📁</div>
+        <div class="nav-item">🎨</div>
+        <div class="nav-item">⚙️</div>
+    </div>
+
+    <script>
+        // 1. Toggle Background Visibility (Fixes the "blurry" issue)
+        const toggleBgBtn = document.getElementById('toggleBg');
+        const bgLayer = document.getElementById('bgLayer');
+        
+        toggleBgBtn.addEventListener('click', () => {
+            bgLayer.classList.toggle('invisible');
+            toggleBgBtn.textContent = bgLayer.classList.contains('invisible') ? 'Show BG' : 'Toggle BG';
+        });
+
+        // 2. Toggle Edit Mode (Fixes the "cannot change" issue)
+        const toggleEditBtn = document.getElementById('toggleEdit');
+        
+        toggleEditBtn.addEventListener('click', () => {
+            document.body.classList.toggle('edit-mode');
+            toggleEditBtn.textContent = document.body.classList.contains('edit-mode') ? 'Save Layout' : 'Edit Mode';
+            
+            if(document.body.classList.contains('edit-mode')) {
+                toggleEditBtn.style.background = 'var(--neon-yellow)';
+                toggleEditBtn.style.color = '#000';
+            } else {
+                toggleEditBtn.style.background = 'var(--glass-bg)';
+                toggleEditBtn.style.color = 'var(--neon-cyan)';
+            }
+        });
+
+        // 3. Prevent double-tap zoom on mobile (Crucial for responsive UI)
+        document.addEventListener('touchstart', function(event) {
+            if (event.touches.length > 1) {
+                event.preventDefault();
+            }
+        }, { passive: false });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    </script>
+</body>
+</html>
