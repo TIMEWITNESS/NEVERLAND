@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Twilight Dove | Quantumverse DJ Lab</title>
+    <style>
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-magenta: #ff00ff;
+            --neon-yellow: #ffea00;
+            --bg-dark: #07051a;
+            --glass-bg: rgba(10, 15, 30, 0.85);
+            --glass-border: rgba(0, 243, 255, 0.4);
+            --accent: var(--neon-cyan);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: none; }
+        
+        body {
+            background-color: var(--bg-dark);
+            color: #fff;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            transition: background 0.5s ease;
+        }
+
+        /* --- 3D CAMERA & STAGE --- */
+        #camera {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            perspective: 1200px;
+            perspective-origin: 50% 50%;
+            z-index: 1;
+            transition: transform 0.05s linear;
+        }
+
+        #stage {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 0; height: 0;
+            transform-style: preserve-3d;
+            transform: rotateX(20deg) rotateY(0deg) translateZ(-400px);
+        }
+
+        /* --- NEON GRID FLOOR --- */
+        .grid-floor {
+            position: absolute;
+            width: 400vw;
+            height: 400vh;
+            top: -200vh;
+            left: -200vw;
+            background-image: 
+                linear-gradient(var(--accent) 1px, transparent 1px),
+                linear-gradient(90deg, var(--accent) 1px, transparent 1px);
+            background-size: 60px 60px;
+            transform: rotateX(90deg) translateZ(-100px);
+            opacity: 0.15;
+            pointer-events: none;
+            transition: background-image 0.5s ease;
+        }
+
+        /* --- HOLOGRAPHIC HORIZON & WATER --- */
+        .horizon {
+            position: absolute;
+            bottom: -50vh; left: -100vw;
+            width: 200vw; height: 100vh;
+            background: radial-gradient(circle at center bottom, var(--accent), transparent 70%);
+            opacity: 0.2;
+            pointer-events: none;
+            transition: background 0.5s ease;
+        }
+
+        /* --- CRYSTAL CORE (The AI Sphere) --- */
+        #crystal-core {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) translateZ(50px);
+            width: 140px; height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .crystal-ring {
+            position: absolute;
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            border: 2px solid var(--accent);
+            box-shadow: 0 0 30px var(--accent), inset 0 0 30px var(--accent);
+            animation: spin-ring 4s linear infinite;
+        }
+
+        .crystal-core-inner {
+            width: 60px; height: 60px;
+            background: var(--accent);
+            transform: rotate(45deg);
+            box-shadow: 0 0 40px var(--accent);
+            animation: pulse-core 2s infinite alternate;
+        }
+
+        @keyframes spin-ring {
+            0% { transform: rotate(0deg) rotateX(20deg); }
+            100% { transform: rotate(360deg) rotateX(20deg); }
+        }
+
+        @keyframes pulse-core {
+            0% { transform: rotate(45deg) scale(0.8); opacity: 0.6; }
+            100% { transform: rotate(45deg) scale(1.1); opacity: 1; }
+        }
+
+        /* --- THE PROFESSOR (Cinematic Entrance) --- */
+        #professor {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) translateZ(150px) translateX(200px);
+            width: 80px; height: 160px;
+            background: linear-gradient(to top, var(--neon-magenta), var(--neon-cyan));
+            border-radius: 40px 40px 10px 10px;
+            box-shadow: 0 0 50px var(--neon-magenta);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+            z-index: 20;
+        }
+
+        #professor::before {
+            content: '👩‍🔬';
+            position: absolute;
+            top: -30px; left: 50%;
+            transform: translateX(-50%);
+            font-size: 2rem;
+            filter: drop-shadow(0 0 10px var(--neon-cyan));
+        }
+
+        #professor.active {
+            opacity: 1;
+            transform: translate(-50%, -50%) translateZ(150px) translateX(0px);
+        }
+
+        /* --- DIALOGUE BOX --- */
+        #dialogue {
+            position: absolute;
+            bottom: 180px; left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 350px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--accent);
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 0.8rem;
+            color: #fff;
+            text-align: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+            z-index: 100;
+        }
+
+        #dialogue.active {
+            opacity: 1;
+        }
+
+        /* --- HUD (Fixed UI) --- */
+        #hud {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* SOS Button (Top Left) */
+        .sos-btn {
+            position: absolute;
+            top: 15px; left: 15px;
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ff0000, #660000);
+            border: 2px solid #ff4444;
+            color: white; font-weight: bold; font-size: 0.8rem;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
+            pointer-events: auto; cursor: pointer;
+            animation: pulse-sos 2s infinite;
+        }
+        @keyframes pulse-sos { 0% { box-shadow: 0 0 10px #ff0000; } 50% { box-shadow: 0 0 25px #ff0000; } 100% { box-shadow: 0 0 10px #ff0000; } }
+
+        /* Top Right Status */
+        .status-bar {
+            position: absolute;
+            top: 15px; right: 15px;
+            display: flex; gap: 8px;
+            pointer-events: auto;
+        }
+        .status-box {
+            width: 50px; height: 35px; border-radius: 6px;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid var(--neon-magenta);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.6rem; color: var(--neon-magenta);
+        }
+
+        /* --- VIRTUAL JOYSTICK (Bottom Left) --- */
+        #joystick-zone {
+            position: absolute;
+            bottom: 30px; left: 30px;
+            width: 120px; height: 120px;
+            pointer-events: auto;
+            z-index: 200;
+        }
+
+        .joystick-base {
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            background: rgba(0, 243, 255, 0.05);
+            border: 2px solid var(--neon-cyan);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+            position: relative;
+        }
+
+        .joystick-knob {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--neon-cyan), transparent);
+            box-shadow: 0 0 15px var(--neon-cyan);
+            transition: transform 0.1s ease-out;
+        }
+
+        /* --- DJ MIX PULT (Bottom Right) --- */
+        #dj-pult {
+            position: absolute;
+            bottom: 20px; right: 20px;
+            width: 140px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
+            z-index: 200;
+        }
+
+        .pult-module {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 10px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .pult-module h4 {
+            font-size: 0.6rem;
+            color: var(--neon-cyan);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        /* Neon Slider */
+        .neon-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 243, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+            margin: 8px 0;
+        }
+
+        .neon-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: var(--neon-cyan);
+            box-shadow: 0 0 10px var(--neon-cyan);
+            cursor: pointer;
+        }
+
+        /* Pult Buttons */
+        .pult-btn {
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .pult-btn:active {
+            background: var(--neon-cyan);
+            color: #000;
+            box-shadow: 0 0 15px var(--neon-cyan);
+            transform: scale(0.95);
+        }
+
+        .pult-btn.active {
+            background: var(--neon-cyan);
+            color: #000;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+
+        /* --- BOTTOM NAVIGATION --- */
+        .bottom-nav {
+            position: absolute;
+            bottom: 0; left: 0; width: 100%;
+            background: rgba(7, 5, 26, 0.95);
+            border-top: 1px solid var(--glass-border);
+            display: flex; justify-content: space-around;
+            padding: 12px 0;
+            pointer-events: auto;
+            z-index: 150;
+        }
+        .nav-item {
+            font-size: 1.2rem; cursor: pointer; opacity: 0.6; transition: all 0.2s;
+        }
+        .nav-item.active { opacity: 1; text-shadow: 0 0 15px var(--accent); transform: translateY(-3px); }
+    </style>
+</head>
+<body data-accent="cyan">
+
+    <!-- 3D CAMERA -->
+    <div id="camera">
+        <div id="stage">
+            <div class="grid-floor"></div>
+            <div class="horizon"></div>
+            
+            <!-- Crystal Core (Red Alice AI) -->
+            <div id="crystal-core">
+                <div class="crystal-ring"></div>
+                <div class="crystal-core-inner"></div>
+            </div>
+
+            <!-- The Professor (Cinematic Entrance) -->
+            <div id="professor"></div>
+        </div>
+    </div>
+
+    <!-- HUD (Fixed UI) -->
+    <div id="hud">
+        
+        <!-- SOS Button -->
+        <div class="sos-btn" onclick="alert('SOS Signal Sent!')">SOS</div>
+
+        <!-- Top Right Status -->
+        <div class="status-bar">
+            <div class="status-box">P1</div>
+            <div class="status-box">P2</div>
+        </div>
+
+        <!-- Dialogue Box -->
+        <div id="dialogue">Welcome, Player 1. The Professor is arriving soon...</div>
+
+        <!-- Virtual Joystick (Bottom Left) -->
+        <div id="joystick-zone">
+            <div class="joystick-base">
+                <div class="joystick-knob" id="joystick-knob"></div>
+            </div>
+        </div>
+
+        <!-- DJ Mix Pult (Bottom Right) -->
+        <div id="dj-pult">
+            <div class="pult-module">
+                <h4>MIXER</h4>
+                <input type="range" class="neon-slider" id="slider-glow" min="0" max="100" value="50">
+                <input type="range" class="neon-slider" id="slider-zoom" min="0" max="100" value="50">
+            </div>
+            <div class="pult-module">
+                <h4>MODULES</h4>
+                <div class="btn-grid">
+                    <button class="pult-btn active" onclick="setAccent('cyan', this)">Cyan</button>
+                    <button class="pult-btn" onclick="setAccent('magenta', this)">Magenta</button>
+                    <button class="pult-btn" onclick="setAccent('yellow', this)">Yellow</button>
+                    <button class="pult-btn" onclick="triggerProfessor()">Professor</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <div class="nav-item active">🏠</div>
+            <div class="nav-item">📁</div>
+            <div class="nav-item">🎨</div>
+            <div class="nav-item">⚙️</div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. CINEMATIC INTRO SCENE ---
+        const dialogue = document.getElementById('dialogue');
+        const professor = document.getElementById('professor');
+        
+        setTimeout(() => {
+            dialogue.innerText = "Bzzt! Welcome, Player 1! I'm Red Alice. The Professor is arriving soon. Eek!";
+            dialogue.classList.add('active');
+        }, 1000);
+
+        setTimeout(() => {
+            dialogue.innerText = "Oh! The digital wall is opening! Here she comes!";
+            professor.classList.add('active');
+        }, 4000);
+
+        setTimeout(() => {
+            dialogue.innerText = "Professor: Hello there. Welcome to the Quantumverse HoloLab.";
+            dialogue.style.borderColor = 'var(--neon-magenta)';
+        }, 6000);
+
+        setTimeout(() => {
+            dialogue.classList.remove('active');
+        }, 10000);
+
+        // --- 2. DJ PULT CONTROLS ---
+        function setAccent(color, btn) {
+            document.body.setAttribute('data-accent', color);
+            // Update CSS variables based on color
+            const root = document.documentElement;
+            if (color === 'cyan') {
+                root.style.setProperty('--accent', '#00f3ff');
+                root.style.setProperty('--neon-magenta', '#ff00ff');
+            } else if (color === 'magenta') {
+                root.style.setProperty('--accent', '#ff00ff');
+                root.style.setProperty('--neon-cyan', '#00f3ff');
+            } else if (color === 'yellow') {
+                root.style.setProperty('--accent', '#ffea00');
+                root.style.setProperty('--neon-magenta', '#ff00ff');
+            }
+            
+            // UI Feedback
+            document.querySelectorAll('.pult-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            
+            // Update dialogue
+            dialogue.innerText = `System recalibrated. Accent color set to ${color.toUpperCase()}.`;
+            dialogue.classList.add('active');
+            setTimeout(() => dialogue.classList.remove('active'), 2000);
+        }
+
+        function triggerProfessor() {
+            professor.classList.add('active');
+            dialogue.innerText = "Professor: I'm here. Let's begin the simulation.";
+            dialogue.classList.add('active');
+            setTimeout(() => dialogue.classList.remove('active'), 3000);
+        }
+
+        // --- 3. VIRTUAL JOYSTICK (Camera Pan) ---
+        const joystickZone = document.getElementById('joystick-zone');
+        const joystickKnob = document.getElementById('joystick-knob');
+        const stage = document.getElementById('stage');
+        
+        let isDraggingJoystick = false;
+        let joystickStartX, joystickStartY;
+        let targetRotX = 20, targetRotY = 0;
+        let currentRotX = 20, currentRotY = 0;
+        let targetZoom = -400;
+        let currentZoom = -400;
+
+        joystickZone.addEventListener('touchstart', (e) => {
+            isDraggingJoystick = true;
+            const touch = e.touches[0];
+            const rect = joystickZone.getBoundingClientRect();
+            joystickStartX = rect.left + rect.width / 2;
+            joystickStartY = rect.top + rect.height / 2;
+            e.preventDefault();
+        });
+
+        joystickZone.addEventListener('touchmove', (e) => {
+            if (!isDraggingJoystick) return;
+            const touch = e.touches[0];
+            let deltaX = touch.clientX - joystickStartX;
+            let deltaY = touch.clientY - joystickStartY;
+            
+            // Limit joystick movement
+            const maxDist = 40;
+            const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            if (dist > maxDist) {
+                deltaX = (deltaX / dist) * maxDist;
+                deltaY = (deltaY / dist) * maxDist;
+            }
+            
+            // Move knob visually
+            joystickKnob.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+            
+            // Apply to camera rotation
+            targetRotY += deltaX * 0.3;
+            targetRotX -= deltaY * 0.3;
+            targetRotX = Math.max(-10, Math.min(60, targetRotX));
+            
+            e.preventDefault();
+        });
+
+        joystickZone.addEventListener('touchend', () => {
+            isDraggingJoystick = false;
+            joystickKnob.style.transform = 'translate(-50%, -50%)';
+        });
+
+        // Smooth Camera Animation Loop
+        function animateCamera() {
+            currentRotX += (targetRotX - currentRotX) * 0.1;
+            currentRotY += (targetRotY - currentRotY) * 0.1;
+            currentZoom += (targetZoom - currentZoom) * 0.1;
+            
+            stage.style.transform = `rotateX(${currentRotX}deg) rotateY(${currentRotY}deg) translateZ(${currentZoom}px)`;
+            requestAnimationFrame(animateCamera);
+        }
+        animateCamera();
+
+        // --- 4. SLIDER CONTROLS ---
+        document.getElementById('slider-glow').addEventListener('input', (e) => {
+            const val = e.target.value / 100;
+            document.querySelector('.grid-floor').style.opacity = val * 0.5;
+            document.querySelector('.horizon').style.opacity = val * 0.5;
+        });
+
+        document.getElementById('slider-zoom').addEventListener('input', (e) => {
+            const val = e.target.value;
+            targetZoom = -400 + (val - 50) * 5; // Zoom between -650 and -150
+        });
+
+        // Prevent double-tap zoom
+        document.addEventListener('touchstart', function(event) {
+            if (event.touches.length > 1) event.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>
