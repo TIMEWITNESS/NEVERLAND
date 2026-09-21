@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Twilight Dove | 3D HoloLab</title>
+    <style>
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-magenta: #ff00ff;
+            --neon-yellow: #ffea00;
+            --bg-dark: #07051a;
+            --glass-bg: rgba(10, 15, 30, 0.8);
+            --glass-border: rgba(0, 243, 255, 0.5);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: none; }
+        
+        body {
+            background-color: var(--bg-dark);
+            color: #fff;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden; /* Prevent scrolling, we are in 3D space */
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* --- 3D CAMERA WRAPPER --- */
+        #camera {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            perspective: 1000px;
+            perspective-origin: 50% 50%;
+            z-index: 1;
+            cursor: grab;
+        }
+
+        #camera:active { cursor: grabbing; }
+
+        /* --- 3D STAGE --- */
+        #stage {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 0; height: 0;
+            transform-style: preserve-3d;
+            /* Initial camera angle */
+            transform: rotateX(15deg) rotateY(0deg) translateZ(-200px);
+            transition: transform 0.1s ease-out;
+            will-change: transform;
+        }
+
+        /* --- 3D GRID FLOOR --- */
+        .grid-floor {
+            position: absolute;
+            width: 200vw;
+            height: 200vh;
+            top: -100vh;
+            left: -100vw;
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.2) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.2) 1px, transparent 1px);
+            background-size: 50px 50px;
+            transform: rotateX(90deg) translateZ(-100px);
+            animation: grid-pulse 4s infinite alternate;
+            pointer-events: none;
+        }
+
+        @keyframes grid-pulse {
+            0% { opacity: 0.5; background-size: 50px 50px; }
+            100% { opacity: 1; background-size: 55px 55px; }
+        }
+
+        /* --- HOLOGRAPHIC HORIZON --- */
+        .horizon {
+            position: absolute;
+            bottom: -50vh;
+            left: -100vw;
+            width: 200vw;
+            height: 100vh;
+            background: radial-gradient(circle at center bottom, rgba(255, 0, 255, 0.3), transparent 70%);
+            transform: rotateX(0deg);
+            pointer-events: none;
+            animation: horizon-glow 3s infinite alternate;
+        }
+
+        @keyframes horizon-glow {
+            0% { opacity: 0.5; transform: scale(1); }
+            100% { opacity: 1; transform: scale(1.05); }
+        }
+
+        /* --- FLOATING HOLO CARDS --- */
+        .holo-card {
+            position: absolute;
+            width: 260px;
+            height: 160px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 15px;
+            color: #fff;
+            transform-style: preserve-3d;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2), inset 0 0 20px rgba(255, 0, 255, 0.1);
+            pointer-events: auto;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .holo-card:active {
+            transform: scale(1.05) translateZ(20px);
+            box-shadow: 0 0 40px rgba(0, 243, 255, 0.6), inset 0 0 30px rgba(255, 0, 255, 0.3);
+            border-color: var(--neon-magenta);
+        }
+
+        /* Card Positioning in 3D Space */
+        .card-1 { transform: translate3d(-150px, -100px, 0) rotateY(15deg) rotateX(-5deg); }
+        .card-2 { transform: translate3d(150px, -80px, 50px) rotateY(-15deg) rotateX(5deg); }
+        .card-3 { transform: translate3d(-100px, 120px, 100px) rotateY(10deg) rotateX(-10deg); }
+        .card-4 { transform: translate3d(120px, 150px, -50px) rotateY(-20deg) rotateX(0deg); }
+
+        .card-title {
+            font-size: 1rem;
+            color: var(--neon-cyan);
+            margin-bottom: 8px;
+            text-shadow: 0 0 5px var(--neon-cyan);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-content {
+            font-size: 0.75rem;
+            line-height: 1.4;
+            color: #ccc;
+        }
+
+        /* Character Preview inside card */
+        .char-preview {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .char-preview img {
+            width: 50px;
+            height: 60px;
+            border-radius: 6px;
+            border: 1px solid var(--neon-magenta);
+            object-fit: cover;
+        }
+
+        /* --- FIXED HUD (Always on top, doesn't rotate with stage) --- */
+        #hud {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; /* Let touches pass through to the 3D stage */
+            z-index: 100;
+        }
+
+        /* Multiplayer Edge View */
+        .multiplayer-bar {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            display: flex;
+            gap: 8px;
+            padding: 10px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            pointer-events: auto;
+            overflow-x: auto;
+        }
+
+        .player-view {
+            width: 60px;
+            height: 40px;
+            border-radius: 6px;
+            background: #111;
+            border: 1px solid var(--neon-magenta);
+            flex-shrink: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .player-view img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            opacity: 0.7;
+        }
+
+        .join-btn {
+            background: var(--neon-cyan);
+            color: #000;
+            border: none;
+            border-radius: 20px;
+            padding: 5px 15px;
+            font-weight: bold;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        /* SOS Button - Top Left */
+        .sos-btn {
+            position: absolute;
+            top: 60px; /* Below multiplayer bar */
+            left: 15px;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ff0000, #660000);
+            border: 2px solid #ff4444;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
+            pointer-events: auto;
+            cursor: pointer;
+            animation: pulse-sos 2s infinite;
+        }
+
+        @keyframes pulse-sos {
+            0% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.6); }
+            50% { box-shadow: 0 0 25px rgba(255, 0, 0, 1); }
+            100% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.6); }
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: absolute;
+            bottom: 0; left: 0;
+            width: 100%;
+            background: rgba(7, 5, 26, 0.9);
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-around;
+            padding: 15px 0;
+            pointer-events: auto;
+        }
+
+        .nav-item {
+            font-size: 1.5rem;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all 0.2s;
+        }
+
+        .nav-item.active {
+            opacity: 1;
+            text-shadow: 0 0 15px var(--neon-cyan);
+            transform: translateY(-3px);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D CAMERA & STAGE -->
+    <div id="camera">
+        <div id="stage">
+            <div class="grid-floor"></div>
+            <div class="horizon"></div>
+
+            <!-- Floating Holo Cards (Replace img src with your actual images) -->
+            <div class="holo-card card-1">
+                <div class="card-title">🐋 Guide & Character</div>
+                <div class="card-content">
+                    Adaptable character sheet. Edit mode ready.
+                </div>
+                <div class="char-preview">
+                    <img src="https://via.placeholder.com/50x60/0a0a1a/00f3ff?text=1" alt="Char1">
+                    <img src="https://via.placeholder.com/50x60/0a0a1a/ff00ff?text=2" alt="Char2">
+                </div>
+            </div>
+
+            <div class="holo-card card-2">
+                <div class="card-title">🔍 Media Inspector</div>
+                <div class="card-content">
+                    Upload GLB, textures, audio. Inspect layers and colors.
+                </div>
+            </div>
+
+            <div class="holo-card card-3">
+                <div class="card-title">🪆 Matryoshka Shells</div>
+                <div class="card-content">
+                    Package apps like Polly Pocket figures.
+                </div>
+            </div>
+
+            <div class="holo-card card-4">
+                <div class="card-title">🎮 DJ Lab</div>
+                <div class="card-content">
+                    Build your own holo lab mix.
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- FIXED HUD (Does not rotate) -->
+    <div id="hud">
+        
+        <!-- Multiplayer Edge Bar -->
+        <div class="multiplayer-bar">
+            <div class="player-view"><img src="https://via.placeholder.com/60x40/111/00f3ff?text=P1" alt="P1"></div>
+            <div class="player-view"><img src="https://via.placeholder.com/60x40/111/ff00ff?text=P2" alt="P2"></div>
+            <button class="join-btn" onclick="alert('Searching for nearby HoloLabs...')">+ JOIN</button>
+        </div>
+
+        <!-- SOS Button -->
+        <div class="sos-btn" onclick="alert('SOS Signal Sent!')">SOS</div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <div class="nav-item active">🏠</div>
+            <div class="nav-item">📁</div>
+            <div class="nav-item">🎨</div>
+            <div class="nav-item">⚙️</div>
+        </div>
+    </div>
+
+    <script>
+        // --- 3D CAMERA INTERACTION ---
+        const camera = document.getElementById('camera');
+        const stage = document.getElementById('stage');
+        
+        let isDragging = false;
+        let startX, startY;
+        let currentRotX = 15, currentRotY = 0;
+        let targetRotX = 15, targetRotY = 0;
+
+        // Touch Events for Mobile
+        camera.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        });
+
+        camera.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            const deltaX = e.touches[0].clientX - startX;
+            const deltaY = e.touches[0].clientY - startY;
+            
+            targetRotY += deltaX * 0.5;
+            targetRotX -= deltaY * 0.5;
+            
+            // Limit vertical rotation to keep it cinematic
+            targetRotX = Math.max(-30, Math.min(60, targetRotX));
+
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        });
+
+        camera.addEventListener('touchend', () => {
+            isDragging = false;
+        });
+
+        // Mouse Events for Desktop testing
+        camera.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            targetRotY += deltaX * 0.5;
+            targetRotX -= deltaY * 0.5;
+            targetRotX = Math.max(-30, Math.min(60, targetRotX));
+
+            startX = e.clientX;
+            startY = e.clientY;
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Smooth Camera Animation Loop
+        function animateCamera() {
+            // Smoothly interpolate towards target rotation
+            currentRotX += (targetRotX - currentRotX) * 0.1;
+            currentRotY += (targetRotY - currentRotY) * 0.1;
+
+            // Apply 3D transformation
+            stage.style.transform = `rotateX(${currentRotX}deg) rotateY(${currentRotY}deg) translateZ(-200px)`;
+
+            requestAnimationFrame(animateCamera);
+        }
+
+        animateCamera();
+
+        // --- AUDIOREACTIVE SIMULATION ---
+        // Simulates a bass drop affecting the stage scale
+        setInterval(() => {
+            const scale = 1 + (Math.random() * 0.02);
+            stage.style.transform = `rotateX(${currentRotX}deg) rotateY(${currentRotY}deg) translateZ(-200px) scale(${scale})`;
+        }, 100);
+    </script>
+</body>
+</html>
