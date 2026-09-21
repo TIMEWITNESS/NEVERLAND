@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyberpunk Media Preview Grid</title>
+  <style>
+    /* --- SYSTEM SETUP & CORE VARS --- */
+    @import url('https://googleapis.com');
+
+    :root {
+      --bg-dark: #0a0a12;
+      --panel-bg: rgba(13, 13, 25, 0.8);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff0055;
+      --neon-yellow: #fcee0a;
+      --text-main: #c4c4d6;
+      --font-cyber: 'Orbitron', sans-serif;
+      --font-mono: 'Share Tech Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(20, 20, 35, 0.6) 0%, transparent 80%),
+        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+      background-size: 100% 100%, 100% 4px, 6px 100%;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    /* --- LAYOUT GRID --- */
+    .cyber-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* --- BASE CYBERPUNK PANEL --- */
+    .cyber-panel {
+      background: var(--panel-bg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    .cyber-panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+    }
+
+    /* --- TYPE VARIATIONS (CYAN / MAGENTA) --- */
+    .type-video {
+      border-right: 2px solid var(--neon-cyan);
+      box-shadow: inset 0 0 15px rgba(0, 243, 255, 0.05);
+    }
+    .type-video::before {
+      background: var(--neon-cyan);
+      box-shadow: 0 0 10px var(--neon-cyan);
+    }
+    .type-video .glitch-text-hover { color: var(--neon-cyan); }
+
+    .type-audio {
+      border-right: 2px solid var(--neon-magenta);
+      box-shadow: inset 0 0 15px rgba(255, 0, 85, 0.05);
+    }
+    .type-audio::before {
+      background: var(--neon-magenta);
+      box-shadow: 0 0 10px var(--neon-magenta);
+    }
+    .type-audio .glitch-text-hover { color: var(--neon-magenta); }
+
+    /* Hover Effects */
+    .cyber-panel:hover {
+      transform: translateY(-5px);
+    }
+    .type-video:hover {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 20px rgba(0, 243, 255, 0.2), inset 0 0 20px rgba(0, 243, 255, 0.1);
+    }
+    .type-audio:hover {
+      border-color: var(--neon-magenta);
+      box-shadow: 0 0 20px rgba(255, 0, 85, 0.2), inset 0 0 20px rgba(255, 0, 85, 0.1);
+    }
+
+    /* --- PANEL HEADERS --- */
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .tech-id {
+      font-family: var(--font-cyber);
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      opacity: 0.6;
+    }
+
+    .status-tag {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .type-video .status-tag { color: var(--neon-cyan); border-color: rgba(0, 243, 255, 0.3); }
+    .type-audio .status-tag { color: var(--neon-magenta); border-color: rgba(255, 0, 85, 0.3); }
+
+    /* --- MEDIA CONTAINERS --- */
+    .media-wrapper {
+      position: relative;
+      width: 100%;
+      background: #000;
+      line-height: 0;
+    }
+
+    .aspect-video {
+      aspect-ratio: 16 / 9;
+    }
+
+    .aspect-audio {
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(45deg, #0d0d19 0%, #15051a 100%);
+      position: relative;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* --- TECH DATA & UI OVERLAYS --- */
+    .panel-body {
+      padding: 1rem;
+    }
+
+    .media-title {
+      font-family: var(--font-cyber);
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .meta-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      opacity: 0.7;
+      border-top: 1px dashed rgba(255, 255, 255, 0.1);
+      padding-top: 0.75rem;
+      margin-top: 0.75rem;
+    }
+
+    .metric-line span {
+      color: #fff;
+      font-weight: bold;
+    }
+
+    /* --- SIMULATED AUDIO VISUALIZER BAR --- */
+    .cyber-visualizer {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      width: 60%;
+      height: 40px;
+    }
+
+    .vis-bar {
+      flex: 1;
+      background: var(--neon-magenta);
+      height: 10%;
+      animation: bounce 1.2s ease-in-out infinite alternate;
+      box-shadow: 0 0 8px var(--neon-magenta);
+    }
+
+    /* Staggering visualizer bar animations */
+    .vis-bar:nth-child(2) { animation-delay: 0.2s; height: 30%; }
+    .vis-bar:nth-child(3) { animation-delay: 0.4s; height: 60%; }
+    .vis-bar:nth-child(4) { animation-delay: 0.1s; height: 45%; }
+    .vis-bar:nth-child(5) { animation-delay: 0.6s; height: 80%; }
+    .vis-bar:nth-child(6) { animation-delay: 0.3s; height: 20%; }
+
+    @keyframes bounce {
+      0% { height: 10%; filter: hue-rotate(0deg); }
+      100% { height: 100%; filter: hue-rotate(45deg); }
+    }
+
+    /* --- CUSTOM AUDIO CONTROLS OVERRIDE STYLING HINTS --- */
+    audio {
+      width: calc(100% - 2rem);
+      position: absolute;
+      bottom: 0.5rem;
+      left: 1rem;
+      height: 30px;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    }
+    audio:hover { opacity: 1; }
+
+    /* --- DECORATIVE TECH CORNERS --- */
+    .corner-tag {
+      position: absolute;
+      bottom: 2px;
+      right: 4px;
+      font-size: 0.6rem;
+      color: rgba(255,255,255,0.2);
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="cyber-grid">
+
+    <!-- DATA PANEL 01: MP4 PREVIEW (Using raw stream asset linked via raw.githubusercontent) -->
+    <div class="cyber-panel type-video">
+      <div class="panel-header">
+        <span class="tech-id">NET_NODE // 042</span>
+        <span class="status-tag">MP4.FEED</span>
+      </div>
+      
+      <div class="media-wrapper aspect-video">
+        <!-- Main video payload pointing directly to the valid raw video architecture asset -->
+        <video controls preload="metadata" poster="data:image/svg+xml;utf8,<svg xmlns='http://w3.org' width='100' height='100' viewBox='0 0 100 100'><rect width='100%' height='100%' fill='%2305050a'/><text x='50%' y='50%' font-family='monospace' font-size='8' fill='%2300f3ff' dominant-baseline='middle' text-anchor='middle'>LOADING FEED...</text></svg>">
+          <source src="https://githubusercontent.com" type="video/mp4">
+          SYSTEM ERROR: Media playback unsupported on this deck.
+        </video>
+      </div>
+
+      <div class="panel-body">
+        <div class="media-title glitch-text-hover">Bunny_Hearts_Wolf_Auras</div>
+        
+        <div class="meta-metrics">
+          <div class="metric-line">CODEC: <span>H.264 / AVC</span></div>
+          <div class="metric-line">TYPE: <span>VIDEO/MP4</span></div>
+          <div class="metric-line">SOURCE: <span>WAN.GITHUB</span></div>
+          <div class="metric-line">SECURE: <span>YES (TLS)</span></div>
+        </div>
+      </div>
+      <div class="corner-tag">SYS_P_V.1.0</div>
+    </div>
+
+    <!-- DATA PANEL 02: MP3 AUDIO SAMPLE -->
+    <div class="cyber-panel type-audio">
+      <div class="panel-header">
+        <span class="tech-id">NET_NODE // 089</span>
+        <span class="status-tag">MP3.AUDIO</span>
+      </div>
+      
+      <div class="media-wrapper aspect-audio">
+        <!-- Neon Virtualizer Graphic Layer for Audio Context Feedback -->
+        <div class="cyber-visualizer">
+          <div class="vis-bar"></div>
+          <div class="vis-bar"></div>
+          <div class="vis-bar"></div>
+          <div class="vis-bar"></div>
+          <div class="vis-bar"></div>
+          <div class="vis-bar"></div>
+        </div>
+        
+        <!-- Standard Audio Tag with Cyber Deck integration -->
+        <audio controls preload="metadata">
+          <source src="https://soundhelix.com" type="audio/mp3">
+          SYSTEM ERROR: Audio interface malfunctioning.
+        </audio>
+      </div>
+
+      <div class="panel-body">
+        <div class="media-title glitch-text-hover">Synthetic_Atmosphere_V3</div>
+        
+        <div class="meta-metrics">
+          <div class="metric-line">BITRATE: <span>320 KBPS</span></div>
+          <div class="metric-line">TYPE: <span>AUDIO/MP3</span></div>
+          <div class="metric-line">CHANNELS: <span>STEREO</span></div>
+          <div class="metric-line">HZ: <span>44100 KHZ</span></div>
+        </div>
+      </div>
+      <div class="corner-tag">SYS_P_A.1.0</div>
+      <a href="RENEW.html" >🕊️🎶🌐🐇🪽</a>
+    </div>
+
+  </div>
+
+</body>
+</html>
