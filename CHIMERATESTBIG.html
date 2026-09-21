@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Arc Defender</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0d0d13;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            user-select: none;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            z-index: 10;
+            pointer-events: none;
+            background: rgba(0,0,0,0.5);
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #333;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vw;
+            max-width: 600px;
+            max-height: 600px;
+            margin: auto;
+            background: radial-gradient(circle, #1a1a2e 0%, #0f0f1a 100%);
+            border: 2px solid #444;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+        @media (min-height: 620px) {
+            #game-container {
+                margin-top: calc((100vh - 600px) / 2);
+            }
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 10;
+        }
+        button {
+            background: #222;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+        button:hover {
+            background: #444;
+        }
+        #game-over {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="ui-layer">
+            <div>XYZ_HP: <span id="hp-val">100</span></div>
+            <div>XYZ_SCORE: <span id="score-val">0</span></div>
+            <div>XYZ_WAVE: <span id="wave-val">1</span></div>
+        </div>
+
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+        <div id="controls">
+            <button id="btn-sac" onclick="triggerSacrifice()">XYZ_SACRIFICE</button>
+            <button id="btn-toast" onclick="triggerToaster()">XYZ_TOASTER</button>
+        </div>
+
+        <div id="game-over" id="gameOverScreen">
+            <h1 style="color: #ff3333;">XYZ_GAME_OVER</h1>
+            <p>XYZ_FINAL: <span id="final-score">0</span></p>
+            <button onclick="resetGame()">XYZ_RESTART</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game Configuration & Templates
+        let gameActive = true;
+        let score = 0;
+        let wave = 1;
+        
+        // Arc (The Central Space Station to Defend)
+        const arc = {
+            x: 300,
+            y: 300,
+            radius: 45,
+            hp: 100,
+            maxHp: 100,
+            emoji: "🛸" // Space Arc
+        };
+
+        // Defender Characters (Named after Animals, customizable emojis)
+        // Synthesizes mechanics from Shoggoth games: position feeding, scaling, & stealth brawling
+        const defenders = [
+            { id: 1, name: "XYZ_BEAR", emoji: "🐻", angle: 0, distance: 80, size: 24, type: "brawler" },
+            { id: 2, name: "XYZ_EAGLE", emoji: "🦅", angle: 120, distance: 100, size: 24, type: "ranged" },
+            { id: 3, name: "XYZ_TIGER", emoji: "🐯", angle: 240, distance: 90, size: 24, type: "stealth" }
+        ];
+
+        // Threat Vectors (Shoggoth-style morphing blobs / eldritch waves)
+        let enemies = [];
+        let projectiles = [];
+        let particles = [];
+        let toasters = [];
+
+        // Input tracking
+        let mouseX = 300;
+        let mouseY = 300;
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+        });
+
+        canvas.addEventListener('click', () => {
+            if (!gameActive) return;
+            // Ranged defender fire mechanic
+            defenders.forEach(def => {
+                if (def.type === "ranged") {
+                    const defX = arc.x + Math.cos(def.angle) * def.distance;
+                    const defY = arc.y + Math.sin(def.angle) * def.distance;
+                    const angleToMouse = Math.atan2(mouseY - defY, mouseX - defX);
+                    projectiles.push({
+                        x: defX, y: defY,
+                        vx: Math.cos(angleToMouse) * 6,
+                        vy: Math.sin(angleToMouse) * 6,
+                        emoji: "☄️",
+                        size: 14
+                    });
+                }
+            });
+        });
+
+        function spawnEnemy() {
+            if (!gameActive) return;
+            const spawnAngle = Math.random() * Math.PI * 2;
+            const dist = 400; // Offscreen starting point
+            const speed = 1.0 + (wave * 0.15);
+            
+            // Randomly pick a Shoggoth form
+            const types = [
+                { emoji: "👁️", hp: 3, size: 28, label: "XYZ_BLOB_A" },
+                { emoji: "🐙", hp: 5, size: 34, label: "XYZ_BLOB_B" },
+                { emoji: "🧬", hp: 2, size: 22, label: "XYZ_BLOB_C" }
+            ];
+            const chosen = types[Math.floor(Math.random() * types.length)];
+
+            enemies.push({
+                x: arc.x + Math.cos(spawnAngle) * dist,
+                y: arc.y + Math.sin(spawnAngle) * dist,
+                speed: speed,
+                emoji: chosen.emoji,
+                size: chosen.size,
+                hp: chosen.hp,
+                maxHp: chosen.hp,
+                label: chosen.label
+            });
+
+            // Schedule next spawn based on wave intensity
+            setTimeout(spawnEnemy, Math.max(800, 2500 - (wave * 200)));
+        }
+
+        // Active Ability: Cultist Sacrifice Mechanic (Feeds the center to push back danger)
+        function triggerSacrifice() {
+            if (!gameActive) return;
+            // High risk choice: trade 15 Space Arc HP to wipe nearby threat waves
+            if (arc.hp > 20) {
+                arc.hp -= 15;
+                document.getElementById('hp-val').innerText = arc.hp;
+                
+                // Explode outwards from center
+                for (let i = 0; i < 30; i++) {
+                    const pAngle = Math.random() * Math.PI * 2;
+                    const pSpeed = 3 + Math.random() * 5;
+                    particles.push({
+                        x: arc.x, y: arc.y,
+                        vx: Math.cos(pAngle) * pSpeed, vy: Math.sin(pAngle) * pSpeed,
+                        emoji: "💥", size: 16, life: 30
+                    });
+                }
+
+                // Damage all enemies within medium radius
+                enemies.forEach(en => {
+                    const dx = en.x - arc.x;
+                    const dy = en.y - arc.y;
+                    const d = Math.sqrt(dx*dx + dy*dy);
+                    if (d < 220) {
+                        en.hp -= 4;
+                    }
+                });
+                enemies = enemies.filter(en => en.hp > 0);
+                score += 10;
+                document.getElementById('score-val').innerText = score;
+            }
+        }
+
+        // Active Ability: Deploy Emergency Defense Toasters
+        function triggerToaster() {
+            if (!gameActive) return;
+            // Spawns automated defensive toasters rotating nearby
+            const tAngle = Math.random() * Math.PI * 2;
+            toasters.push({
+                angle: tAngle,
+                distance: 60,
+                speed: 0.04,
+                emoji: "🍞",
+                size: 20,
+                life: 400 // Frames duration
+            });
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            // 1. Rotate & Position Animal Defenders around the Arc
+            defenders.forEach(def => {
+                // Stealth & Brawling positions respond to mouse proximity offsets
+                if (def.type === "brawler") {
+                    def.angle += 0.015; 
+                } else if (def.type === "stealth") {
+                    def.angle -= 0.01;
+                } else {
+                    // Ranged aims tracking facing angles
+                    const dx = mouseX - arc.x;
+                    const dy = mouseY - arc.y;
+                    def.angle = Math.atan2(dy, dx);
+                }
+            });
+
+            // 2. Update Toasters orbit status
+            toasters.forEach((t, index) => {
+                t.angle += t.speed;
+                t.life--;
+                if (t.life <= 0) toasters.splice(index, 1);
+            });
+
+            // 3. Move Projectiles
+            projectiles.forEach((proj, pIdx) => {
+                proj.x += proj.vx;
+                proj.y += proj.vy;
+                // Bounds check
+                if (proj.x < 0 || proj.x > 600 || proj.y < 0 || proj.y > 600) {
+                    projectiles.splice(pIdx, 1);
+                }
+            });
+
+            // 4. Move & Update Eldritch Enemies
+            enemies.forEach((en, eIdx) => {
+                const dx = arc.x - en.x;
+                const dy = arc.y - en.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+
+                if (dist > arc.radius - 10) {
+                    // Walk toward the Space Arc core
+                    en.x += (dx / dist) * en.speed;
+                    en.y += (dy / dist) * en.speed;
+                } else {
+                    // Collision with Space Arc
+                    arc.hp -= 5;
+                    document.getElementById('hp-val').innerText = arc.hp;
+                    enemies.splice(eIdx, 1);
+                    
+                    if (arc.hp <= 0) {
+                        endGame();
+                    }
+                    return;
+                }
+
+                // Check collisions with Defenders
+                defenders.forEach(def => {
+                    const defX = arc.x + Math.cos(def.angle) * def.distance;
+                    const defY = arc.y + Math.sin(def.angle) * def.distance;
+                    const ex = en.x - defX;
+                    const ey = en.y - defY;
+                    const dDef = Math.sqrt(ex*ex + ey*ey);
+                    
+                    if (dDef < (en.size/2 + def.size/2)) {
+                        en.hp -= 0.05; // Continuous brawling damage
+                        if (Math.random() < 0.05) {
+                            particles.push({ x: en.x, y: en.y, vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4, emoji: "✨", size: 10, life: 15 });
+                        }
+                    }
+                });
+
+                // Check collisions with Toasters
+                toasters.forEach(t => {
+                    const tX = arc.x + Math.cos(t.angle) * t.distance;
+                    const tY = arc.y + Math.sin(t.angle) * t.distance;
+                    const tx = en.x - tX;
+                    const ty = en.y - tY;
+                    const dToast = Math.sqrt(tx*tx + ty*ty);
+                    if (dToast < (en.size/2 + t.size/2)) {
+                        en.hp -= 0.1; // Hot toast burns enemies fast
+                    }
+                });
+
+                // Check collisions with Projectiles
+                projectiles.forEach((proj, pIdx) => {
+                    const px = en.x - proj.x;
+                    const py = en.y - proj.y;
+                    const dProj = Math.sqrt(px*px + py*py);
+                    if (dProj < (en.size/2 + proj.size/2)) {
+                        en.hp -= 1;
+                        projectiles.splice(pIdx, 1);
+                    }
+                });
+
+                // Handle Enemy death
+                if (en.hp <= 0) {
+                    enemies.splice(eIdx, 1);
+                    score += 5;
+                    document.getElementById('score-val').innerText = score;
+                    // Dynamic scaling wave increments
+                    if (score > 0 && score % 50 === 0) {
+                        wave++;
+                        document.getElementById('wave-val').innerText = wave;
+                    }
+                }
+            });
+
+            // 5. Update Particles
+            particles.forEach((p, pIdx) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                if (p.life <= 0) particles.splice(pIdx, 1);
+            });
+        }
+
+        function draw() {
+            // Clear Frame
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Background Ambience / Space dust placeholders
+            ctx.fillStyle = "rgba(255,255,255,0.05)";
+            ctx.font = "10px Monospace";
+            ctx.fillText("XYZ_COORD_X: " + mouseX.toFixed(0), 20, 560);
+            ctx.fillText("XYZ_COORD_Y: " + mouseY.toFixed(0), 20, 580);
+
+            // Draw Space Arc Shield / Radius
+            ctx.strokeStyle = "rgba(0, 150, 255, 0.2)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(arc.x, arc.y, arc.radius, 0, Math.PI*2);
+            ctx.stroke();
+
+            // Draw Space Arc Core Emoji
+            ctx.font = `${arc.radius}px serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(arc.emoji, arc.x, arc.y);
+
+            // Draw Emergency Toasters
+            toasters.forEach(t => {
+                const tX = arc.x + Math.cos(t.angle) * t.distance;
+                const tY = arc.y + Math.sin(t.angle) * t.distance;
+                ctx.font = `${t.size}px serif`;
+                ctx.fillText(t.emoji, tX, tY);
+            });
+
+            // Draw Defenders (Animals)
+            defenders.forEach(def => {
+                const defX = arc.x + Math.cos(def.angle) * def.distance;
+                const defY = arc.y + Math.sin(def.angle) * def.distance;
+                
+                // Draw tethering indicator vector line
+                ctx.strokeStyle = "rgba(255,255,255,0.08)";
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(arc.x, arc.y);
+                ctx.lineTo(defX, defY);
+                ctx.stroke();
+
+                ctx.font = `${def.size}px serif`;
+                ctx.fillText(def.emoji, defX, defY);
+            });
+
+            // Draw Projectiles
+            projectiles.forEach(proj => {
+                ctx.font = `${proj.size}px serif`;
+                ctx.fillText(proj.emoji, proj.x, proj.y);
+            });
+
+            // Draw Eldritch Shoggoth Threats
+            enemies.forEach(en => {
+                ctx.font = `${en.size}px serif`;
+                ctx.fillText(en.emoji, en.x, en.y);
+                
+                // Simple health tracking indicator line above emoji
+                const hpPct = en.hp / en.maxHp;
+                ctx.fillStyle = "#ff3333";
+                ctx.fillRect(en.x - 15, en.y - en.size/2 - 5, 30, 3);
+                ctx.fillStyle = "#33ff33";
+                ctx.fillRect(en.x - 15, en.y - en.size/2 - 5, 30 * hpPct, 3);
+            });
+
+            // Draw Particles
+            particles.forEach(p => {
+                ctx.font = `${p.size}px serif`;
+                ctx.fillText(p.emoji, p.x, p.y);
+            });
+        }
+
+        function loop() {
+            update();
+            draw();
+            if (gameActive) {
+                requestAnimationFrame(loop);
+            }
+        }
+
+        function endGame() {
+            gameActive = false;
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('game-over').style.display = "flex";
+        }
+
+        function resetGame() {
+            arc.hp = arc.maxHp;
+            score = 0;
+            wave = 1;
+            enemies = [];
+            projectiles = [];
+            particles = [];
+            toasters = [];
+            document.getElementById('hp-val').innerText = arc.hp;
+            document.getElementById('score-val').innerText = score;
+            document.getElementById('wave-val').innerText = wave;
+            document.getElementById('game-over').style.display = "none";
+            
+            if (!gameActive) {
+                gameActive = true;
+                loop();
+            }
+        }
+
+        // Start initialization loops
+        loop();
+        spawnEnemy();
+    </script>
+</body>
+</html>
