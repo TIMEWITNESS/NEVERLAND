@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Twilight Dove | Quantumverse Starter</title>
+    <style>
+        :root {
+            --accent: #00f3ff; /* Default Cyan */
+            --neon-magenta: #ff00ff;
+            --neon-yellow: #ffea00;
+            --bg-dark: #07051a;
+            --glass-bg: rgba(10, 15, 30, 0.85);
+            --glass-border: rgba(0, 243, 255, 0.4);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: none; }
+        
+        body {
+            background-color: var(--bg-dark);
+            color: #fff;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* --- 3D CAMERA & STAGE --- */
+        #camera {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            perspective: 1200px;
+            perspective-origin: 50% 50%;
+            z-index: 1;
+            transition: transform 0.1s ease-out;
+        }
+
+        #stage {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 0; height: 0;
+            transform-style: preserve-3d;
+            transform: rotateX(20deg) rotateY(0deg) translateZ(-300px);
+        }
+
+        /* --- NEON GRID FLOOR (Changes color!) --- */
+        .grid-floor {
+            position: absolute;
+            width: 300vw;
+            height: 300vh;
+            top: -150vh;
+            left: -150vw;
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.15) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.15) 1px, transparent 1px);
+            background-size: 50px 50px;
+            transform: rotateX(90deg) translateZ(-100px);
+            transition: background-image 0.5s ease;
+            pointer-events: none;
+        }
+
+        /* Dynamic Grid Color based on Active Card */
+        body[data-accent="cyan"] .grid-floor { background-image: linear-gradient(rgba(0, 243, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 243, 255, 0.2) 1px, transparent 1px); }
+        body[data-accent="magenta"] .grid-floor { background-image: linear-gradient(rgba(255, 0, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 0, 255, 0.2) 1px, transparent 1px); }
+        body[data-accent="yellow"] .grid-floor { background-image: linear-gradient(rgba(255, 234, 0, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 234, 0, 0.2) 1px, transparent 1px); }
+
+        /* --- GLOWING HEART IN GRID --- */
+        .grid-heart {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 80px; height: 80px;
+            transform: translate(-50%, -50%) rotateX(-90deg) translateZ(50px);
+            background: radial-gradient(circle, var(--accent), transparent 70%);
+            border-radius: 50%;
+            opacity: 0.6;
+            animation: pulse-heart 2s infinite alternate;
+            pointer-events: none;
+            box-shadow: 0 0 50px var(--accent);
+        }
+
+        @keyframes pulse-heart {
+            0% { transform: translate(-50%, -50%) rotateX(-90deg) translateZ(50px) scale(0.8); opacity: 0.4; }
+            100% { transform: translate(-50%, -50%) rotateX(-90deg) translateZ(50px) scale(1.2); opacity: 0.8; }
+        }
+
+        /* --- BEACH WAVE & HORIZON --- */
+        .horizon {
+            position: absolute;
+            bottom: -50vh; left: -100vw;
+            width: 200vw; height: 100vh;
+            background: radial-gradient(circle at center bottom, rgba(255, 0, 255, 0.2), transparent 70%);
+            pointer-events: none;
+        }
+
+        .wave {
+            position: absolute;
+            bottom: 0; left: 0;
+            width: 100%; height: 20vh;
+            background: linear-gradient(to top, rgba(0, 243, 255, 0.3), transparent);
+            animation: wave-motion 4s infinite linear;
+        }
+
+        @keyframes wave-motion {
+            0% { transform: translateX(0) scaleY(1); }
+            50% { transform: translateX(-5%) scaleY(1.1); }
+            100% { transform: translateX(0) scaleY(1); }
+        }
+
+        /* --- SLIDING STICKER MENUS (HUD) --- */
+        #hud {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; /* Let touches pass to stage */
+            z-index: 100;
+        }
+
+        /* Sticker Card Base */
+        .sticker-card {
+            position: absolute;
+            width: 140px;
+            height: 100px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 2px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 10px;
+            pointer-events: auto;
+            cursor: grab;
+            transition: box-shadow 0.3s, border-color 0.3s;
+            touch-action: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5), inset 0 0 10px rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .sticker-card:active {
+            cursor: grabbing;
+            box-shadow: 0 0 25px var(--accent);
+            border-color: var(--accent);
+            transform: scale(1.05);
+        }
+
+        .sticker-card h3 {
+            font-size: 0.8rem;
+            color: var(--accent);
+            text-shadow: 0 0 5px var(--accent);
+            margin-bottom: 5px;
+        }
+
+        .sticker-card p {
+            font-size: 0.6rem;
+            color: #ccc;
+        }
+
+        /* Position the stickers initially around the edges */
+        #sticker-1 { top: 15%; left: 10%; border-color: #00f3ff; }
+        #sticker-2 { top: 25%; right: 10%; border-color: #ff00ff; }
+        #sticker-3 { bottom: 30%; left: 15%; border-color: #ffea00; }
+        #sticker-4 { bottom: 20%; right: 15%; border-color: #00f3ff; }
+
+        /* --- SOS BUTTON (Top Left) --- */
+        .sos-btn {
+            position: absolute;
+            top: 15px; left: 15px;
+            width: 45px; height: 45px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ff0000, #660000);
+            border: 2px solid #ff4444;
+            color: white; font-weight: bold; font-size: 0.8rem;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
+            pointer-events: auto; cursor: pointer;
+            animation: pulse-sos 2s infinite;
+        }
+        @keyframes pulse-sos { 0% { box-shadow: 0 0 10px #ff0000; } 50% { box-shadow: 0 0 25px #ff0000; } 100% { box-shadow: 0 0 10px #ff0000; } }
+
+        /* --- MULTIPLAYER EDGE BAR --- */
+        .multiplayer-bar {
+            position: absolute; top: 15px; right: 15px;
+            display: flex; gap: 8px;
+            pointer-events: auto;
+        }
+        .player-view {
+            width: 50px; height: 35px; border-radius: 6px;
+            background: #111; border: 1px solid var(--neon-magenta);
+            overflow: hidden;
+        }
+        .player-view img { width: 100%; height: 100%; object-fit: cover; opacity: 0.6; }
+
+        /* --- RED ALICE AI (Starter Scene) --- */
+        #red-alice {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) translateZ(100px);
+            width: 120px; height: 120px;
+            background: rgba(255, 0, 0, 0.2);
+            border: 2px solid #ff0000;
+            border-radius: 50%; /* Sphere */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            cursor: pointer;
+            box-shadow: 0 0 40px #ff0000;
+            animation: float-alice 3s infinite alternate ease-in-out;
+            z-index: 50;
+        }
+
+        .alice-cube {
+            width: 40px; height: 40px;
+            background: #ff0000;
+            transform: rotate(45deg);
+            box-shadow: 0 0 20px #ff0000;
+        }
+
+        .alice-text {
+            position: absolute;
+            bottom: -40px;
+            width: 200px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid #ff0000;
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 0.7rem;
+            color: #ffcccc;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        @keyframes float-alice {
+            0% { transform: translate(-50%, -50%) translateZ(100px) translateY(0); }
+            100% { transform: translate(-50%, -50%) translateZ(100px) translateY(-10px); }
+        }
+
+        /* --- BOTTOM NAV --- */
+        .bottom-nav {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: rgba(7, 5, 26, 0.95);
+            border-top: 1px solid var(--glass-border);
+            display: flex; justify-content: space-around;
+            padding: 15px 0; pointer-events: auto;
+        }
+        .nav-item {
+            font-size: 1.5rem; cursor: pointer; opacity: 0.6; transition: all 0.2s;
+        }
+        .nav-item.active { opacity: 1; text-shadow: 0 0 15px var(--accent); transform: translateY(-3px); }
+    </style>
+</head>
+<body data-accent="cyan">
+
+    <!-- 3D CAMERA -->
+    <div id="camera">
+        <div id="stage">
+            <div class="grid-floor"></div>
+            <div class="grid-heart"></div>
+            <div class="horizon">
+                <div class="wave"></div>
+            </div>
+
+            <!-- Red Alice AI Agent -->
+            <div id="red-alice" onclick="triggerAlice()">
+                <div class="alice-cube"></div>
+                <div class="alice-text" id="alice-speech">Bzzt! Welcome, Player 1! I'm Red Alice. The Professor is arriving soon. Eek!</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HUD (Fixed, sliding sticker menus) -->
+    <div id="hud">
+        
+        <!-- SOS Button -->
+        <div class="sos-btn" onclick="alert('SOS Signal Sent!')">SOS</div>
+
+        <!-- Multiplayer Bar -->
+        <div class="multiplayer-bar">
+            <div class="player-view"><img src="https://via.placeholder.com/50x35/111/00f3ff?text=P1" alt="P1"></div>
+            <div class="player-view"><img src="https://via.placeholder.com/50x35/111/ff00ff?text=P2" alt="P2"></div>
+        </div>
+
+        <!-- Sliding Sticker Menus (Drag them around!) -->
+        <div class="sticker-card" id="sticker-1" onclick="setAccent('cyan')">
+            <h3>🐋 Guide</h3>
+            <p>Character & Lore</p>
+        </div>
+        <div class="sticker-card" id="sticker-2" onclick="setAccent('magenta')">
+            <h3>🔍 Inspector</h3>
+            <p>GLB & Textures</p>
+        </div>
+        <div class="sticker-card" id="sticker-3" onclick="setAccent('yellow')">
+            <h3>🪆 Shells</h3>
+            <p>Matryoshka</p>
+        </div>
+        <div class="sticker-card" id="sticker-4" onclick="setAccent('cyan')">
+            <h3>🎮 DJ Lab</h3>
+            <p>Holo Mix</p>
+        </div>
+
+        <!-- Bottom Nav -->
+        <div class="bottom-nav">
+            <div class="nav-item active">🏠</div>
+            <div class="nav-item">📁</div>
+            <div class="nav-item">🎨</div>
+            <div class="nav-item">⚙️</div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. AUDIOREACTIVE GRID & COLOR CHANGE ---
+        function setAccent(color) {
+            document.body.setAttribute('data-accent', color);
+            // Play a simulated cheeky AI voice response
+            const alice = document.getElementById('alice-speech');
+            if (color === 'cyan') alice.innerText = "Ooh, Cyan! Like the water! I love it!";
+            if (color === 'magenta') alice.innerText = "Magenta! So bold! Eek, the Professor will love this!";
+            if (color === 'yellow') alice.innerText = "Yellow! Like a sunflower! Sunflowers are my favorite!";
+        }
+
+        // --- 2. RED ALICE AI INTERACTION ---
+        function triggerAlice() {
+            const alice = document.getElementById('red-alice');
+            const speech = document.getElementById('alice-speech');
+            alice.style.transform = 'translate(-50%, -50%) translateZ(150px) scale(1.2)';
+            speech.innerText = "The Professor is entering the room! Quick, look at the digital wall!";
+            setTimeout(() => {
+                alice.style.transform = 'translate(-50%, -50%) translateZ(100px) scale(1)';
+            }, 500);
+        }
+
+        // --- 3. SLIDING STICKER MENUS (Drag and Drop) ---
+        const stickers = document.querySelectorAll('.sticker-card');
+        let activeSticker = null;
+        let startX, startY, initialX, initialY;
+
+        stickers.forEach(sticker => {
+            // Touch Events
+            sticker.addEventListener('touchstart', (e) => {
+                activeSticker = sticker;
+                const touch = e.touches[0];
+                startX = touch.clientX;
+                startY = touch.clientY;
+                // Get current position (handling absolute positioning)
+                const rect = sticker.getBoundingClientRect();
+                initialX = rect.left;
+                initialY = rect.top;
+                sticker.style.transition = 'none'; // Disable transition for smooth dragging
+                sticker.style.zIndex = '1000'; // Bring to front
+            });
+
+            sticker.addEventListener('touchmove', (e) => {
+                if (!activeSticker) return;
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - startX;
+                const deltaY = touch.clientY - startY;
+                
+                // Apply new position
+                sticker.style.left = `${initialX + deltaX}px`;
+                sticker.style.top = `${initialY + deltaY}px`;
+                sticker.style.right = 'auto'; // Remove right anchor
+                sticker.style.bottom = 'auto'; // Remove bottom anchor
+                e.preventDefault(); // Prevent scrolling
+            });
+
+            sticker.addEventListener('touchend', () => {
+                if (activeSticker) {
+                    activeSticker.style.transition = 'box-shadow 0.3s, border-color 0.3s';
+                    activeSticker.style.zIndex = '';
+                    activeSticker = null;
+                }
+            });
+        });
+
+        // --- 4. 3D CAMERA ROTATION (Drag background) ---
+        const camera = document.getElementById('camera');
+        const stage = document.getElementById('stage');
+        let isDraggingCamera = false;
+        let camStartX, camStartY;
+        let currentRotX = 20, currentRotY = 0;
+        let targetRotX = 20, targetRotY = 0;
+
+        camera.addEventListener('touchstart', (e) => {
+            // Only rotate if we aren't dragging a sticker
+            if (e.target.closest('.sticker-card') || e.target.closest('.sos-btn') || e.target.closest('#red-alice')) return;
+            isDraggingCamera = true;
+            camStartX = e.touches[0].clientX;
+            camStartY = e.touches[0].clientY;
+        });
+
+        camera.addEventListener('touchmove', (e) => {
+            if (!isDraggingCamera) return;
+            const deltaX = e.touches[0].clientX - camStartX;
+            const deltaY = e.touches[0].clientY - camStartY;
+            
+            targetRotY += deltaX * 0.5;
+            targetRotX -= deltaY * 0.5;
+            targetRotX = Math.max(-10, Math.min(60, targetRotX)); // Limit vertical angle
+
+            camStartX = e.touches[0].clientX;
+            camStartY = e.touches[0].clientY;
+        });
+
+        camera.addEventListener('touchend', () => { isDraggingCamera = false; });
+
+        // Smooth Camera Animation Loop
+        function animateCamera() {
+            currentRotX += (targetRotX - currentRotX) * 0.1;
+            currentRotY += (targetRotY - currentRotY) * 0.1;
+            stage.style.transform = `rotateX(${currentRotX}deg) rotateY(${currentRotY}deg) translateZ(-300px)`;
+            requestAnimationFrame(animateCamera);
+        }
+        animateCamera();
+
+        // --- 5. BEACH WAVE AUDIOREACTIVE SIMULATION ---
+        setInterval(() => {
+            const wave = document.querySelector('.wave');
+            const intensity = Math.random() * 0.5 + 0.5;
+            wave.style.opacity = intensity;
+        }, 500);
+
+        // Prevent double-tap zoom
+        document.addEventListener('touchstart', function(event) {
+            if (event.touches.length > 1) event.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>
