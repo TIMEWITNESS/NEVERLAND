@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Twilight Dove | Mobile HoloLab</title>
+    <style>
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-magenta: #ff00ff;
+            --neon-yellow: #ffea00;
+            --bg-dark: #07051a;
+            --glass-bg: rgba(10, 15, 30, 0.85); /* Solid enough to prevent blur lag */
+            --glass-border: rgba(0, 243, 255, 0.4);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
+        
+        body {
+            background-color: var(--bg-dark);
+            color: #fff;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            overflow-x: hidden;
+            /* Removed the 3D perspective from body to fix mobile blurriness */
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+            transition: background-image 0.3s ease;
+        }
+
+        /* Toggle for invisible background */
+        body.bg-invisible {
+            background-image: none;
+        }
+
+        /* Multiplayer Edge Bar */
+        .multiplayer-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(0,0,0,0.5);
+            border-bottom: 1px solid var(--glass-border);
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .player-view {
+            width: 60px;
+            height: 40px;
+            border-radius: 8px;
+            background: #111;
+            border: 1px solid var(--neon-magenta);
+            position: relative;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .player-view img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.6;
+        }
+
+        .join-btn {
+            background: var(--neon-cyan);
+            color: #000;
+            border: none;
+            border-radius: 20px;
+            padding: 5px 15px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        header {
+            padding: 1.5rem 1rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-magenta);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .ctrl-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .ctrl-btn:active {
+            background: var(--neon-cyan);
+            color: #000;
+        }
+
+        /* Holo-Card Grid System */
+        .holo-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Glassmorphism Card (Optimized for mobile) */
+        .holo-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1.2rem;
+            position: relative;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+            /* Lightweight 3D effect */
+            transform: translateZ(0); 
+        }
+
+        /* Edit Mode Styles */
+        body.edit-mode .holo-card {
+            border: 2px dashed var(--neon-yellow);
+            cursor: grab;
+        }
+
+        body.edit-mode .holo-card::after {
+            content: '✥';
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            color: var(--neon-yellow);
+            font-size: 1.2rem;
+        }
+
+        .holo-card:active {
+            transform: scale(0.98);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
+        }
+
+        .card-title {
+            font-size: 1rem;
+            color: var(--neon-cyan);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-content {
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: #ccc;
+        }
+
+        /* Character Preview inside card */
+        .char-preview {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            overflow-x: auto;
+        }
+
+        .char-preview img {
+            width: 80px;
+            height: 100px;
+            border-radius: 8px;
+            border: 1px solid var(--neon-magenta);
+            object-fit: cover;
+        }
+
+        /* Highlight text */
+        .hl-cyan { color: var(--neon-cyan); font-weight: bold; }
+        .hl-magenta { color: var(--neon-magenta); font-weight: bold; }
+        .hl-yellow { color: var(--neon-yellow); font-weight: bold; }
+
+        /* SOS Button */
+        .sos-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ff0000, #660000);
+            border: 2px solid #ff4444;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
+            z-index: 100;
+            cursor: pointer;
+        }
+
+        .sos-btn:active {
+            transform: scale(0.9);
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(7, 5, 26, 0.95);
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 90;
+        }
+
+        .nav-item {
+            font-size: 1.5rem;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+
+        .nav-item.active {
+            opacity: 1;
+            text-shadow: 0 0 10px var(--neon-cyan);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Multiplayer Edge View (Top Bar) -->
+    <div class="multiplayer-bar">
+        <div class="player-view"><img src="https://via.placeholder.com/60x40/111/00f3ff?text=P1" alt="P1"></div>
+        <div class="player-view"><img src="https://via.placeholder.com/60x40/111/ff00ff?text=P2" alt="P2"></div>
+        <div class="player-view"><img src="https://via.placeholder.com/60x40/111/ffea00?text=P3" alt="P3"></div>
+        <button class="join-btn" onclick="alert('Searching for nearby HoloLabs...')">+ JOIN</button>
+    </div>
+
+    <header>
+        <h1>Twilight Dove</h1>
+        <div class="controls">
+            <button class="ctrl-btn" id="toggleBg">Toggle BG</button>
+            <button class="ctrl-btn" id="toggleEdit">Edit Mode</button>
+        </div>
+    </header>
+
+    <main class="holo-grid">
+        
+        <!-- Guide & Character Preview -->
+        <div class="holo-card">
+            <div class="card-title">🐋 Guide & Character</div>
+            <div class="card-content">
+                Welcome to the Quantumverse. Your sentient Deep AI guide is ready. 
+                Preview your adaptable character sheet below. In Edit Mode, you can slice and animate them.
+            </div>
+            <div class="char-preview">
+                <!-- Replace src with your actual character images -->
+                <img src="https://via.placeholder.com/80x100/0a0a1a/00f3ff?text=Char1" alt="Character 1">
+                <img src="https://via.placeholder.com/80x100/0a0a1a/ff00ff?text=Char2" alt="Character 2">
+                <img src="https://via.placeholder.com/80x100/0a0a1a/ffea00?text=Char3" alt="Character 3">
+            </div>
+        </div>
+
+        <!-- Editor & Media Inspector -->
+        <div class="holo-card">
+            <div class="card-title">🔍 Editor & Inspector</div>
+            <div class="card-content">
+                Upload GLB, textures, or audio. Inspect layers, colors, and sizes. 
+                <br><br>
+                <span class="hl-cyan">Edit Mode is currently OFF.</span> Turn it on to rearrange apps and change backgrounds.
+            </div>
+        </div>
+
+        <!-- Matryoshka Shells -->
+        <div class="holo-card">
+            <div class="card-title">🪆 Matryoshka Shells</div>
+            <div class="card-content">
+                Package your apps like Polly Pocket figures. Project them in layered HOLO shells. 
+                <br><br>
+                <strong>STARXGUIDEX42:</strong> Active.
+            </div>
+        </div>
+
+        <!-- Safety & SOS -->
+        <div class="holo-card">
+            <div class="card-title">🛡️ Safety & Privacy</div>
+            <div class="card-content">
+                Your data is protected. If you feel unsafe, the <span class="hl-magenta">SOS button</span> instantly shares your HoloLab status with trusted contacts.
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="nav-item active">🏠</div>
+        <div class="nav-item">📁</div>
+        <div class="nav-item">🎨</div>
+        <div class="nav-item">⚙️</div>
+    </div>
+
+    <!-- SOS Button -->
+    <div class="sos-btn" onclick="alert('SOS Signal Sent! Privacy settings activated. Help is on the way.')">
+        SOS
+    </div>
+
+    <script>
+        // 1. Toggle Background Visibility
+        const toggleBgBtn = document.getElementById('toggleBg');
+        toggleBgBtn.addEventListener('click', () => {
+            document.body.classList.toggle('bg-invisible');
+            toggleBgBtn.textContent = document.body.classList.contains('bg-invisible') ? 'Show BG' : 'Toggle BG';
+        });
+
+        // 2. Toggle Edit Mode (Editor functionality)
+        const toggleEditBtn = document.getElementById('toggleEdit');
+        toggleEditBtn.addEventListener('click', () => {
+            document.body.classList.toggle('edit-mode');
+            toggleEditBtn.textContent = document.body.classList.contains('edit-mode') ? 'Save Layout' : 'Edit Mode';
+            
+            // Visual feedback
+            if(document.body.classList.contains('edit-mode')) {
+                toggleEditBtn.style.background = 'var(--neon-yellow)';
+                toggleEditBtn.style.color = '#000';
+            } else {
+                toggleEditBtn.style.background = 'var(--glass-bg)';
+                toggleEditBtn.style.color = 'var(--neon-cyan)';
+            }
+        });
+
+        // 3. Prevent double-tap zoom on mobile
+        document.addEventListener('touchstart', function(event) {
+            if (event.touches.length > 1) {
+                event.preventDefault();
+            }
+        }, { passive: false });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    </script>
+</body>
+</html>
