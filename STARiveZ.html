@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Twilight Dove | Quantumverse HoloLab Guide</title>
+    <style>
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-magenta: #ff00ff;
+            --neon-yellow: #ffea00;
+            --neon-orange: #ff6600;
+            --bg-dark: #07051a;
+            --glass-bg: rgba(10, 15, 30, 0.6);
+            --glass-border: rgba(0, 243, 255, 0.3);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
+        
+        body {
+            background-color: var(--bg-dark);
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            /* Simulated holo-grid background */
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            perspective: 1000px;
+        }
+
+        /* Water/Reflection simulation */
+        .twilight-horizon {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40vh;
+            background: linear-gradient(to top, var(--bg-dark) 0%, transparent 100%);
+            box-shadow: 0 0 100px rgba(0, 243, 255, 0.2) inset;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        header {
+            padding: 2rem 1rem;
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-magenta);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--neon-yellow);
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+            text-shadow: 0 0 5px var(--neon-orange);
+        }
+
+        /* Holo-Card Grid System */
+        .holo-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            padding: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        @media (min-width: 768px) {
+            .holo-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (min-width: 1024px) {
+            .holo-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        /* Glassmorphism Card */
+        .holo-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            /* Bending holo effect */
+            transform-style: preserve-3d;
+        }
+
+        .holo-card:active {
+            transform: scale(0.98) rotateX(2deg) rotateY(-2deg);
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.5), inset 0 0 20px rgba(255, 0, 255, 0.2);
+        }
+
+        .holo-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 50%; height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+            transform: skewX(-20deg);
+            transition: 0.5s;
+        }
+
+        .holo-card:active::before { left: 100%; }
+
+        .card-title {
+            font-size: 1.1rem;
+            color: var(--neon-cyan);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-shadow: 0 0 5px var(--neon-cyan);
+        }
+
+        .card-content {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #ccc;
+        }
+
+        /* Highlight text */
+        .hl-cyan { color: var(--neon-cyan); font-weight: bold; }
+        .hl-magenta { color: var(--neon-magenta); font-weight: bold; }
+        .hl-yellow { color: var(--neon-yellow); font-weight: bold; }
+        .hl-orange { color: var(--neon-orange); font-weight: bold; }
+
+        /* Interactive Elements */
+        .tag-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .holo-tag {
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            padding: 0.3rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .holo-tag:active {
+            background: var(--neon-cyan);
+            color: #000;
+            box-shadow: 0 0 15px var(--neon-cyan);
+        }
+
+        /* Media Preview Box */
+        .media-preview {
+            width: 100%;
+            height: 120px;
+            background: linear-gradient(45deg, #0a0a1a, #1a0a2a);
+            border: 1px dashed var(--neon-magenta);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .media-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.7;
+        }
+
+        .media-preview .overlay-text {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            font-size: 0.6rem;
+            background: rgba(0,0,0,0.8);
+            padding: 2px 5px;
+            border-radius: 4px;
+            color: var(--neon-cyan);
+        }
+
+        /* SOS Button */
+        .sos-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ff0000, #660000);
+            border: 2px solid #ff4444;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+            z-index: 100;
+            cursor: pointer;
+            animation: pulse-sos 2s infinite;
+        }
+
+        @keyframes pulse-sos {
+            0% { transform: scale(1); box-shadow: 0 0 20px rgba(255, 0, 0, 0.6); }
+            50% { transform: scale(1.05); box-shadow: 0 0 40px rgba(255, 0, 0, 0.9); }
+            100% { transform: scale(1); box-shadow: 0 0 20px rgba(255, 0, 0, 0.6); }
+        }
+
+        /* Navigation Bubble */
+        .nav-bubble {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 0.5rem 1rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 100;
+        }
+
+        .nav-bubble span {
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .nav-bubble span:active {
+            transform: scale(1.2);
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+            opacity: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .delay-1 { animation-delay: 0.2s; }
+        .delay-2 { animation-delay: 0.4s; }
+        .delay-3 { animation-delay: 0.6s; }
+    </style>
+</head>
+<body>
+
+    <div class="twilight-horizon"></div>
+
+    <header class="fade-in">
+        <h1>Twilight Dove</h1>
+        <div class="subtitle">Quantumverse HoloLab &bull; STARXGUIDEX42</div>
+    </header>
+
+    <main class="holo-grid">
+        
+        <!-- Card 1: The Vision -->
+        <div class="holo-card fade-in delay-1">
+            <div class="card-title">🌌 The Quantumverse</div>
+            <div class="card-content">
+                A safe, <span class="hl-cyan">youth-friendly</span> utopian space. The HoloLab acts as a <span class="hl-yellow">KOFFER (TARDIS Interface)</span> for school work, diaries, social contact, and memories. 
+                <br><br>
+                <strong>Visuals:</strong> Negative grid window, twilight horizon, cyan water reflections. Audio-reactive waves.
+            </div>
+            <div class="tag-container">
+                <div class="holo-tag">HoloCards</div>
+                <div class="holo-tag">Negative Grid</div>
+                <div class="holo-tag">Audio-Reactive</div>
+            </div>
+        </div>
+
+        <!-- Card 2: Media Inspector -->
+        <div class="holo-card fade-in delay-1">
+            <div class="card-title">🔍 Media Inspector</div>
+            <div class="card-content">
+                Upload and inspect all media types (GLB, textures, audio). Measure texture sizes, inspect layers, and view color schematics through the HoloLens visor.
+            </div>
+            <div class="media-preview">
+                <!-- Placeholder for the user's image -->
+                <img src="https://via.placeholder.com/300x120/0a0a1a/00f3ff?text=GLB+Preview" alt="GLB Preview">
+                <div class="overlay-text">Texture: 2048x2048 | Layers: 5</div>
+            </div>
+        </div>
+
+        <!-- Card 3: Gamification & Paperdolls -->
+        <div class="holo-card fade-in delay-2">
+            <div class="card-title">🎮 Paperdolls & DJ Lab</div>
+            <div class="card-content">
+                Paper marionettes with ♥️♦️♣️♠️💌🃏 holo card optics. Build your own DJ holo lab mix. 
+                <br><br>
+                <strong>Closet (KLEIDERSCHRANK):</strong> Sliceable, adaptable character sheets that can be read and animated automatically.
+            </div>
+            <div class="tag-container">
+                <div class="holo-tag">♥️ Marionettes</div>
+                <div class="holo-tag">DJ Mixer</div>
+                <div class="holo-tag">Auto-Animate</div>
+            </div>
+        </div>
+
+        <!-- Card 4: Matryoshka Shells -->
+        <div class="holo-card fade-in delay-2">
+            <div class="card-title">🪆 Matryoshka Shells</div>
+            <div class="card-content">
+                Apps are packaged like Polly Pocket figures. Project your digital tools in <span class="hl-magenta">HOLO layered MATRYOSHKA shells</span>. 
+                <br><br>
+                <strong>STARXGUIDEX42:</strong> The master shell template for projections and the app guide.
+            </div>
+            <div class="tag-container">
+                <div class="holo-tag">Polly Pocket</div>
+                <div class="holo-tag">Layered Shells</div>
+                <div class="holo-tag">3D Pult</div>
+            </div>
+        </div>
+
+        <!-- Card 5: Safety & SOS -->
+        <div class="holo-card fade-in delay-3">
+            <div class="card-title">🛡️ Safety & Privacy</div>
+            <div class="card-content">
+                Privacy settings for youngsters and family/Mitbewohner. A discreet <span class="hl-orange">SOS feature</span> allows immediate status sharing (school work, diary, location) if a troubled home situation arises.
+                <br><br>
+                <em>Promotes good behavior, environmental awareness, and upcycling (microplastic recycling gamification).</em>
+            </div>
+            <div class="tag-container">
+                <div class="holo-tag">SOS Ready</div>
+                <div class="holo-tag">Privacy First</div>
+                <div class="holo-tag">Eco-Tech</div>
+            </div>
+        </div>
+
+        <!-- Card 6: Drohne Earth TV -->
+        <div class="holo-card fade-in delay-3">
+            <div class="card-title">🐋 Drohne Earth TV</div>
+            <div class="card-content">
+                A global holo immersive studio. Communities project design suggestions via anti-gravity Drohne tech (magnetic, Back to the Future style). 
+                <br><br>
+                <strong>Whale Story Gimmick:</strong> A sentient Deep AI guiding the user through the Quantumverse, collecting "data stars" and exploring the stage in 1st/3rd person (Spider-Man web-slinging or lightsaber mechanics).
+            </div>
+            <div class="tag-container">
+                <div class="holo-tag">Drohne Tech</div>
+                <div class="holo-tag">1st/3rd Person</div>
+                <div class="holo-tag">Data Stars</div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Navigation Bubble (Mobile Optimized) -->
+    <div class="nav-bubble">
+        <span>🏠</span>
+        <span>📁</span>
+        <span>🎨</span>
+        <span>⚙️</span>
+    </div>
+
+    <!-- SOS Button -->
+    <div class="sos-btn" onclick="alert('SOS Signal Sent! Privacy settings activated. Help is on the way.')">
+        SOS
+    </div>
+
+    <script>
+        // Simple touch feedback for holo-cards
+        document.querySelectorAll('.holo-card').forEach(card => {
+            card.addEventListener('touchstart', () => {
+                card.style.transform = 'scale(0.98) rotateX(2deg) rotateY(-2deg)';
+                card.style.boxShadow = '0 0 30px rgba(0, 243, 255, 0.5), inset 0 0 20px rgba(255, 0, 255, 0.2)';
+            });
+            card.addEventListener('touchend', () => {
+                card.style.transform = '';
+                card.style.boxShadow = '';
+            });
+        });
+
+        // Simulate audio-reactive background
+        const horizon = document.querySelector('.twilight-horizon');
+        setInterval(() => {
+            const intensity = Math.random() * 0.3 + 0.1;
+            horizon.style.boxShadow = `0 0 100px rgba(0, 243, 255, ${intensity}) inset`;
+        }, 1000);
+    </script>
+</body>
+</html>
