@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyberBunny OS - Media Deck</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;900&family=Share+Tech+Mono&display=swap');
+
+    :root {
+      --bg-space: #05050d;
+      --glass-blur: blur(12px);
+      --font-cyber: 'Orbitron', sans-serif;
+      --font-mono: 'Share Tech Mono', monospace;
+      
+      /* Theme 1: Neon Cyan Bunny */
+      --bunny-cyan: #00f3ff;
+      --bunny-cyan-glow: rgba(0, 243, 255, 0.4);
+      --glass-cyan: rgba(10, 25, 40, 0.55);
+      
+      /* Theme 2: Laser Magenta Bunny */
+      --bunny-magenta: #ff007f;
+      --bunny-magenta-glow: rgba(255, 0, 127, 0.4);
+      --glass-magenta: rgba(30, 10, 25, 0.55);
+      
+      /* Theme 3: Toxic Lime Bunny */
+      --bunny-lime: #39ff14;
+      --bunny-lime-glow: rgba(57, 255, 20, 0.4);
+      --glass-lime: rgba(15, 30, 15, 0.55);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-space);
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(0, 243, 255, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(255, 0, 127, 0.05) 0%, transparent 40%),
+        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+      background-size: 100% 100%, 100% 100%, 100% 4px;
+      color: #e2e2ec;
+      font-family: var(--font-mono);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+      overflow-x: hidden;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    header h1 {
+      font-family: var(--font-cyber);
+      font-size: 2.5rem;
+      font-weight: 900;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+      margin-bottom: 0.5rem;
+    }
+
+    header h1 span {
+      color: var(--bunny-magenta);
+      text-shadow: 0 0 10px var(--bunny-magenta-glow);
+    }
+
+    .system-status {
+      font-size: 0.9rem;
+      color: var(--bunny-cyan);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    /* --- ARCHITECTURE CONTAINER --- */
+    .deck-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4rem;
+    }
+
+    /* --- ALBUM STRUCTURE PANEL --- */
+    .album-panel {
+      border-radius: 24px;
+      padding: 2rem;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: var(--glass-blur);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Theme Variations injection via custom properties local to panel scope */
+    .album-cyan {
+      background: var(--glass-cyan);
+      box-shadow: inset 0 0 30px rgba(0, 243, 255, 0.05), 0 15px 35px rgba(0,0,0,0.5);
+      border-top: 2px solid var(--bunny-cyan);
+    }
+    .album-cyan .album-title { color: var(--bunny-cyan); text-shadow: 0 0 10px var(--bunny-cyan-glow); }
+    .album-cyan .app-icon.active { background: var(--bunny-cyan); color: #000; box-shadow: 0 0 15px var(--bunny-cyan); }
+
+    .album-magenta {
+      background: var(--glass-magenta);
+      box-shadow: inset 0 0 30px rgba(255, 0, 127, 0.05), 0 15px 35px rgba(0,0,0,0.5);
+      border-top: 2px solid var(--bunny-magenta);
+    }
+    .album-magenta .album-title { color: var(--bunny-magenta); text-shadow: 0 0 10px var(--bunny-magenta-glow); }
+    .album-magenta .app-icon.active { background: var(--bunny-magenta); color: #000; box-shadow: 0 0 15px var(--bunny-magenta); }
+
+    .album-lime {
+      background: var(--glass-lime);
+      box-shadow: inset 0 0 30px rgba(57, 255, 20, 0.05), 0 15px 35px rgba(0,0,0,0.5);
+      border-top: 2px solid var(--bunny-lime);
+    }
+    .album-lime .album-title { color: var(--bunny-lime); text-shadow: 0 0 10px var(--bunny-lime-glow); }
+    .album-lime .app-icon.active { background: var(--bunny-lime); color: #000; box-shadow: 0 0 15px var(--bunny-lime); }
+
+    .album-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+      padding-bottom: 1rem;
+    }
+
+    .album-title {
+      font-family: var(--font-cyber);
+      font-size: 1.6rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+    }
+
+    .album-meta {
+      font-size: 0.8rem;
+      opacity: 0.6;
+      text-align: right;
+    }
+
+    /* --- ACTIVE CINEMATIC PLAYER ZONE --- */
+    .player-workspace {
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 2rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stage-area {
+      position: relative;
+      width: 100%;
+      background: #020205;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stage-area video {
+      width: 100%;
+      max-height: 480px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .stage-area img {
+      width: 100%;
+      max-height: 480px;
+      object-fit: contain;
+      display: block;
+      padding: 1rem;
+    }
+
+    .audio-stage-ui {
+      width: 100%;
+      padding: 3rem 2rem;
+      text-align: center;
+      background: linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    /* Floating Text Sandbox Layer */
+    .text-stage-ui {
+      width: 100%;
+      padding: 2.5rem;
+      max-height: 400px;
+      overflow-y: auto;
+      font-size: 1.1rem;
+      line-height: 1.6;
+      color: #ececff;
+      background: rgba(5, 5, 15, 0.85);
+      border-left: 4px solid cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .album-cyan .text-stage-ui { border-left-color: var(--bunny-cyan); }
+    .album-magenta .text-stage-ui { border-left-color: var(--bunny-magenta); }
+    .album-lime .text-stage-ui { border-left-color: var(--bunny-lime); }
+
+    .audio-stage-ui audio {
+      width: 100%;
+      max-width: 600px;
+    }
+
+    /* Audio Visualizer Component */
+    .visualizer-node {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 60px;
+      width: 200px;
+    }
+    .visualizer-node span {
+      flex: 1;
+      height: 15%;
+      border-radius: 2px;
+      animation: audioPulse 1s infinite ease-in-out alternate;
+    }
+    .album-cyan .visualizer-node span { background: var(--bunny-cyan); box-shadow: 0 0 8px var(--bunny-cyan); }
+    .album-magenta .visualizer-node span { background: var(--bunny-magenta); box-shadow: 0 0 8px var(--bunny-magenta); }
+    .album-lime .visualizer-node span { background: var(--bunny-lime); box-shadow: 0 0 8px var(--bunny-lime); }
+
+    .visualizer-node span:nth-child(2) { animation-delay: 0.15s; }
+    .visualizer-node span:nth-child(3) { animation-delay: 0.4s; }
+    .visualizer-node span:nth-child(4) { animation-delay: 0.25s; }
+    .visualizer-node span:nth-child(5) { animation-delay: 0.6s; }
+
+    @keyframes audioPulse {
+      0% { height: 10%; }
+      100% { height: 100%; }
+    }
+
+    /* Active Display Metadata Bar */
+    .workspace-footer {
+      padding: 1rem;
+      background: rgba(255,255,255,0.02);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .current-meta-title {
+      font-family: var(--font-cyber);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    /* Action utility array controls */
+    .utility-deck {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .util-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      text-decoration: none;
+    }
+    .util-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* --- TOP-TIER ENGINE SORTING CONTROLS --- */
+    .filter-deck {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .filter-btn.active {
+      border-color: currentColor;
+    }
+    .album-cyan .filter-btn.active { color: var(--bunny-cyan); background: rgba(0, 243, 255, 0.1); }
+    .album-magenta .filter-btn.active { color: var(--bunny-magenta); background: rgba(255, 0, 127, 0.1); }
+    .album-lime .filter-btn.active { color: var(--bunny-lime); background: rgba(57, 255, 20, 0.1); }
+
+    /* --- APP MATRIX INTERFACE (ROUNDED SUB APPS) --- */
+    .app-matrix {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 1.5rem 1rem;
+      justify-items: center;
+    }
+
+    .app-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      cursor: pointer;
+      width: 90px;
+      transition: transform 0.2s;
+    }
+    .app-node:hover {
+      transform: scale(1.08);
+    }
+
+    .app-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px; /* Squared rounded app icon architecture */
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    .album-panel:not(.album-cyan) .app-node:hover .app-icon { border-color: rgba(255,255,255,0.4); }
+    .album-cyan .app-node:hover .app-icon { border-color: var(--bunny-cyan); box-shadow: 0 0 10px rgba(0,243,255,0.3); }
+    .album-magenta .app-node:hover .app-icon { border-color: var(--bunny-magenta); box-shadow: 0 0 10px rgba(255,0,127,0.3); }
+    .album-lime .app-node:hover .app-icon { border-color: var(--bunny-lime); box-shadow: 0 0 10px rgba(57,255,20,0.3); }
+
+    .app-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      opacity: 0.8;
+      letter-spacing: 0.5px;
+    }
+
+    .app-type-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      font-size: 0.55rem;
+      padding: 1px 4px;
+      border-radius: 4px;
+      background: #000;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    /* Type Badge Accent Mapping */
+    [data-type="video"] .app-type-badge { color: var(--bunny-cyan); border-color: var(--bunny-cyan); }
+    [data-type="audio"] .app-type-badge { color: var(--bunny-magenta); border-color: var(--bunny-magenta); }
+    [data-type="image"] .app-type-badge { color: var(--bunny-lime); border-color: var(--bunny-lime); }
+    [data-type="text"] .app-type-badge { color: #fcee0a; border-color: #fcee0a; }
+
+    /* Utility styling classes for app layout hiding */
+    .hidden-node {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>CyberBunny <span>MediaDeck // OS</span></h1>
+    <div class="system-status">System Online // Cloud Directory Link Active</div>
+  </header>
+
+  <div class="deck-container">
+
+    <!-- ==================== ALBUM 1: CYAN SYSTEM ==================== -->
+    <div class="album-panel album-cyan" id="album-neon-genesis">
+      <div class="album-header">
+        <div>
+          <div class="album-title">ALBUM > NEON_GENESIS</div>
+          <div style="font-size:0.8rem; opacity:0.5; margin-top:2px;">Directory: /ALBUM/NEON_GENESIS/</div>
+        </div>
+        <div class="album-meta">
+          <div>NODE ID: #BG-001</div>
+          <div>FILES: 4 DETECTED</div>
+        </div>
+      </div>
+
+      <!-- Live Interactive Workspace -->
+      <div class="player-workspace">
+        <div class="stage-area">
+          <!-- Dynamically populated payload container -->
+          <div style="padding: 3rem; text-align: center; font-family: var(--font-cyber); font-size: 0.9rem; opacity: 0.5;">
+            SELECT AN INTERACTIVE CYBERBUNNY APP BELOW TO INITIALIZE STREAM
+          </div>
+        </div>
+        <div class="workspace-footer">
+          <div class="current-meta-title">STATUS: SYSTEM IDLE</div>
+          <div class="utility-deck">
+            <button class="util-btn" onclick="copyShareLink(this)">🔗 Copy Link</button>
+            <button class="util-btn" onclick="shareSystem()">📡 Share</button>
+            <a href="#" class="util-btn download-target" download>💾 Download Asset</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sorting Filter System -->
+      <div class="filter-deck">
+        <button class="filter-btn active" onclick="filterMediaType(this, 'all')">⚡ All Data</button>
+        <button class="filter-btn" onclick="filterMediaType(this, 'video')">📹 Video</button>
+        <button class="filter-btn" onclick="filterMediaType(this, 'audio')">🎵 Audio</button>
+        <button class="filter-btn" onclick="filterMediaType(this, 'image')">🖼️ Pics</button>
+        <button class="filter-btn" onclick="filterMediaType(this, 'text')">📄 Manuals</button>
+      </div>
+
+      <!-- Apps Matrix -->
+      <div class="app-matrix">
+        <!-- Asset Node 1: Video Payload -->
+        <div class="app-node" data-type="video" data-src="https://raw.githubusercontent.com/worldpeacebtn/WAVE/main/Bunny_Hearts_Wolf_Auras.mp4" onclick="mountMedia(this)">
+          <div class="app-icon">
+            📹
+            <span class="app-type-badge">MP4</span>
+          </div>
+          <div class="app-label">Bunny_Hearts_Wolf_Auras.mp4</div>
+        </div>
+
+        <!-- Asset Node 2: Audio Payload -->
+        <div class="app-node" data-type="audio" data-src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" onclick="mountMedia(this)">
+          <div class="app-icon">
+            🎵
+            <span class="app-type-badge">MP3</span>
+          </div>
+          <div class="app-label">Cybernetic_Pulse_X.mp3</div>
+        </div>
+
+        <!-- Asset Node 3: Image Payload -->
+        <div class="app-node" data-type="image" data-src="https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=600&auto=format&fit=crop" onclick="mountMedia(this)">
+          <div class="app-icon">
+            🖼️
+            <span class="app-type-badge">IMG</span>
+          </div>
+          <div class="app-label">CyberBunny_Concept_Design.jpg</div>
+        </div>
+
+        <!-- Asset Node 4: Floating Textbook Description Payload -->
+        <div class="app-node" data-type="text" data-src="PROJECT REVELATION ENGINE MANUAL v1.04
+
+Welcome operative. This system workspace runs directly off decentralized repository protocols. Uploading files is simple:
+1. Open your workspace directory structure.
+2. Place files matching your desired names inside target album folders.
+3. Instantly review live telemetry inside this responsive layout frame." onclick="mountMedia(this)">
+          <div class="app-icon">
+            📄
+            <span class="app-type-badge">TXT</span>
+          </div>
+          <div class="app-label">System_Operation_Manual.txt</div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==================== ALBUM 2: MAGENTA SYSTEM ==================== -->
+    <div class="album-panel album-magenta" id="album-aurora-borealis">
+      <div class="album-header">
+        <div>
+          <div class="album-title">ALBUM > AURORA_WOLF</div>
+          <div style="font-size:0.8rem; opacity:0.5; margin-top:2px;">Directory: /ALBUM/AURORA_WOLF/</div>
+        </div>
+        <div class="album-meta">
+          <div>NODE ID: #AW-002</div>
+          <div>FILES: 3 DETECTED</div>
+        </div>
+      </div>
+
+      <div class="player-workspace">
+        <div class="stage-area">
+          <div style="padding: 3rem; text-align: center; font-family: var(--font-cyber); font-size: 0.9rem; opacity: 0.5;">
+            SELECT AN INTERACTIVE CYBERBUNNY APP BELOW TO INITIALIZE STREAM
+          </div>
+        </div>
+        <div class="workspace-footer">
+          <div class="current-meta-title">STATUS: SYSTEM IDLE</div>
+          <div class="utility-deck">
+            <button class="util-btn" onclick="copyShareLink(this)">🔗 Copy Link</button>
+            <button class="util-btn" onclick="shareSystem()">📡 Share</button>
+            <a href="#" class="util-btn download-target" download>💾 Download Asset</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-deck">
+        <button class="filter-btn active" onclick="filterMediaType(this, 'all')">⚡ All Data</button>
+        <button class="filter-btn" onclick="filterMediaType(this, 'video')">📹 Video</button>
+        <button class="filter-btn" onclick="filterMediaType(this, 'audio')">🎵 Audio</button>
+        <button class="filter-btn" onclick="filterMediaType(this, 'image')">🖼️ Pics</button>
+        <button class="filter-btn" onclick="filterMediaType(this, 'text')">📄 Manuals</button>
+      </div>
+
+      <div class="app-matrix">
+        <div class="app-node" data-type="audio" data-src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" onclick="mountMedia(this)">
+          <div class="app-icon">
+            🎵
+            <span class="app-type-badge">MP3</span>
+          </div>
+          <div class="app-label">Wolf_Auras_Synth_Frequency.mp3</div>
+        </div>
+
+        <div class="app-node" data-type="image" data-src="https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=600&auto=format&fit=crop" onclick="mountMedia(this)">
+          <div class="app-icon">
+            🖼️
+            <span class="app-type-badge">PNG</span>
+          </div>
+          <div class="app-label">Synthwave_Neon_Landscape.png</div>
+        </div>
+
+        <div class="app-node" data-type="text" data-src="ALBUM CHRONICLES: AURORA WOLF
+
+This aesthetic sequence records atmospheric anomalies across neo-hamburg frequencies. Deep synthetic soundscapes paired with ultra-violet light visuals form the basis of the tactical performance simulation array." onclick="mountMedia(this)">
+          <div class="app-icon">
+            📄
+            <span class="app-type-badge">TXT</span>
+          </div>
+          <div class="app-label">Album_Concept_Lore.txt</div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==================== ALBUM 3: LIME SYSTEM ==================== -->
+    <div class="album-panel album-lime" id="album-matrix-v3">
+      <div class="album-header">
+        <div>
+          <div class="album-title">ALBUM > TOXIC_HOPPER</div>
+          <div style="font-size:0.8rem; opacity:0.5; margin-top:2px;">Directory: /ALBUM/TOXIC_HOPPER/</div>
+        </div>
+        <div class="album-meta">
+          <div>NODE ID: #TH-003</div>
+          <div>FILES: 3 DETECTED</div>
+        </div>
+      </div>
+
+      <div class="player-workspace">
+        <div class="stage-area">
+          <div style="padding: 3rem; text-align: center; font-family: var(--font-cyber); font-size: 0.9rem; opacity: 0.5;">
+            SELECT AN INTERACTIVE CYBERBUNNY APP BELOW TO INITIALIZE STREAM
+          </div>
+        </div>
+        <div class="workspace-footer">
+          <div class="current-meta-title">STATUS: SYSTEM IDLE</div>
+          <div class="utility-deck">
+            <button class="util-btn" onclick="copyShareLink(this)">🔗 Copy Link</button>
+            <button class="util-btn" onclick="shareSystem()">📡 Share</button>
+            <a href="#" class="util-btn download-target" download>💾 Download Asset</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-deck">
+        <button class="filter-btn active" onclick="filterMediaType(this, 'all')">⚡ All Data</button>
+        <button class="filter-btn" onclick="filterMediaType(this, 'video')">📹 Video</button>
+        <button class="filter-btn" onclick="filterMediaType(this, 'audio')">🎵 Audio</button>
+        <button class="filter-btn" onclick="filterMediaType(this, 'image')">🖼️ Pics</button>
+        <button class="filter-btn" onclick="filterMediaType(this, 'text')">📄 Manuals</button>
+      </div>
+
+      <div class="app-matrix">
+        <div class="app-node" data-type="video" data-src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" onclick="mountMedia(this)">
+          <div class="app-icon">
+            📹
+            <span class="app-type-badge">MP4</span>
+          </div>
+          <div class="app-label">Toxic_Waste_Flow_Telemetries.mp4</div>
+        </div>
+
+        <div class="app-node" data-type="audio" data-src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" onclick="mountMedia(this)">
+          <div class="app-icon">
+            🎵
+            <span class="app-type-badge">MP3</span>
+          </div>
+          <div class="app-label">Acid_Bassline_Matrix.mp3</div>
+        </div>
+
+        <div class="app-node" data-type="text" data-src="TOXIC HOPPER MATRIX INITIALIZATION PROTOCOLS
+
+Warning: High radiation frequencies embedded in audio tracking. Ensure system equalizer limits are enabled before mounting audio pipelines." onclick="mountMedia(this)">
+          <div class="app-icon">
+            📄
+            <span class="app-type-badge">TXT</span>
+          </div>
+          <div class="app-label">Hazard_Safety_Briefing.txt</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- --- CORE ENGINE JAVASCRIPT AUTOMATION --- -->
+  <script>
+    // Initialize labels automatically based on file name rules if missing
+    document.querySelectorAll('.app-node').forEach(node => {
+      const src = node.getAttribute('data-src');
+      const labelEl = node.querySelector('.app-label');
+      
+      // Auto-extract filename if label template requires dynamic sync
+      if (node.getAttribute('data-type') !== 'text' && src) {
+        try {
+          const filename = src.substring(src.lastIndexOf('/') + 1).split('?')[0];
+          if (filename && labelEl.innerText.trim() === "") {
+            labelEl.innerText = filename;
+          }
+        } catch(e) {
+          // Fallback to existing structural text safely
+        }
+      }
+    });
+
+    // Interactive Media Mounting Core Engine
+    function mountMedia(element) {
+      const albumPanel = element.closest('.album-panel');
+      const stageArea = albumPanel.querySelector('.stage-area');
+      const titleDisplay = albumPanel.querySelector('.current-meta-title');
+      const downloadTarget = albumPanel.querySelector('.download-target');
+      
+      const type = element.getAttribute('data-type');
+      const src = element.getAttribute('data-src');
+      const rawTitle = element.querySelector('.app-label').innerText;
+
+      // Clear previous active nodes within this scope
+      albumPanel.querySelectorAll('.app-icon').forEach(ico => ico.classList.remove('active'));
+      element.querySelector('.app-icon').classList.add('active');
+
+      // Update UI title readout
+      titleDisplay.innerText = `ACTIVE SOURCE // ${rawTitle.toUpperCase()}`;
+      
+      // Configure Action Downloads
+      if (type !== 'text') {
+        downloadTarget.setAttribute('href', src);
+        downloadTarget.style.display = "inline-flex";
+      } else {
+        downloadTarget.style.display = "none";
+      }
+
+      // Payload Router
+      if (type === 'video') {
+        stageArea.innerHTML = `
+          <video controls autoplay class="stage-media">
+            <source src="${src}" type="video/mp4">
+            CORE DECK PLAYBACK CONFLICT
+          </video>
+        `;
+      } 
+      else if (type === 'audio') {
+        stageArea.innerHTML = `
+          <div class="audio-stage-ui">
+            <div class="visualizer-node">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <audio controls autoplay>
+              <source src="${src}" type="audio/mp3">
+            </audio>
+          </div>
+        `;
+      } 
+      else if (type === 'image') {
+        stageArea.innerHTML = `<img src="${src}" alt="${rawTitle}" class="stage-media">`;
+      } 
+      else if (type === 'text') {
+        // Floating textbook container parsing newlines safely
+        const formattedText = src.replace(/\n/g, '<br>');
+        stageArea.innerHTML = `<div class="text-stage-ui">${formattedText}</div>`;
+      }
+    }
+
+    // Interactive Data Pillar Filters
+    function filterMediaType(btn, type) {
+      const albumPanel = btn.closest('.album-panel');
+      
+      // Toggle button selection states
+      albumPanel.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // Iterate elements mapping types
+      albumPanel.querySelectorAll('.app-node').forEach(node => {
+        if (type === 'all' || node.getAttribute('data-type') === type) {
+          node.classList.remove('hidden-node');
+        } else {
+          node.classList.add('hidden-node');
+        }
+      });
+    }
+
+    // Communication Share Tool Utilities
+    function copyShareLink(btn) {
+      navigator.clipboard.writeText(window.location.href);
+      const originalText = btn.innerText;
+      btn.innerText = "✓ Copied!";
+      setTimeout(() => btn.innerText = originalText, 2000);
+    }
+
+    function shareSystem() {
+      if (navigator.share) {
+        navigator.share({
+          title: 'CyberBunny Deck',
+          url: window.location.href
+        }).catch(() => {});
+      } else {
+        alert("Subspace network connection tracking active. URL ready on clip matrix.");
+      }
+    }
+  </script>
+</body>
+</html>
